@@ -14,21 +14,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# 设置 OpenBLAS 预编译路径
-set(OPENBLAS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openblas)
-set(OPENBLAS_INCLUDE_DIR ${OPENBLAS_ROOT}/include)
-set(OPENBLAS_LIBRARY_DIR ${OPENBLAS_ROOT}/lib)
-set(OPENBLAS_BIN_DIR ${OPENBLAS_ROOT}/bin) 
+# 查找 OpenBLAS - 跨平台支持
+if(WIN32)
+    # Windows 使用预编译的 OpenBLAS
+    set(OPENBLAS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/openblas)
+    set(OPENBLAS_INCLUDE_DIR ${OPENBLAS_ROOT}/include)
+    set(OPENBLAS_LIBRARY_DIR ${OPENBLAS_ROOT}/lib)
+    set(OPENBLAS_BIN_DIR ${OPENBLAS_ROOT}/bin)
 
-# 创建导入目标
-add_library(OpenBLAS::OpenBLAS SHARED IMPORTED)
-
-# 设置导入目标属性
-set_target_properties(OpenBLAS::OpenBLAS PROPERTIES
-    IMPORTED_IMPLIB   "${OPENBLAS_LIBRARY_DIR}/libopenblas.lib"   # 静态链接库
-    IMPORTED_LOCATION "${OPENBLAS_BIN_DIR}/libopenblas.dll"       # 动态链接库
-    INTERFACE_INCLUDE_DIRECTORIES "${OPENBLAS_INCLUDE_DIR}"
-)
+    add_library(OpenBLAS::OpenBLAS SHARED IMPORTED)
+    set_target_properties(OpenBLAS::OpenBLAS PROPERTIES
+        IMPORTED_IMPLIB   "${OPENBLAS_LIBRARY_DIR}/libopenblas.lib"
+        IMPORTED_LOCATION  "${OPENBLAS_BIN_DIR}/libopenblas.dll"
+        INTERFACE_INCLUDE_DIRECTORIES "${OPENBLAS_INCLUDE_DIR}"
+    )
+else()
+    # Linux/macOS 使用系统包管理器安装的 OpenBLAS
+    find_package(OpenBLAS REQUIRED)
+endif()
 
 # 创建 numcxx 接口库
 add_library(numcxx INTERFACE)

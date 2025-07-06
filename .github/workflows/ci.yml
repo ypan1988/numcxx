@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build_and_test:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Install OpenBLAS (Linux/macOS)
+      if: matrix.os != 'windows-latest'
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install openblas
+        fi
+        
+    - name: Configure CMake
+      shell: bash
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        
+    - name: Build
+      shell: bash
+      run: |
+        cd build
+        cmake --build . --config Release
+        
+    - name: Run tests
+      shell: bash
+      run: |
+        cd build
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ctest -C Release --output-on-failure
+        else
+          ctest --output-on-failure
+        fi
