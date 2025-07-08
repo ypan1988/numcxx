@@ -31,6 +31,11 @@ if(WIN32)
 else()
     # Linux/macOS 使用系统包管理器安装的 OpenBLAS
     find_package(OpenBLAS REQUIRED)
+    if(NOT TARGET OpenBLAS::OpenBLAS)
+        add_library(OpenBLAS::OpenBLAS INTERFACE IMPORTED)
+        target_include_directories(OpenBLAS::OpenBLAS INTERFACE ${OpenBLAS_INCLUDE_DIRS})
+        target_link_libraries(OpenBLAS::OpenBLAS INTERFACE ${OpenBLAS_LIBRARIES})
+    endif()
 endif()
 
 # 创建 numcxx 接口库
