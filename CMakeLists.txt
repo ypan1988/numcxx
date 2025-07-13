@@ -38,30 +38,27 @@ else()
     endif()
 endif()
 
+# 定义复制 OpenBLAS DLL 的宏（Windows 专用）
+macro(copy_openblas_dll target_name)
+    if(WIN32)
+        add_custom_command(TARGET ${target_name} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${OPENBLAS_BIN_DIR}/libopenblas.dll"
+                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            COMMENT "Copying OpenBLAS DLL for ${target_name}"
+        )
+    endif()
+endmacro()
+
 # 创建 numcxx 接口库
 add_library(numcxx INTERFACE)
-target_include_directories(numcxx INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# 添加 OpenBLAS 依赖
-target_link_libraries(numcxx INTERFACE
-    OpenBLAS::OpenBLAS
-)
+target_include_directories(numcxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(numcxx INTERFACE OpenBLAS::OpenBLAS)
 
 # 主程序可执行文件（可选）
 add_executable(main main.cpp)
 target_link_libraries(main PRIVATE numcxx)
-
-# 自动复制 DLL 到输出目录
-if(WIN32)
-    add_custom_command(TARGET main POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${OPENBLAS_BIN_DIR}/libopenblas.dll"
-            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-        COMMENT "Copying OpenBLAS DLL to bin/"
-    )
-endif()
+copy_openblas_dll(main)
 
 # 启用测试
 enable_testing()

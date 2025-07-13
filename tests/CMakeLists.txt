@@ -26,6 +26,7 @@ set(TEST_TARGETS
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)
     add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
     target_link_libraries(${TEST_TARGET} PRIVATE test_utils GTest::gtest_main)
+    copy_openblas_dll(${TEST_TARGET})
     include(GoogleTest)
     gtest_discover_tests(${TEST_TARGET})
 endforeach()
