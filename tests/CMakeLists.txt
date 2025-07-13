@@ -27,6 +27,14 @@ foreach(TEST_TARGET IN LISTS TEST_TARGETS)
     add_executable(${TEST_TARGET} ${TEST_TARGET}.cpp)
     target_link_libraries(${TEST_TARGET} PRIVATE test_utils GTest::gtest_main)
     copy_openblas_dll(${TEST_TARGET})
+
+    # Windows：为测试发现阶段设置 PATH
+    if(WIN32)
+        set_target_properties(${TEST_TARGET} PROPERTIES
+            VS_DEBUGGER_ENVIRONMENT "PATH=$<TARGET_FILE_DIR:${TEST_TARGET}>;$ENV{PATH}"
+        )
+    endif()
+
     include(GoogleTest)
     gtest_discover_tests(${TEST_TARGET})
 endforeach()
