@@ -79,6 +79,67 @@ inline void ValidateShape(const std::vector<size_t>& shape) {
 
 }  // namespace internal
 
+/**
+ * Python-style slice implementation with start/stop/step semantics
+ * Supports both forward and reverse slicing with exclusive stop boundary
+ */
+class Slice {
+ public:
+  // Default constructor creates an empty slice [0:0:1]
+  Slice() noexcept : start_(0), stop_(0), step_(1) {}
+
+  /**
+   * Main constructor
+   * @param start First index (inclusive)
+   * @param stop Last index (exclusive)
+   * @param step Step size (default=1, cannot be zero)
+   */
+  Slice(int64_t start, int64_t stop, int64_t step = 1)
+      : start_(start), stop_(stop), step_(step) {
+    if (step == 0) {
+      throw std::invalid_argument("Slice step cannot be zero");
+    }
+  }
+
+  // Accessors
+  int64_t start() const noexcept { return start_; }
+  int64_t stop() const noexcept { return stop_; }
+  int64_t step() const noexcept { return step_; }
+
+  /**
+   * Calculate number of elements in the slice
+   * @return Number of elements, 0 if slice is empty
+   */
+  int64_t size() const noexcept {
+    if (step_ == 0) return 0;
+
+    // Check for empty slices
+    if ((step_ > 0 && start_ >= stop_) || (step_ < 0 && start_ <= stop_)) {
+      return 0;
+    }
+
+    const int64_t diff = stop_ - start_;
+    return (diff / step_) + ((diff % step_) != 0 ? 1 : 0);
+  }
+
+  // Alias for step() to match other libraries
+  int64_t stride() const noexcept { return step_; }
+
+  // Comparison operators
+  bool operator==(const Slice& other) const noexcept {
+    return (start_ == other.start_) && (stop_ == other.stop_) &&
+           (step_ == other.step_);
+  }
+  bool operator!=(const Slice& other) const noexcept {
+    return !(*this == other);
+  }
+
+ private:
+  int64_t start_;  // First index (inclusive)
+  int64_t stop_;   // Last index (exclusive)
+  int64_t step_;   // Step size (cannot be zero)
+};
+
 // ==================== 表达式模板基础设施 ====================
 template <typename Derived>
 class Expr {

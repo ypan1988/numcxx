@@ -17,6 +17,7 @@ set(TEST_TARGETS
     test_compute_strides
     test_ndarray_cstor
     # VIEW TEST
+    test_slice
     # EXPR TEST
     #test_slice_view
     #test_expressions
