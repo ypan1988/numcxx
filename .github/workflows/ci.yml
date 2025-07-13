@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_and_test:
-    timeout-minutes: 5
+    timeout-minutes: 10
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
@@ -17,15 +17,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       
-    - name: Install OpenBLAS (Linux/macOS)
-      if: matrix.os != 'windows-latest'
+    # °²×°ÒÀÀµ£¨Linux/macOS£©
+    - name: Install dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
-        if [ "$RUNNER_OS" == "Linux" ]; then
-          sudo apt-get update
-          sudo apt-get install -y libopenblas-dev
-        elif [ "$RUNNER_OS" == "macOS" ]; then
-          brew install openblas
-        fi
+        sudo apt-get update
+        sudo apt-get install -y libopenblas-dev pkg-config ninja-build
+
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew update
+        brew install openblas pkg-config ninja
 
     - name: Setup MSVC (Windows)
       if: matrix.os == 'windows-latest'

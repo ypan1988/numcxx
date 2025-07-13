@@ -36,13 +36,12 @@ if(WIN32)
         INTERFACE_INCLUDE_DIRECTORIES "${OPENBLAS_INCLUDE_DIR}"
     )
 else()
-    # Linux/macOS 使用系统包管理器安装的 OpenBLAS
-    find_package(OpenBLAS REQUIRED)
-    if(NOT TARGET OpenBLAS::OpenBLAS)
-        add_library(OpenBLAS::OpenBLAS INTERFACE IMPORTED)
-        target_include_directories(OpenBLAS::OpenBLAS INTERFACE ${OpenBLAS_INCLUDE_DIRS})
-        target_link_libraries(OpenBLAS::OpenBLAS INTERFACE ${OpenBLAS_LIBRARIES})
-    endif()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(OPENBLAS REQUIRED openblas)
+
+    add_library(OpenBLAS::OpenBLAS INTERFACE IMPORTED)
+    target_include_directories(OpenBLAS::OpenBLAS INTERFACE ${OPENBLAS_INCLUDE_DIRS})
+    target_link_libraries(OpenBLAS::OpenBLAS INTERFACE ${OPENBLAS_LINK_LIBRARIES})
 endif()
 
 # 定义复制 OpenBLAS DLL 的宏（Windows 专用）
