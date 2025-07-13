@@ -196,7 +196,7 @@ class SliceView : public Expr<SliceView<T>> {
   // 支持从表达式赋值
   template <typename E>
   SliceView& operator=(const Expr<E>& expr) {
-    for (size_t i = 0; i < size(); ++i) {
+    for (size_t i = 0; i < this->size(); ++i) {
       data_[unravel_original_index(i)] = expr[i];
     }
     return *this;
@@ -208,7 +208,10 @@ class SliceView : public Expr<SliceView<T>> {
     for (size_t i = 0; i < slices_.size(); ++i) {
       shape_[i] = slices_[i].size();
     }
-    original_strides_ = strides_;
+    // Compute strides for the view
+    internal::ComputeStrides(&strides_, shape_, order_);
+    // Store original strides
+    original_strides_ = internal::ComputeStrides(&original_strides_, original_shape_, order_);
   }
 
   size_t unravel_original_index(size_t linear_index) const {
@@ -237,6 +240,7 @@ class SliceView : public Expr<SliceView<T>> {
   std::vector<size_t> original_strides_;
   std::vector<std::slice> slices_;
   std::vector<size_t> shape_;
+  std::vector<size_t> strides_;
   MemoryOrder order_;
 };
 
