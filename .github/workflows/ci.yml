@@ -26,45 +26,26 @@ jobs:
         elif [ "$RUNNER_OS" == "macOS" ]; then
           brew install openblas
         fi
-        
+
+    - name: Setup MSVC (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: microsoft/setup-msbuild@v1  # 自动加载 VS2022 环境变量
+
     - name: Configure CMake
       shell: bash
       run: |
         mkdir -p build
         cd build
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
-        else
-          cmake .. -DCMAKE_BUILD_TYPE=Release
-        fi
+        cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
       shell: bash
       run: |
         cd build
-        cmake --build . --config Release
-
-    - name: Debug PATH and DLLs
-      shell: bash
-      run: |
-        cd build
-        echo "Current PATH: $PATH"
-        echo "Workspace: ${{ github.workspace }}"
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          echo "Windows DLL directory:"
-          ls -R "${{ github.workspace }}/build/bin/Release" || echo "No DLL directory found"
-        else
-          echo "Linux/macOS library paths:"
-          ldconfig -p | grep openblas || echo "OpenBLAS not found in ldconfig"
-        fi
+        ninja -j 4
 
     - name: Run tests
       shell: bash
       run: |
         cd build
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          export PATH="$PATH:${{ github.workspace }}/build/bin/Release"
-          ctest -C Release --output-on-failure
-        else
-          ctest --output-on-failure
-        fi
+        ctest --output-on-failure
