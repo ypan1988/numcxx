@@ -37,18 +37,33 @@ jobs:
         else
           cmake .. -DCMAKE_BUILD_TYPE=Release
         fi
-        
+
     - name: Build
       shell: bash
       run: |
         cd build
         cmake --build . --config Release
-        
+
+    - name: Debug PATH and DLLs
+      shell: bash
+      run: |
+        cd build
+        echo "Current PATH: $PATH"
+        echo "Workspace: ${{ github.workspace }}"
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          echo "Windows DLL directory:"
+          ls -R "${{ github.workspace }}/build/bin/Release" || echo "No DLL directory found"
+        else
+          echo "Linux/macOS library paths:"
+          ldconfig -p | grep openblas || echo "OpenBLAS not found in ldconfig"
+        fi
+
     - name: Run tests
       shell: bash
       run: |
         cd build
         if [ "$RUNNER_OS" == "Windows" ]; then
+          export PATH="$PATH:${{ github.workspace }}/build/bin/Release"
           ctest -C Release --output-on-failure
         else
           ctest --output-on-failure
