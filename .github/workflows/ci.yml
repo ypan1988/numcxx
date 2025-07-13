@@ -8,9 +8,11 @@ on:
 
 jobs:
   build_and_test:
+    timeout-minutes: 5
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
+      max-parallel: 1
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
