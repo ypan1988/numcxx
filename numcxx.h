@@ -25,19 +25,13 @@ namespace numcxx {
 
 enum class MemoryOrder { kRowMajor, kColMajor };
 
-// 前向声明
-template <typename T> class NdArray;
-template <typename T> class SliceView;
-template <typename T> class GSliceView;
-template <typename T> class IndexView;
-template <typename T> class MaskView;
-
 namespace internal {
 
 // Computes strides and returns total size
 // Returns the total number of elements in the array
 inline size_t ComputeStrides(std::vector<size_t>* strides,
-                      const std::vector<size_t>& shape, MemoryOrder order) {
+                             const std::vector<size_t>& shape,
+                             MemoryOrder order) {
   const size_t n_dims = shape.size();
   if (n_dims == 0) {
     strides->clear();
@@ -140,7 +134,17 @@ class Slice {
   int64_t step_;   // Step size (cannot be zero)
 };
 
-// ==================== 表达式模板基础设施 ====================
+template <typename T>
+class NdArray;
+template <typename T>
+class SliceArray;
+template <typename T>
+class GSliceArray;
+template <typename T>
+class MaskArray;
+template <typename T>
+class IndirectArray;
+
 template <typename Derived>
 class Expr {
  public:
@@ -157,6 +161,36 @@ class Expr {
     for (auto dim : shape()) total *= dim;
     return total;
   }
+};
+
+template <typename Op, typename E>
+class UnaryOp : public Expr<UnaryOp<Op, E>> {
+ public:
+  UnaryOp(Op op, E expr) : op_(op), expr_(std::move(expr)) {}
+
+  auto operator[](size_t i) const { return op_(expr_[i]); }
+
+  const std::vector<size_t>& shape() const { return expr_.shape(); }
+
+ private:
+  Op op_;
+  E expr_;
+};
+
+template <typename Op, typename E1, typename E2>
+class BinaryOp : public Expr<BinaryOp<Op, E1, E2>> {
+ public:
+  BinaryOp(Op op, E1 lhs, E2 rhs)
+      : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+
+  auto operator[](size_t i) const { return op_(lhs_[i], rhs_[i]); }
+
+  const std::vector<size_t>& shape() const { return lhs_.shape(); }
+
+ private:
+  Op op_;
+  E1 lhs_;
+  E2 rhs_;
 };
 
 // ==================== NdArray 核心实现 ====================
@@ -207,8 +241,8 @@ class NdArray : public Expr<NdArray<T>> {
   const T* data() const { return &data_[0]; }
 
   // 切片操作
-  SliceView<T> slice(const std::vector<std::slice>& slices) {
-    return SliceView<T>(*this, slices);
+  SliceArray<T> slice(const std::vector<std::slice>& slices) {
+    return SliceArray<T>(*this, slices);
   }
 
   // 表达式赋值
@@ -226,14 +260,14 @@ class NdArray : public Expr<NdArray<T>> {
   std::vector<size_t> strides_;
   MemoryOrder order_;
 
-  friend class SliceView<T>;
+  friend class SliceArray<T>;
 };
 
-// ==================== SliceView 实现 ====================
+// ==================== SliceArray 实现 ====================
 template <typename T>
-class SliceView : public Expr<SliceView<T>> {
+class SliceArray : public Expr<SliceArray<T>> {
  public:
-  SliceView(NdArray<T>& array, const std::vector<std::slice>& slices)
+  SliceArray(NdArray<T>& array, const std::vector<std::slice>& slices)
       : data_(array.data_),
         original_shape_(array.shape_),
         slices_(slices),
@@ -256,7 +290,7 @@ class SliceView : public Expr<SliceView<T>> {
 
   // 支持从表达式赋值
   template <typename E>
-  SliceView& operator=(const Expr<E>& expr) {
+  SliceArray& operator=(const Expr<E>& expr) {
     for (size_t i = 0; i < this->size(); ++i) {
       data_[unravel_original_index(i)] = expr[i];
     }
@@ -272,7 +306,8 @@ class SliceView : public Expr<SliceView<T>> {
     // Compute strides for the view
     internal::ComputeStrides(&strides_, shape_, order_);
     // Store original strides
-    original_strides_ = internal::ComputeStrides(&original_strides_, original_shape_, order_);
+    original_strides_ =
+        internal::ComputeStrides(&original_strides_, original_shape_, order_);
   }
 
   size_t unravel_original_index(size_t linear_index) const {
@@ -321,26 +356,6 @@ class Scalar : public Expr<Scalar<T>> {
   T value_;
 };
 
-// 二元操作
-template <typename E1, typename E2, typename Op>
-class BinaryOp : public Expr<BinaryOp<E1, E2, Op>> {
- public:
-  BinaryOp(E1 lhs, E2 rhs, Op op = {})
-      : lhs_(std::move(lhs)), rhs_(std::move(rhs)), op_(op) {}
-
-  auto operator[](size_t i) const { return op_(lhs_[i], rhs_[i]); }
-
-  const std::vector<size_t>& shape() const {
-    // 简化：假设形状相同，实际应实现广播
-    return lhs_.shape();
-  }
-
- private:
-  E1 lhs_;
-  E2 rhs_;
-  Op op_;
-};
-
 // 加法操作
 struct AddOp {
   template <typename L, typename R>
@@ -352,7 +367,7 @@ struct AddOp {
 // 运算符重载
 template <typename E1, typename E2>
 auto operator+(const Expr<E1>& lhs, const Expr<E2>& rhs) {
-  return BinaryOp<E1, E2, AddOp>(static_cast<const E1&>(lhs),
+  return BinaryOp<AddOp, E1, E2>(static_cast<const E1&>(lhs),
                                  static_cast<const E2&>(rhs));
 }
 
