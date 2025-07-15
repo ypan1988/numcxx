@@ -193,6 +193,22 @@ class BinaryOp : public Expr<BinaryOp<Op, E1, E2>> {
   E2 rhs_;
 };
 
+template <typename T>
+class ScalarExpr : public Expr<ScalarExpr<T>> {
+ public:
+  explicit ScalarExpr(T value) : value_(value) {}
+
+  T operator[](size_t) const { return value_; }
+
+  const std::vector<size_t>& shape() const {
+    static const std::vector<size_t> scalar_shape{1};
+    return scalar_shape;
+  }
+
+ private:
+  T value_;
+};
+
 // ==================== NdArray 核心实现 ====================
 template <typename T>
 class NdArray : public Expr<NdArray<T>> {
@@ -338,22 +354,6 @@ class SliceArray : public Expr<SliceArray<T>> {
   std::vector<size_t> shape_;
   std::vector<size_t> strides_;
   MemoryOrder order_;
-};
-
-// ==================== 表达式操作 ====================
-// 标量包装
-template <typename T>
-class Scalar : public Expr<Scalar<T>> {
- public:
-  explicit Scalar(T value) : value_(value) {}
-  T operator[](size_t) const { return value_; }
-  const std::vector<size_t>& shape() const {
-    static const std::vector<size_t> scalar_shape{1};
-    return scalar_shape;
-  }
-
- private:
-  T value_;
 };
 
 // 加法操作
