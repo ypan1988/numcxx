@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>  // for std::move
 #include <valarray>
 #include <vector>
@@ -221,6 +222,36 @@ struct UnaryMinus {
   using result_type = T;
 
   constexpr T operator()(const T& x) const { return -x; }
+};
+
+template <typename T>
+struct BitwiseNot {
+  using result_type = T;
+
+  constexpr T operator()(const T& x) const {
+    static_assert(std::is_integral_v<T>, "bitwise_not requires integer types");
+    return ~x;
+  }
+};
+
+template <typename T>
+struct LeftShift {
+  using result_type = T;
+
+  constexpr T operator()(const T& x, const T& y) const {
+    static_assert(std::is_integral_v<T>, "left_shift requires integer types");
+    return x << y;
+  }
+};
+
+template <typename T>
+struct RightShift {
+  using result_type = T;
+
+  constexpr T operator()(const T& x, const T& y) const {
+    static_assert(std::is_integral_v<T>, "right_shift requires integer types");
+    return x >> y;
+  }
 };
 
 // ==================== NdArray 核心实现 ====================
