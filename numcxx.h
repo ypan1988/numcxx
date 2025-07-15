@@ -209,6 +209,20 @@ class ScalarExpr : public Expr<ScalarExpr<T>> {
   T value_;
 };
 
+template <typename T>
+struct UnaryPlus {
+  using result_type = T;
+
+  constexpr T operator()(const T& x) const { return +x; }
+};
+
+template <typename T>
+struct UnaryMinus {
+  using result_type = T;
+
+  constexpr T operator()(const T& x) const { return -x; }
+};
+
 // ==================== NdArray 核心实现 ====================
 template <typename T>
 class NdArray : public Expr<NdArray<T>> {
