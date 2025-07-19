@@ -65,7 +65,11 @@ endmacro()
 # 创建 numcxx 接口库
 add_library(numcxx INTERFACE)
 target_include_directories(numcxx INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(numcxx INTERFACE OpenBLAS::OpenBLAS)
+if(APPLE)
+    target_link_libraries(numcxx INTERFACE Accelerate::Accelerate)
+else()
+    target_link_libraries(numcxx INTERFACE OpenBLAS::OpenBLAS)
+endif()
 
 # 主程序可执行文件（可选）
 add_executable(main main.cpp)
