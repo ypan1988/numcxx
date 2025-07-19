@@ -35,6 +35,12 @@ if(WIN32)
         IMPORTED_LOCATION  "${OPENBLAS_BIN_DIR}/libopenblas.dll"
         INTERFACE_INCLUDE_DIRECTORIES "${OPENBLAS_INCLUDE_DIR}"
     )
+elseif(APPLE)
+    find_library(ACCELERATE_LIBRARY Accelerate REQUIRED)
+    message(STATUS "Found Accelerate: ${ACCELERATE_LIBRARY}")
+
+    add_library(Accelerate::Accelerate INTERFACE IMPORTED)
+    target_link_libraries(Accelerate::Accelerate INTERFACE ${ACCELERATE_LIBRARY})
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(OPENBLAS REQUIRED openblas)

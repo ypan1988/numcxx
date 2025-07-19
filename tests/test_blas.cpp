@@ -1,4 +1,8 @@
+#ifdef __APPLE__
+#include <Accelerate/Accelerate.h>
+#else
 #include <cblas.h>
+#endif
 #include <gtest/gtest.h>
 
 TEST(OpenBLAS, BasicOperation) {
