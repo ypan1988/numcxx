@@ -16,8 +16,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
+
+    - name: Setup MSVC (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: microsoft/setup-msbuild@v1
       
-    # 安装依赖（Linux/macOS）
     - name: Install dependencies (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: |
@@ -28,11 +31,7 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         brew update
-        brew install openblas pkg-config ninja
-
-    - name: Setup MSVC (Windows)
-      if: matrix.os == 'windows-latest'
-      uses: microsoft/setup-msbuild@v1  # 自动加载 VS2022 环境变量
+        brew install pkg-config ninja
 
     - name: Configure CMake
       shell: bash
