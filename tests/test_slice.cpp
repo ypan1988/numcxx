@@ -56,7 +56,7 @@ TEST_F(SliceTest, SizeCalculation) {
   EXPECT_EQ(single_.size(), 1);        // Element: 3
 
   // Reverse slices
-  EXPECT_EQ(reverse_.size(), 4);  // Elements: 10, 8, 6, 4 (stop=2 excluded)
+  EXPECT_EQ(reverse_.size(), 4);           // Elements: 10, 8, 6, 4 (stop=2 excluded)
   EXPECT_EQ(Slice(10, 0, -1).size(), 10);  // Count down from 10 to 1
   EXPECT_EQ(Slice(9, 0, -3).size(), 3);    // Elements: 9, 6, 3
 

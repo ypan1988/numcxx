@@ -20,9 +20,7 @@ TEST_F(NdArrayTest, DefaultConstructor) {
   EXPECT_EQ(arr.strides(), (std::vector<size_t>{3, 1}));
 
   // Verify initialization
-  for (size_t i = 0; i < arr.size(); ++i) {
-    EXPECT_FLOAT_EQ(arr.data()[i], 1.5f);
-  }
+  for (size_t i = 0; i < arr.size(); ++i) { EXPECT_FLOAT_EQ(arr.data()[i], 1.5f); }
 }
 
 TEST_F(NdArrayTest, ColumnMajorConstructor) {

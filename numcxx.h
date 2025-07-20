@@ -30,9 +30,7 @@ namespace internal {
 
 // Computes strides and returns total size
 // Returns the total number of elements in the array
-inline size_t ComputeStrides(std::vector<size_t>* strides,
-                             const std::vector<size_t>& shape,
-                             MemoryOrder order) {
+inline size_t ComputeStrides(std::vector<size_t>* strides, const std::vector<size_t>& shape, MemoryOrder order) {
   const size_t n_dims = shape.size();
   if (n_dims == 0) {
     strides->clear();
@@ -44,15 +42,11 @@ inline size_t ComputeStrides(std::vector<size_t>* strides,
 
   if (order == MemoryOrder::kRowMajor) {
     strides->back() = 1;
-    for (size_t i = n_dims - 1; i > 0; --i) {
-      (*strides)[i - 1] = (*strides)[i] * shape[i];
-    }
+    for (size_t i = n_dims - 1; i > 0; --i) { (*strides)[i - 1] = (*strides)[i] * shape[i]; }
     total_size = strides->front() * shape.front();
   } else {
     strides->front() = 1;
-    for (size_t i = 1; i < n_dims; ++i) {
-      (*strides)[i] = (*strides)[i - 1] * shape[i - 1];
-    }
+    for (size_t i = 1; i < n_dims; ++i) { (*strides)[i] = (*strides)[i - 1] * shape[i - 1]; }
     total_size = strides->back() * shape.back();
   }
 
@@ -61,14 +55,10 @@ inline size_t ComputeStrides(std::vector<size_t>* strides,
 
 // Validates the shape parameters
 inline void ValidateShape(const std::vector<size_t>& shape) {
-  if (shape.empty()) {
-    throw std::invalid_argument("Shape cannot be empty");
-  }
+  if (shape.empty()) { throw std::invalid_argument("Shape cannot be empty"); }
 
   for (const auto& dim : shape) {
-    if (dim == 0) {
-      throw std::invalid_argument("All dimensions must be > 0");
-    }
+    if (dim == 0) { throw std::invalid_argument("All dimensions must be > 0"); }
   }
 }
 
@@ -89,11 +79,8 @@ class Slice {
    * @param stop Last index (exclusive)
    * @param step Step size (default=1, cannot be zero)
    */
-  Slice(int64_t start, int64_t stop, int64_t step = 1)
-      : start_(start), stop_(stop), step_(step) {
-    if (step == 0) {
-      throw std::invalid_argument("Slice step cannot be zero");
-    }
+  Slice(int64_t start, int64_t stop, int64_t step = 1) : start_(start), stop_(stop), step_(step) {
+    if (step == 0) { throw std::invalid_argument("Slice step cannot be zero"); }
   }
 
   // Accessors
@@ -109,9 +96,7 @@ class Slice {
     if (step_ == 0) return 0;
 
     // Check for empty slices
-    if ((step_ > 0 && start_ >= stop_) || (step_ < 0 && start_ <= stop_)) {
-      return 0;
-    }
+    if ((step_ > 0 && start_ >= stop_) || (step_ < 0 && start_ <= stop_)) { return 0; }
 
     const int64_t diff = stop_ - start_;
     return (diff / step_) + ((diff % step_) != 0 ? 1 : 0);
@@ -121,13 +106,8 @@ class Slice {
   int64_t stride() const noexcept { return step_; }
 
   // Comparison operators
-  bool operator==(const Slice& other) const noexcept {
-    return (start_ == other.start_) && (stop_ == other.stop_) &&
-           (step_ == other.step_);
-  }
-  bool operator!=(const Slice& other) const noexcept {
-    return !(*this == other);
-  }
+  bool operator==(const Slice& other) const noexcept { return (start_ == other.start_) && (stop_ == other.stop_) && (step_ == other.step_); }
+  bool operator!=(const Slice& other) const noexcept { return !(*this == other); }
 
  private:
   int64_t start_;  // First index (inclusive)
@@ -135,27 +115,17 @@ class Slice {
   int64_t step_;   // Step size (cannot be zero)
 };
 
-template <typename T>
-class NdArray;
-template <typename T>
-class SliceArray;
-template <typename T>
-class GSliceArray;
-template <typename T>
-class MaskArray;
-template <typename T>
-class IndirectArray;
+template <typename T> class NdArray;
+template <typename T> class SliceArray;
+template <typename T> class GSliceArray;
+template <typename T> class MaskArray;
+template <typename T> class IndirectArray;
 
-template <typename Derived>
-class Expr {
+template <typename Derived> class Expr {
  public:
-  auto operator[](size_t i) const {
-    return static_cast<const Derived&>(*this)[i];
-  }
+  auto operator[](size_t i) const { return static_cast<const Derived&>(*this)[i]; }
 
-  const std::vector<size_t>& shape() const {
-    return static_cast<const Derived&>(*this).shape();
-  }
+  const std::vector<size_t>& shape() const { return static_cast<const Derived&>(*this).shape(); }
 
   size_t size() const {
     size_t total = 1;
@@ -164,8 +134,7 @@ class Expr {
   }
 };
 
-template <typename Op, typename E>
-class UnaryOp : public Expr<UnaryOp<Op, E>> {
+template <typename Op, typename E> class UnaryOp : public Expr<UnaryOp<Op, E>> {
  public:
   UnaryOp(Op op, E expr) : op_(op), expr_(std::move(expr)) {}
 
@@ -178,11 +147,9 @@ class UnaryOp : public Expr<UnaryOp<Op, E>> {
   E expr_;
 };
 
-template <typename Op, typename E1, typename E2>
-class BinaryOp : public Expr<BinaryOp<Op, E1, E2>> {
+template <typename Op, typename E1, typename E2> class BinaryOp : public Expr<BinaryOp<Op, E1, E2>> {
  public:
-  BinaryOp(Op op, E1 lhs, E2 rhs)
-      : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
+  BinaryOp(Op op, E1 lhs, E2 rhs) : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {}
 
   auto operator[](size_t i) const { return op_(lhs_[i], rhs_[i]); }
 
@@ -194,8 +161,7 @@ class BinaryOp : public Expr<BinaryOp<Op, E1, E2>> {
   E2 rhs_;
 };
 
-template <typename T>
-class ScalarExpr : public Expr<ScalarExpr<T>> {
+template <typename T> class ScalarExpr : public Expr<ScalarExpr<T>> {
  public:
   explicit ScalarExpr(T value) : value_(value) {}
 
@@ -210,22 +176,19 @@ class ScalarExpr : public Expr<ScalarExpr<T>> {
   T value_;
 };
 
-template <typename T>
-struct UnaryPlus {
+template <typename T> struct UnaryPlus {
   using result_type = T;
 
   constexpr T operator()(const T& x) const { return +x; }
 };
 
-template <typename T>
-struct UnaryMinus {
+template <typename T> struct UnaryMinus {
   using result_type = T;
 
   constexpr T operator()(const T& x) const { return -x; }
 };
 
-template <typename T>
-struct BitwiseNot {
+template <typename T> struct BitwiseNot {
   using result_type = T;
 
   constexpr T operator()(const T& x) const {
@@ -234,8 +197,7 @@ struct BitwiseNot {
   }
 };
 
-template <typename T>
-struct LeftShift {
+template <typename T> struct LeftShift {
   using result_type = T;
 
   constexpr T operator()(const T& x, const T& y) const {
@@ -244,8 +206,7 @@ struct LeftShift {
   }
 };
 
-template <typename T>
-struct RightShift {
+template <typename T> struct RightShift {
   using result_type = T;
 
   constexpr T operator()(const T& x, const T& y) const {
@@ -255,25 +216,17 @@ struct RightShift {
 };
 
 // ==================== NdArray 核心实现 ====================
-template <typename T>
-class NdArray : public Expr<NdArray<T>> {
+template <typename T> class NdArray : public Expr<NdArray<T>> {
  public:
-  NdArray(std::vector<size_t> shape, const T& init_value = T(),
-          MemoryOrder order = MemoryOrder::kRowMajor)
-      : shape_(std::move(shape)), order_(order) {
+  NdArray(std::vector<size_t> shape, const T& init_value = T(), MemoryOrder order = MemoryOrder::kRowMajor) : shape_(std::move(shape)), order_(order) {
     internal::ValidateShape(shape_);
-    const size_t total_size =
-        internal::ComputeStrides(&strides_, shape_, order_);
+    const size_t total_size = internal::ComputeStrides(&strides_, shape_, order_);
     data_.resize(total_size, init_value);
   }
 
   // 从表达式构造
-  template <typename E,
-            typename = std::enable_if_t<std::is_base_of_v<Expr<E>, E>>>
-  explicit NdArray(const Expr<E>& expr) : NdArray(expr.shape()) {
-    for (size_t i = 0; i < size(); ++i) {
-      data_[i] = expr[i];
-    }
+  template <typename E, typename = std::enable_if_t<std::is_base_of_v<Expr<E>, E>>> explicit NdArray(const Expr<E>& expr) : NdArray(expr.shape()) {
+    for (size_t i = 0; i < size(); ++i) { data_[i] = expr[i]; }
   }
 
   // 基础访问
@@ -302,16 +255,11 @@ class NdArray : public Expr<NdArray<T>> {
   const T* data() const { return &data_[0]; }
 
   // 切片操作
-  SliceArray<T> slice(const std::vector<std::slice>& slices) {
-    return SliceArray<T>(*this, slices);
-  }
+  SliceArray<T> slice(const std::vector<std::slice>& slices) { return SliceArray<T>(*this, slices); }
 
   // 表达式赋值
-  template <typename E>
-  NdArray& operator=(const Expr<E>& expr) {
-    for (size_t i = 0; i < size(); ++i) {
-      data_[i] = expr[i];
-    }
+  template <typename E> NdArray& operator=(const Expr<E>& expr) {
+    for (size_t i = 0; i < size(); ++i) { data_[i] = expr[i]; }
     return *this;
   }
 
@@ -325,14 +273,10 @@ class NdArray : public Expr<NdArray<T>> {
 };
 
 // ==================== SliceArray 实现 ====================
-template <typename T>
-class SliceArray : public Expr<SliceArray<T>> {
+template <typename T> class SliceArray : public Expr<SliceArray<T>> {
  public:
   SliceArray(NdArray<T>& array, const std::vector<std::slice>& slices)
-      : data_(array.data_),
-        original_shape_(array.shape_),
-        slices_(slices),
-        order_(array.order_) {
+      : data_(array.data_), original_shape_(array.shape_), slices_(slices), order_(array.order_) {
     compute_view_shape();
   }
 
@@ -341,8 +285,7 @@ class SliceArray : public Expr<SliceArray<T>> {
     size_t original_index = 0;
     for (size_t dim = 0; dim < indices.size(); ++dim) {
       const auto& s = slices_[dim];
-      original_index +=
-          (s.start() + indices[dim] * s.stride()) * original_strides_[dim];
+      original_index += (s.start() + indices[dim] * s.stride()) * original_strides_[dim];
     }
     return data_[original_index];
   }
@@ -350,25 +293,19 @@ class SliceArray : public Expr<SliceArray<T>> {
   const std::vector<size_t>& shape() const { return shape_; }
 
   // 支持从表达式赋值
-  template <typename E>
-  SliceArray& operator=(const Expr<E>& expr) {
-    for (size_t i = 0; i < this->size(); ++i) {
-      data_[unravel_original_index(i)] = expr[i];
-    }
+  template <typename E> SliceArray& operator=(const Expr<E>& expr) {
+    for (size_t i = 0; i < this->size(); ++i) { data_[unravel_original_index(i)] = expr[i]; }
     return *this;
   }
 
  private:
   void compute_view_shape() {
     shape_.resize(slices_.size());
-    for (size_t i = 0; i < slices_.size(); ++i) {
-      shape_[i] = slices_[i].size();
-    }
+    for (size_t i = 0; i < slices_.size(); ++i) { shape_[i] = slices_[i].size(); }
     // Compute strides for the view
     internal::ComputeStrides(&strides_, shape_, order_);
     // Store original strides
-    original_strides_ =
-        internal::ComputeStrides(&original_strides_, original_shape_, order_);
+    original_strides_ = internal::ComputeStrides(&original_strides_, original_shape_, order_);
   }
 
   size_t unravel_original_index(size_t linear_index) const {
@@ -376,14 +313,12 @@ class SliceArray : public Expr<SliceArray<T>> {
     size_t original_index = 0;
     for (size_t dim = 0; dim < indices.size(); ++dim) {
       const auto& s = slices_[dim];
-      original_index +=
-          (s.start() + indices[dim] * s.stride()) * original_strides_[dim];
+      original_index += (s.start() + indices[dim] * s.stride()) * original_strides_[dim];
     }
     return original_index;
   }
 
-  static std::vector<size_t> unravel_index(size_t linear_index,
-                                           const std::vector<size_t>& shape) {
+  static std::vector<size_t> unravel_index(size_t linear_index, const std::vector<size_t>& shape) {
     std::vector<size_t> indices(shape.size());
     for (int i = shape.size() - 1; i >= 0; --i) {
       indices[i] = linear_index % shape[i];
@@ -403,17 +338,12 @@ class SliceArray : public Expr<SliceArray<T>> {
 
 // 加法操作
 struct AddOp {
-  template <typename L, typename R>
-  auto operator()(L&& l, R&& r) const {
-    return std::forward<L>(l) + std::forward<R>(r);
-  }
+  template <typename L, typename R> auto operator()(L&& l, R&& r) const { return std::forward<L>(l) + std::forward<R>(r); }
 };
 
 // 运算符重载
-template <typename E1, typename E2>
-auto operator+(const Expr<E1>& lhs, const Expr<E2>& rhs) {
-  return BinaryOp<AddOp, E1, E2>(static_cast<const E1&>(lhs),
-                                 static_cast<const E2&>(rhs));
+template <typename E1, typename E2> auto operator+(const Expr<E1>& lhs, const Expr<E2>& rhs) {
+  return BinaryOp<AddOp, E1, E2>(static_cast<const E1&>(lhs), static_cast<const E2&>(rhs));
 }
 
 }  // namespace numcxx

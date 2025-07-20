@@ -17,8 +17,7 @@ TEST(OpenBLAS, BasicOperation) {
   double B[] = {5, 6, 7, 8};
   double C[4] = {0};
 
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 2, 2, 2, 1.0, A, 2, B,
-              2, 0.0, C, 2);
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, 2, 2, 2, 1.0, A, 2, B, 2, 0.0, C, 2);
 
   EXPECT_DOUBLE_EQ(C[0], 19.0);
   EXPECT_DOUBLE_EQ(C[1], 22.0);
