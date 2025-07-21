@@ -215,6 +215,18 @@ template <typename T> struct RightShift {
   }
 };
 
+template <class T, class F> struct ApplyExpr {
+ private:
+  F f_;
+
+ public:
+  typedef T result_type;
+
+  explicit ApplyExpr(F f) : f_(f) {}
+
+  T operator()(const T& x) const { return f_(x); }
+};
+
 // ==================== NdArray 核心实现 ====================
 template <typename T> class NdArray : public Expr<NdArray<T>> {
  public:
