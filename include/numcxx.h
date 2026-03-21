@@ -13,9 +13,23 @@
 //#  include <__memory/uninitialized_algorithms.h>
 //#  include <__utility/exception_guard.h>
 
+#include <mdspan/mdarray.hpp>
+
+namespace numcxx::detail {
+    using Kokkos::Experimental::mdarray;
+    using Kokkos::extents;
+    using Kokkos::dextents;
+    using Kokkos::layout_right;
+    using Kokkos::layout_left;
+}
+
 namespace numcxx {
 
-template <class Tp>
+template <
+    class ElementType,
+    class Extents,
+    class LayoutPolicy
+>
 class ndarray;
 
 class slice {
@@ -46,17 +60,17 @@ class mask_array;
 template <class Tp>
 class indirect_array;
 
-template <class Tp>
-Tp* begin(ndarray<Tp>& v);
+template <class Tp, class Ex, class Lp>
+Tp* begin(ndarray<Tp, Ex, Lp>& v);
 
-template <class Tp>
-const Tp* begin(const ndarray<Tp>& v);
+template <class Tp, class Ex, class Lp>
+const Tp* begin(const ndarray<Tp, Ex, Lp>& v);
 
-template <class Tp>
-Tp* end(ndarray<Tp>& v);
+template <class Tp, class Ex, class Lp>
+Tp* end(ndarray<Tp, Ex, Lp>& v);
 
-template <class Tp>
-const Tp* end(const ndarray<Tp>& v);
+template <class Tp, class Ex, class Lp>
+const Tp* end(const ndarray<Tp, Ex, Lp>& v);
 
 template <class Op, class A0>
 struct UnaryOp {
@@ -267,7 +281,7 @@ public:
 
     template <class>
     friend class nc_val_expr;
-    template <class>
+    template <class, class, class>
     friend class ndarray;
 };
 
@@ -363,8 +377,8 @@ struct nc_is_val_expr : false_type {};
 template <class ValExpr>
 struct nc_is_val_expr<nc_val_expr<ValExpr> > : true_type {};
 
-template <class Tp>
-struct nc_is_val_expr<ndarray<Tp> > : true_type {};
+template <class Tp, class Ex, class Lp>
+struct nc_is_val_expr<ndarray<Tp, Ex, Lp> > : true_type {};
 
 template <class Tp>
 struct nc_is_val_expr<slice_array<Tp> > : true_type {};
@@ -404,13 +418,19 @@ struct nc_val_expr_use_member_functions<mask_array<Tp> > : true_type {};
 template <class Tp>
 struct nc_val_expr_use_member_functions<indirect_array<Tp> > : true_type {};
 
-template <class Tp>
+template <
+    class ElementType,
+    class Extents,
+    class LayoutPolicy = detail::layout_right
+>
 class ndarray {
 public:
-    typedef Tp value_type;
-    typedef Tp result_type;
+    typedef ElementType value_type;
+    typedef ElementType result_type;
 
 private:
+    detail::mdarray<ElementType, Extents, LayoutPolicy, std::vector<ElementType>> elem_;
+
     value_type* begin_;
     value_type* end_;
 
@@ -454,23 +474,23 @@ public:
     [[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s) const;
     [[nodiscard]] slice_array<value_type> operator[](slice s);
     [[nodiscard]]
-    nc_val_expr<__mask_expr<const ndarray&> > operator[](const ndarray<bool>& __vb) const;
-    [[nodiscard]] mask_array<value_type> operator[](const ndarray<bool>& __vb);
+    nc_val_expr<__mask_expr<const ndarray&> > operator[](const ndarray<bool, Extents, LayoutPolicy>& __vb) const;
+    [[nodiscard]] mask_array<value_type> operator[](const ndarray<bool, Extents, LayoutPolicy>& __vb);
     [[nodiscard]]
-        nc_val_expr<__mask_expr<const ndarray&> > operator[](ndarray<bool>&& __vb) const;
-    [[nodiscard]] mask_array<value_type> operator[](ndarray<bool>&& __vb);
+        nc_val_expr<__mask_expr<const ndarray&> > operator[](ndarray<bool, Extents, LayoutPolicy>&& __vb) const;
+    [[nodiscard]] mask_array<value_type> operator[](ndarray<bool, Extents, LayoutPolicy>&& __vb);
     [[nodiscard]]
-    nc_val_expr<__indirect_expr<const ndarray&> > operator[](const ndarray<size_t>& __vs) const;
-    [[nodiscard]] indirect_array<value_type> operator[](const ndarray<size_t>& __vs);
+    nc_val_expr<__indirect_expr<const ndarray&> > operator[](const ndarray<size_t, Extents, LayoutPolicy>& __vs) const;
+    [[nodiscard]] indirect_array<value_type> operator[](const ndarray<size_t, Extents, LayoutPolicy>& __vs);
     [[nodiscard]]
-        nc_val_expr<__indirect_expr<const ndarray&> > operator[](ndarray<size_t>&& __vs) const;
-    [[nodiscard]] indirect_array<value_type> operator[](ndarray<size_t>&& __vs);
+        nc_val_expr<__indirect_expr<const ndarray&> > operator[](ndarray<size_t, Extents, LayoutPolicy>&& __vs) const;
+    [[nodiscard]] indirect_array<value_type> operator[](ndarray<size_t, Extents, LayoutPolicy>&& __vs);
 
     // unary operators:
-    nc_val_expr<UnaryOp<__unary_plus<Tp>, const ndarray&> > operator+() const;
-    nc_val_expr<UnaryOp<std::negate<Tp>, const ndarray&> > operator-() const;
-    nc_val_expr<UnaryOp<__bit_not<Tp>, const ndarray&> > operator~() const;
-    nc_val_expr<UnaryOp<std::logical_not<Tp>, const ndarray&> > operator!() const;
+    nc_val_expr<UnaryOp<__unary_plus<ElementType>, const ndarray&> > operator+() const;
+    nc_val_expr<UnaryOp<std::negate<ElementType>, const ndarray&> > operator-() const;
+    nc_val_expr<UnaryOp<__bit_not<ElementType>, const ndarray&> > operator~() const;
+    nc_val_expr<UnaryOp<std::logical_not<ElementType>, const ndarray&> > operator!() const;
 
     // computed assignment:
     ndarray& operator*=(const value_type& x);
@@ -530,7 +550,7 @@ public:
     void resize(size_t n, value_type x = value_type());
 
 private:
-    template <class>
+    template <class, class, class>
     friend class ndarray;
     template <class>
     friend class slice_array;
@@ -545,24 +565,24 @@ private:
     template <class>
     friend class nc_val_expr;
 
-    template <class _Up>
-    friend _Up* begin(ndarray<_Up>& v);
+    template <class Up, class Ex, class Lp>
+    friend Up* begin(ndarray<Up, Ex, Lp>& v);
 
-    template <class _Up>
-    friend const _Up* begin(const ndarray<_Up>& v);
+    template <class Up, class Ex, class Lp>
+    friend const Up* begin(const ndarray<Up, Ex, Lp>& v);
 
-    template <class _Up>
-    friend _Up* end(ndarray<_Up>& v);
+    template <class Up, class Ex, class Lp>
+    friend Up* end(ndarray<Up, Ex, Lp>& v);
 
-    template <class _Up>
-    friend const _Up* end(const ndarray<_Up>& v);
+    template <class Up, class Ex, class Lp>
+    friend const Up* end(const ndarray<Up, Ex, Lp>& v);
 
     void __clear(size_t capacity);
     ndarray& __assign_range(const value_type* __f, const value_type* __l);
 };
 
-template <class Tp, size_t _Size>
-ndarray(const Tp(&)[_Size], size_t) -> ndarray<Tp>;
+//template <class Tp, size_t _Size>
+//ndarray(const Tp(&)[_Size], size_t) -> ndarray<Tp>;
 
 template <class Expr,
     std::enable_if_t<nc_is_val_expr<Expr>::value&& nc_val_expr_use_member_functions<Expr>::value, int> = 0>
@@ -576,33 +596,33 @@ typename Expr::value_type __get(const Expr& v, size_t i) {
     return v[i];
 }
 
-extern template void ndarray<size_t>::resize(size_t, size_t);
+//extern template void ndarray<size_t>::resize(size_t, size_t);
 
-template <class Op, class Tp>
-struct UnaryOp<Op, ndarray<Tp> > {
+template <class Op, class Tp, class Ex, class Lp>
+struct UnaryOp<Op, ndarray<Tp, Ex, Lp> > {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
     Op op_;
-    const ndarray<Tp>& a0_;
+    const ndarray<Tp, Ex, Lp>& a0_;
 
-    UnaryOp(const Op& op, const ndarray<Tp>& a0) : op_(op), a0_(a0) {}
+    UnaryOp(const Op& op, const ndarray<Tp, Ex, Lp>& a0) : op_(op), a0_(a0) {}
 
     result_type operator[](size_t i) const { return op_(a0_[i]); }
 
     size_t size() const { return a0_.size(); }
 };
 
-template <class Op, class Tp, class A1>
-struct BinaryOp<Op, ndarray<Tp>, A1> {
+template <class Op, class Tp, class Ex, class Lp, class A1>
+struct BinaryOp<Op, ndarray<Tp, Ex, Lp>, A1> {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
     Op op_;
-    const ndarray<Tp>& a0_;
+    const ndarray<Tp, Ex, Lp>& a0_;
     A1 a1_;
 
-    BinaryOp(const Op& op, const ndarray<Tp>& a0, const A1& a1)
+    BinaryOp(const Op& op, const ndarray<Tp, Ex, Lp>& a0, const A1& a1)
         : op_(op), a0_(a0), a1_(a1) {
     }
 
@@ -611,16 +631,16 @@ struct BinaryOp<Op, ndarray<Tp>, A1> {
     size_t size() const { return a0_.size(); }
 };
 
-template <class Op, class A0, class Tp>
-struct BinaryOp<Op, A0, ndarray<Tp> > {
+template <class Op, class A0, class Tp, class Ex, class Lp>
+struct BinaryOp<Op, A0, ndarray<Tp, Ex, Lp> > {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
     Op op_;
     A0 a0_;
-    const ndarray<Tp>& a1_;
+    const ndarray<Tp, Ex, Lp>& a1_;
 
-    BinaryOp(const Op& op, const A0& a0, const ndarray<Tp>& a1)
+    BinaryOp(const Op& op, const A0& a0, const ndarray<Tp, Ex, Lp>& a1)
         : op_(op), a0_(a0), a1_(a1) {
     }
 
@@ -629,16 +649,22 @@ struct BinaryOp<Op, A0, ndarray<Tp> > {
     size_t size() const { return a0_.size(); }
 };
 
-template <class Op, class Tp>
-struct BinaryOp<Op, ndarray<Tp>, ndarray<Tp> > {
+template <class Op,
+    class Tp1, class Ex1, class Lp1,
+    class Tp2, class Ex2, class Lp2
+>
+struct BinaryOp<Op,
+    ndarray<Tp1, Ex1, Lp1>,
+    ndarray<Tp2, Ex2, Lp2>
+> {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
     Op op_;
-    const ndarray<Tp>& a0_;
-    const ndarray<Tp>& a1_;
+    const ndarray<Tp1, Ex1, Lp1>& a0_;
+    const ndarray<Tp2, Ex2, Lp2>& a1_;
 
-    BinaryOp(const Op& op, const ndarray<Tp>& a0, const ndarray<Tp>& a1)
+    BinaryOp(const Op& op, const ndarray<Tp1, Ex1, Lp1>& a0, const ndarray<Tp2, Ex2, Lp2>& a1)
         : op_(op), a0_(a0), a1_(a1) {
     }
 
@@ -699,7 +725,8 @@ public:
 
     void operator=(const value_type& x) const;
 
-    void operator=(const ndarray<value_type>& __va) const;
+    template <class Ex, class Lp>
+    void operator=(const ndarray<value_type, Ex, Lp>& __va) const;
 
     // Behaves like nc_val_expr::operator[], which returns by value.
     value_type __get(size_t i) const {
@@ -708,11 +735,12 @@ public:
     }
 
 private:
-    slice_array(const slice& __sl, const ndarray<value_type>& v)
+    template <class Ex, class Lp>
+    slice_array(const slice& __sl, const ndarray<value_type, Ex, Lp>& v)
         : vp_(const_cast<value_type*>(v.begin_ + __sl.start())), size_(__sl.size()), stride_(__sl.stride()) {
     }
 
-    template <class>
+    template <class, class, class>
     friend class ndarray;
 };
 
@@ -734,7 +762,8 @@ inline void slice_array<Tp>::operator=(const Expr& v) const {
 }
 
 template <class Tp>
-inline void slice_array<Tp>::operator=(const ndarray<value_type>& __va) const {
+template <class Ex, class Lp>
+inline void slice_array<Tp>::operator=(const ndarray<value_type, Ex, Lp>& __va) const {
     value_type* t = vp_;
     for (size_t i = 0; i < __va.size(); ++i, t += stride_)
         *t = __va[i];
@@ -836,7 +865,7 @@ public:
 
 private:
     value_type* vp_;
-    ndarray<size_t> oned_;
+    detail::mdarray<size_t, detail::dextents<std::size_t,1>, detail::layout_right> oned_;
 
 public:
     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
@@ -885,7 +914,8 @@ public:
     }
 
 private:
-    mask_array(const ndarray<bool>& __vb, const ndarray<value_type>& v)
+    template <class Ex, class Lp>
+    mask_array(const ndarray<bool, Ex, Lp>& __vb, const ndarray<value_type, Ex, Lp>& v)
         : vp_(const_cast<value_type*>(v.begin_)),
         oned_(static_cast<size_t>(count(__vb.begin_, __vb.end_, true))) {
         size_t j = 0;
@@ -894,7 +924,7 @@ private:
                 oned_[j++] = i;
     }
 
-    template <class>
+    template <class, class, class>
     friend class ndarray;
 };
 
@@ -1011,9 +1041,9 @@ public:
 
 private:
     ValExpr expr_;
-    ndarray<size_t> oned_;
+    ndarray<size_t, detail::dextents<std::size_t, 1>, detail::layout_right> oned_;
 
-    __mask_expr(const ndarray<bool>& __vb, const _RmExpr& e)
+    __mask_expr(const ndarray<bool, detail::dextents<std::size_t, 1>, detail::layout_right>& __vb, const _RmExpr& e)
         : expr_(e), oned_(static_cast<size_t>(count(__vb.begin_, __vb.end_, true))) {
         size_t j = 0;
         for (size_t i = 0; i < __vb.size(); ++i)
@@ -1028,7 +1058,7 @@ public:
 
     template <class>
     friend class nc_val_expr;
-    template <class>
+    template <class, class, class>
     friend class ndarray;
 };
 
@@ -1041,7 +1071,7 @@ public:
 
 private:
     value_type* vp_;
-    ndarray<size_t> oned_;
+    ndarray<size_t, detail::dextents<std::size_t, 1>, detail::layout_right> oned_;
 
 public:
     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
@@ -1090,15 +1120,17 @@ public:
     }
 
 private:
-    indirect_array(const ndarray<size_t>& ia, const ndarray<value_type>& v)
+    template <class Ex1, class Lp1, class Ex2, class Lp2>
+    indirect_array(const ndarray<size_t, Ex1, Lp1>& ia, const ndarray<value_type, Ex2, Lp2>& v)
         : vp_(const_cast<value_type*>(v.begin_)), oned_(ia) {
     }
 
-    indirect_array(ndarray<size_t>&& ia, const ndarray<value_type>& v)
+    template <class Ex1, class Lp1, class Ex2, class Lp2>
+    indirect_array(ndarray<size_t, Ex1, Lp1>&& ia, const ndarray<value_type, Ex2, Lp2>& v)
         : vp_(const_cast<value_type*>(v.begin_)), oned_(std::move(ia)) {
     }
 
-    template <class>
+    template <class, class, class>
     friend class ndarray;
 };
 
@@ -1216,11 +1248,13 @@ public:
 
 private:
     ValExpr expr_;
-    ndarray<size_t> oned_;
+    ndarray<size_t, detail::dextents<std::size_t, 1>, detail::layout_right> oned_;
 
-    __indirect_expr(const ndarray<size_t>& ia, const _RmExpr& e) : expr_(e), oned_(ia) {}
+    template <class Ex, class Lp>
+    __indirect_expr(const ndarray<size_t, Ex, Lp>& ia, const _RmExpr& e) : expr_(e), oned_(ia) {}
 
-    __indirect_expr(ndarray<size_t>&& ia, const _RmExpr& e)
+    template <class Ex, class Lp>
+    __indirect_expr(ndarray<size_t, Ex, Lp>&& ia, const _RmExpr& e)
         : expr_(e), oned_(std::move(ia)) {
     }
 
@@ -1231,7 +1265,7 @@ public:
 
     template <class>
     friend class nc_val_expr;
-    template <class>
+    template <class, class, class>
     friend class ndarray;
 };
 
@@ -1254,12 +1288,14 @@ public:
         return nc_val_expr< _NewExpr >(_NewExpr(s, expr_));
     }
 
-    nc_val_expr<__mask_expr<ValExpr> > operator[](const ndarray<bool>& __vb) const {
+    template <class Ex, class Lp>
+    nc_val_expr<__mask_expr<ValExpr> > operator[](const ndarray<bool, Ex, Lp>& __vb) const {
         typedef __mask_expr<ValExpr> _NewExpr;
         return nc_val_expr< _NewExpr >(_NewExpr(__vb, expr_));
     }
 
-    nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_t>& __vs) const {
+    template <class Ex, class Lp>
+    nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_t, Ex, Lp>& __vs) const {
         typedef __indirect_expr<ValExpr> _NewExpr;
         return nc_val_expr< _NewExpr >(_NewExpr(__vs, expr_));
     }
@@ -1284,7 +1320,8 @@ public:
         return nc_val_expr<_NewExpr>(_NewExpr(std::logical_not<value_type>(), expr_));
     }
 
-    operator ndarray<result_type>() const;
+    template<class Ex, class Lp>
+    operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
 
     size_t size() const { return expr_.size(); }
 
@@ -1342,7 +1379,8 @@ public:
 };
 
 template <class ValExpr>
-nc_val_expr<ValExpr>::operator ndarray<nc_val_expr::result_type>() const {
+template <class Ex, class Lp>
+nc_val_expr<ValExpr>::operator ndarray<nc_val_expr::result_type, Ex, Lp>() const {
     ndarray<result_type> r;
     size_t n = expr_.size();
     if (n) {
@@ -1355,8 +1393,8 @@ nc_val_expr<ValExpr>::operator ndarray<nc_val_expr::result_type>() const {
 
 // ndarray
 
-template <class Tp>
-inline ndarray<Tp>::ndarray(size_t n) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>::ndarray(size_t n) : begin_(nullptr), end_(nullptr) {
     if (n) {
         begin_ = end_ = allocator<value_type>().allocate(n);
         auto __guard = std::__make_exception_guard([&] { __clear(n); });
@@ -1366,13 +1404,13 @@ inline ndarray<Tp>::ndarray(size_t n) : begin_(nullptr), end_(nullptr) {
     }
 }
 
-template <class Tp>
-inline ndarray<Tp>::ndarray(const value_type& x, size_t n) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>::ndarray(const value_type& x, size_t n) : begin_(nullptr), end_(nullptr) {
     resize(n, x);
 }
 
-template <class Tp>
-ndarray<Tp>::ndarray(const value_type* p, size_t n) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>::ndarray(const value_type* p, size_t n) : begin_(nullptr), end_(nullptr) {
     if (n) {
         begin_ = end_ = allocator<value_type>().allocate(n);
         auto __guard = std::__make_exception_guard([&] { __clear(n); });
@@ -1382,8 +1420,8 @@ ndarray<Tp>::ndarray(const value_type* p, size_t n) : begin_(nullptr), end_(null
     }
 }
 
-template <class Tp>
-ndarray<Tp>::ndarray(const ndarray& v) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>::ndarray(const ndarray& v) : begin_(nullptr), end_(nullptr) {
     if (v.size()) {
         begin_ = end_ = allocator<value_type>().allocate(v.size());
         auto __guard = std::__make_exception_guard([&] { __clear(v.size()); });
@@ -1393,13 +1431,13 @@ ndarray<Tp>::ndarray(const ndarray& v) : begin_(nullptr), end_(nullptr) {
     }
 }
 
-template <class Tp>
-inline ndarray<Tp>::ndarray(ndarray&& v) noexcept : begin_(v.begin_), end_(v.end_) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>::ndarray(ndarray&& v) noexcept : begin_(v.begin_), end_(v.end_) {
     v.begin_ = v.end_ = nullptr;
 }
 
-template <class Tp>
-ndarray<Tp>::ndarray(std::initializer_list<value_type> __il) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>::ndarray(std::initializer_list<value_type> __il) : begin_(nullptr), end_(nullptr) {
     const size_t n = __il.size();
     if (n) {
         begin_ = end_ = allocator<value_type>().allocate(n);
@@ -1411,8 +1449,8 @@ ndarray<Tp>::ndarray(std::initializer_list<value_type> __il) : begin_(nullptr), 
     }
 }
 
-template <class Tp>
-ndarray<Tp>::ndarray(const slice_array<value_type>& sa) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>::ndarray(const slice_array<value_type>& sa) : begin_(nullptr), end_(nullptr) {
     const size_t n = sa.size_;
     if (n) {
         begin_ = end_ = allocator<value_type>().allocate(n);
@@ -1424,8 +1462,8 @@ ndarray<Tp>::ndarray(const slice_array<value_type>& sa) : begin_(nullptr), end_(
     }
 }
 
-template <class Tp>
-ndarray<Tp>::ndarray(const mask_array<value_type>& ma) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>::ndarray(const mask_array<value_type>& ma) : begin_(nullptr), end_(nullptr) {
     const size_t n = ma.oned_.size();
     if (n) {
         begin_ = end_ = allocator<value_type>().allocate(n);
@@ -1438,8 +1476,8 @@ ndarray<Tp>::ndarray(const mask_array<value_type>& ma) : begin_(nullptr), end_(n
     }
 }
 
-template <class Tp>
-ndarray<Tp>::ndarray(const indirect_array<value_type>& ia) : begin_(nullptr), end_(nullptr) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>::ndarray(const indirect_array<value_type>& ia) : begin_(nullptr), end_(nullptr) {
     const size_t n = ia.oned_.size();
     if (n) {
         begin_ = end_ = allocator<value_type>().allocate(n);
@@ -1452,13 +1490,13 @@ ndarray<Tp>::ndarray(const indirect_array<value_type>& ia) : begin_(nullptr), en
     }
 }
 
-template <class Tp>
-inline ndarray<Tp>::~ndarray() {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>::~ndarray() {
     __clear(size());
 }
 
-template <class Tp>
-ndarray<Tp>& ndarray<Tp>::__assign_range(const value_type* __f, const value_type* __l) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::__assign_range(const value_type* __f, const value_type* __l) {
     size_t n = __l - __f;
     if (size() != n) {
         __clear(size());
@@ -1472,15 +1510,15 @@ ndarray<Tp>& ndarray<Tp>::__assign_range(const value_type* __f, const value_type
     return *this;
 }
 
-template <class Tp>
-ndarray<Tp>& ndarray<Tp>::operator=(const ndarray& v) {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const ndarray& v) {
     if (this != std::addressof(v))
         return __assign_range(v.begin_, v.end_);
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator=(ndarray&& v) noexcept {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(ndarray&& v) noexcept {
     __clear(size());
     begin_ = v.begin_;
     end_ = v.end_;
@@ -1489,19 +1527,19 @@ inline ndarray<Tp>& ndarray<Tp>::operator=(ndarray&& v) noexcept {
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator=(std::initializer_list<value_type> __il) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(std::initializer_list<value_type> __il) {
     return __assign_range(__il.begin(), __il.end());
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const value_type& x) {
     std::fill(begin_, end_, x);
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator=(const slice_array<value_type>& sa) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const slice_array<value_type>& sa) {
     value_type* t = begin_;
     const value_type* s = sa.vp_;
     for (size_t n = sa.size_; n; --n, s += sa.stride_, ++t)
@@ -1509,8 +1547,8 @@ inline ndarray<Tp>& ndarray<Tp>::operator=(const slice_array<value_type>& sa) {
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator=(const mask_array<value_type>& ma) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const mask_array<value_type>& ma) {
     typedef const size_t* _Ip;
     value_type* t = begin_;
     const value_type* s = ma.vp_;
@@ -1519,8 +1557,8 @@ inline ndarray<Tp>& ndarray<Tp>::operator=(const mask_array<value_type>& ma) {
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator=(const indirect_array<value_type>& ia) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const indirect_array<value_type>& ia) {
     typedef const size_t* _Ip;
     value_type* t = begin_;
     const value_type* s = ia.vp_;
@@ -1529,9 +1567,9 @@ inline ndarray<Tp>& ndarray<Tp>::operator=(const indirect_array<value_type>& ia)
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class ValExpr>
-inline ndarray<Tp>& ndarray<Tp>::operator=(const nc_val_expr<ValExpr>& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<ValExpr>& v) {
     size_t n = v.size();
     if (size() != n)
         resize(n);
@@ -1541,249 +1579,249 @@ inline ndarray<Tp>& ndarray<Tp>::operator=(const nc_val_expr<ValExpr>& v) {
     return *this;
 }
 
-template <class Tp>
-inline nc_val_expr<__slice_expr<const ndarray<Tp>&> > ndarray<Tp>::operator[](slice s) const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<__slice_expr<const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator[](slice s) const {
     return nc_val_expr<__slice_expr<const ndarray&> >(__slice_expr<const ndarray&>(s, *this));
 }
 
-template <class Tp>
-inline slice_array<Tp> ndarray<Tp>::operator[](slice s) {
+template <class Tp, class Ex, class Lp>
+inline slice_array<Tp> ndarray<Tp, Ex, Lp>::operator[](slice s) {
     return slice_array<value_type>(s, *this);
 }
 
-template <class Tp>
-inline nc_val_expr<__mask_expr<const ndarray<Tp>&> > ndarray<Tp>::operator[](const ndarray<bool>& __vb) const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<__mask_expr<const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator[](const ndarray<bool, Ex, Lp>& __vb) const {
     return nc_val_expr<__mask_expr<const ndarray&> >(__mask_expr<const ndarray&>(__vb, *this));
 }
 
-template <class Tp>
-inline mask_array<Tp> ndarray<Tp>::operator[](const ndarray<bool>& __vb) {
+template <class Tp, class Ex, class Lp>
+inline mask_array<Tp> ndarray<Tp, Ex, Lp>::operator[](const ndarray<bool, Ex, Lp>& __vb) {
     return mask_array<value_type>(__vb, *this);
 }
 
-template <class Tp>
-inline nc_val_expr<__mask_expr<const ndarray<Tp>&> > ndarray<Tp>::operator[](ndarray<bool>&& __vb) const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<__mask_expr<const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator[](ndarray<bool, Ex, Lp>&& __vb) const {
     return nc_val_expr<__mask_expr<const ndarray&> >(__mask_expr<const ndarray&>(std::move(__vb), *this));
 }
 
-template <class Tp>
-inline mask_array<Tp> ndarray<Tp>::operator[](ndarray<bool>&& __vb) {
+template <class Tp, class Ex, class Lp>
+inline mask_array<Tp> ndarray<Tp, Ex, Lp>::operator[](ndarray<bool, Ex, Lp>&& __vb) {
     return mask_array<value_type>(std::move(__vb), *this);
 }
 
-template <class Tp>
-inline nc_val_expr<__indirect_expr<const ndarray<Tp>&> >
-ndarray<Tp>::operator[](const ndarray<size_t>& __vs) const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<__indirect_expr<const ndarray<Tp, Ex, Lp>&> >
+ndarray<Tp, Ex, Lp>::operator[](const ndarray<size_t, Ex, Lp>& __vs) const {
     return nc_val_expr<__indirect_expr<const ndarray&> >(__indirect_expr<const ndarray&>(__vs, *this));
 }
 
-template <class Tp>
-inline indirect_array<Tp> ndarray<Tp>::operator[](const ndarray<size_t>& __vs) {
+template <class Tp, class Ex, class Lp>
+inline indirect_array<Tp> ndarray<Tp, Ex, Lp>::operator[](const ndarray<size_t, Ex, Lp>& __vs) {
     return indirect_array<value_type>(__vs, *this);
 }
 
-template <class Tp>
-inline nc_val_expr<__indirect_expr<const ndarray<Tp>&> > ndarray<Tp>::operator[](ndarray<size_t>&& __vs) const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<__indirect_expr<const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator[](ndarray<size_t, Ex, Lp>&& __vs) const {
     return nc_val_expr<__indirect_expr<const ndarray&> >(__indirect_expr<const ndarray&>(std::move(__vs), *this));
 }
 
-template <class Tp>
-inline indirect_array<Tp> ndarray<Tp>::operator[](ndarray<size_t>&& __vs) {
+template <class Tp, class Ex, class Lp>
+inline indirect_array<Tp> ndarray<Tp, Ex, Lp>::operator[](ndarray<size_t, Ex, Lp>&& __vs) {
     return indirect_array<value_type>(std::move(__vs), *this);
 }
 
-template <class Tp>
-inline nc_val_expr<UnaryOp<__unary_plus<Tp>, const ndarray<Tp>&> > ndarray<Tp>::operator+() const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<UnaryOp<__unary_plus<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator+() const {
     using Op = UnaryOp<__unary_plus<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(__unary_plus<Tp>(), *this));
 }
 
-template <class Tp>
-inline nc_val_expr<UnaryOp<std::negate<Tp>, const ndarray<Tp>&> > ndarray<Tp>::operator-() const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<UnaryOp<std::negate<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator-() const {
     using Op = UnaryOp<std::negate<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(std::negate<Tp>(), *this));
 }
 
-template <class Tp>
-inline nc_val_expr<UnaryOp<__bit_not<Tp>, const ndarray<Tp>&> > ndarray<Tp>::operator~() const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<UnaryOp<__bit_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator~() const {
     using Op = UnaryOp<__bit_not<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(__bit_not<Tp>(), *this));
 }
 
-template <class Tp>
-inline nc_val_expr<UnaryOp<std::logical_not<Tp>, const ndarray<Tp>&> > ndarray<Tp>::operator!() const {
+template <class Tp, class Ex, class Lp>
+inline nc_val_expr<UnaryOp<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator!() const {
     using Op = UnaryOp<std::logical_not<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(std::logical_not<Tp>(), *this));
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator*=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator*=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p *= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator/=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator/=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p /= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator%=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator%=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p %= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator+=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator+=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p += x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator-=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator-=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p -= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator^=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator^=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p ^= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator&=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator&=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p &= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator|=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator|=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p |= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator<<=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator<<=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p <<= x;
     return *this;
 }
 
-template <class Tp>
-inline ndarray<Tp>& ndarray<Tp>::operator>>=(const value_type& x) {
+template <class Tp, class Ex, class Lp>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator>>=(const value_type& x) {
     for (value_type* p = begin_; p != end_; ++p)
         *p >>= x;
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator*=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator*=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t *= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator/=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator/=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t /= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator%=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator%=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t %= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator+=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator+=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t += std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator-=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator-=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t -= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator^=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator^=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t ^= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator|=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator|=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t |= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator&=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator&=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t &= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator<<=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator<<=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t <<= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
+template <class Tp, class Ex, class Lp>
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-inline ndarray<Tp>& ndarray<Tp>::operator>>=(const Expr& v) {
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator>>=(const Expr& v) {
     size_t i = 0;
     for (value_type* t = begin_; t != end_; ++t, ++i)
         *t >>= std::__get(v, i);
     return *this;
 }
 
-template <class Tp>
-inline void ndarray<Tp>::swap(ndarray& v) noexcept {
+template <class Tp, class Ex, class Lp>
+inline void ndarray<Tp, Ex, Lp>::swap(ndarray& v) noexcept {
     std::swap(begin_, v.begin_);
     std::swap(end_, v.end_);
 }
 
-template <class Tp>
-inline Tp ndarray<Tp>::sum() const {
+template <class Tp, class Ex, class Lp>
+inline Tp ndarray<Tp, Ex, Lp>::sum() const {
     if (begin_ == end_)
         return value_type();
     const value_type* p = begin_;
@@ -1793,22 +1831,22 @@ inline Tp ndarray<Tp>::sum() const {
     return r;
 }
 
-template <class Tp>
-inline Tp ndarray<Tp>::min() const {
+template <class Tp, class Ex, class Lp>
+inline Tp ndarray<Tp, Ex, Lp>::min() const {
     if (begin_ == end_)
         return value_type();
     return *std::min_element(begin_, end_);
 }
 
-template <class Tp>
-inline Tp ndarray<Tp>::max() const {
+template <class Tp, class Ex, class Lp>
+inline Tp ndarray<Tp, Ex, Lp>::max() const {
     if (begin_ == end_)
         return value_type();
     return *std::max_element(begin_, end_);
 }
 
-template <class Tp>
-ndarray<Tp> ndarray<Tp>::shift(int i) const {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::shift(int i) const {
     ndarray<value_type> r;
     size_t n = size();
     if (n) {
@@ -1838,8 +1876,8 @@ ndarray<Tp> ndarray<Tp>::shift(int i) const {
     return r;
 }
 
-template <class Tp>
-ndarray<Tp> ndarray<Tp>::cshift(int i) const {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::cshift(int i) const {
     ndarray<value_type> r;
     size_t n = size();
     if (n) {
@@ -1854,8 +1892,8 @@ ndarray<Tp> ndarray<Tp>::cshift(int i) const {
     return r;
 }
 
-template <class Tp>
-ndarray<Tp> ndarray<Tp>::apply(value_type __f(value_type)) const {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(value_type)) const {
     ndarray<value_type> r;
     size_t n = size();
     if (n) {
@@ -1866,8 +1904,8 @@ ndarray<Tp> ndarray<Tp>::apply(value_type __f(value_type)) const {
     return r;
 }
 
-template <class Tp>
-ndarray<Tp> ndarray<Tp>::apply(value_type __f(const value_type&)) const {
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(const value_type&)) const {
     ndarray<value_type> r;
     size_t n = size();
     if (n) {
@@ -1878,8 +1916,8 @@ ndarray<Tp> ndarray<Tp>::apply(value_type __f(const value_type&)) const {
     return r;
 }
 
-template <class Tp>
-inline void ndarray<Tp>::__clear(size_t capacity) {
+template <class Tp, class Ex, class Lp>
+inline void ndarray<Tp, Ex, Lp>::__clear(size_t capacity) {
     if (begin_ != nullptr) {
         while (end_ != begin_)
             (--end_)->~value_type();
@@ -1888,8 +1926,8 @@ inline void ndarray<Tp>::__clear(size_t capacity) {
     }
 }
 
-template <class Tp>
-void ndarray<Tp>::resize(size_t n, value_type x) {
+template <class Tp, class Ex, class Lp>
+void ndarray<Tp, Ex, Lp>::resize(size_t n, value_type x) {
     __clear(size());
     if (n) {
         begin_ = end_ = allocator<value_type>().allocate(n);
@@ -1900,8 +1938,8 @@ void ndarray<Tp>::resize(size_t n, value_type x) {
     }
 }
 
-template <class Tp>
-inline void swap(ndarray<Tp>& x, ndarray<Tp>& y) noexcept {
+template <class Tp, class Ex, class Lp>
+inline void swap(ndarray<Tp, Ex, Lp>& x, ndarray<Tp, Ex, Lp>& y) noexcept {
     x.swap(y);
 }
 
@@ -2579,23 +2617,23 @@ tanh(const Expr& x) {
     return nc_val_expr<Op>(Op(__tanh_expr<value_type>(), x));
 }
 
-template <class Tp>
-[[nodiscard]] inline Tp* begin(ndarray<Tp>& v) {
+template <class Tp, class Ex, class Lp>
+[[nodiscard]] inline Tp* begin(ndarray<Tp, Ex, Lp>& v) {
     return v.begin_;
 }
 
-template <class Tp>
-[[nodiscard]] inline const Tp* begin(const ndarray<Tp>& v) {
+template <class Tp, class Ex, class Lp>
+[[nodiscard]] inline const Tp* begin(const ndarray<Tp, Ex, Lp>& v) {
     return v.begin_;
 }
 
-template <class Tp>
-[[nodiscard]] inline Tp* end(ndarray<Tp>& v) {
+template <class Tp, class Ex, class Lp>
+[[nodiscard]] inline Tp* end(ndarray<Tp, Ex, Lp>& v) {
     return v.end_;
 }
 
-template <class Tp>
-[[nodiscard]] inline const Tp* end(const ndarray<Tp>& v) {
+template <class Tp, class Ex, class Lp>
+[[nodiscard]] inline const Tp* end(const ndarray<Tp, Ex, Lp>& v) {
     return v.end_;
 }
 
