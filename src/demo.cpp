@@ -1,7 +1,5 @@
 ﻿#include "numcxx.h"
 
-#include <mdspan/mdarray.hpp>
-#include <mdspan/mdspan.hpp>
 #include <iostream>
 
 int main() {
@@ -11,10 +9,19 @@ int main() {
       2, 7, 6,
     };
 
-    numcxx::ndarray<int, Kokkos::dextents<std::size_t, 2>> m(3, 3);
-    std::copy(d.begin(), d.end(), m.data());
+    numcxx::ndarray<int, Kokkos::dextents<std::size_t, 2>> m1(3, 3);
+    numcxx::ndarray<int, Kokkos::extents<std::size_t, 3, 3>> m2;
 
-    for (std::size_t i = 0; i < m.extent(0); ++i)
-        for (std::size_t j = 0; j < m.extent(1); ++j)
-            std::cout << "m(" << i << ", " << j << ") == " << m(i, j) << "\n";
+    std::copy(d.begin(), d.end(), m1.data());
+    std::copy(d.begin(), d.end(), m2.data());
+
+    for (std::size_t i = 0; i < m1.extent(0); ++i)
+        for (std::size_t j = 0; j < m1.extent(1); ++j)
+            std::cout << "m1(" << i << ", " << j << ") == " << m1(i, j) << "\n";
+
+    for (std::size_t i = 0; i < m2.extent(0); ++i)
+        for (std::size_t j = 0; j < m2.extent(1); ++j)
+            std::cout << "m2(" << i << ", " << j << ") == " << m2(i, j) << "\n";
+
+    return 0;
 }
