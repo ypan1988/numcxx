@@ -425,8 +425,15 @@ template <
 >
 class ndarray {
 public:
-    typedef ElementType value_type;
-    typedef ElementType result_type;
+    using value_type = ElementType;
+    using result_type = ElementType;
+    using extents_type = Extents;
+    using layout_type = LayoutPolicy;
+
+    using pointer = ElementType*;
+    using const_pointer = const ElementType*;
+    using reference = ElementType&;
+    using const_reference = const ElementType&;
 
 private:
     detail::mdarray<ElementType, Extents, LayoutPolicy, std::vector<ElementType>> elem_;
@@ -439,10 +446,31 @@ public:
     constexpr ndarray(const ndarray& v) = default;
     constexpr ndarray(ndarray&& v) noexcept = default;
 
+    template<class... SizeTypes>
+    explicit constexpr ndarray(SizeTypes... dyn_exts)
+        : elem_(Extents(dyn_exts...)) {
+    }
+
     constexpr ndarray& operator=(const ndarray& v) = default;
     constexpr ndarray& operator=(ndarray&& v) noexcept = default;
 
     ~ndarray() = default;
+
+    template<class... SizeTypes>
+    constexpr reference operator()(SizeTypes... idxs) noexcept {
+        return elem_(idxs...);
+    }
+
+    template<class... SizeTypes>
+    constexpr const_reference operator()(SizeTypes... idxs) const noexcept {
+        return elem_(idxs...);
+    }
+
+    constexpr pointer data() noexcept { return elem_.data(); }
+    constexpr const_pointer data() const noexcept { return elem_.data(); }
+
+    constexpr const Extents& extents() const noexcept { return elem_.extents(); }
+    constexpr size_t extent(size_t r) const noexcept { return elem_.extent(r); }
 
     // construct/destroy:
     // ndarray() : begin_(nullptr), end_(nullptr) {}

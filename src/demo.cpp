@@ -11,7 +11,7 @@ int main() {
       2, 7, 6,
     };
 
-    Kokkos::Experimental::mdarray<int, Kokkos::extents<std::size_t, 3, 3>> m;
+    numcxx::ndarray<int, Kokkos::dextents<std::size_t, 2>> m(3, 3);
     std::copy(d.begin(), d.end(), m.data());
 
     for (std::size_t i = 0; i < m.extent(0); ++i)
