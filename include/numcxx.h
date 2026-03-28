@@ -471,6 +471,7 @@ public:
 
     constexpr const Extents& extents() const noexcept { return elem_.extents(); }
     constexpr size_t extent(size_t r) const noexcept { return elem_.extent(r); }
+    constexpr size_t size() const noexcept { return elem_.size(); }
 
     // construct/destroy:
     // ndarray() : begin_(nullptr), end_(nullptr) {}
@@ -573,8 +574,6 @@ public:
 
     // member functions:
     void swap(ndarray& v) noexcept;
-
-    [[nodiscard]] size_t size() const { return static_cast<size_t>(end_ - begin_); }
 
     [[nodiscard]] value_type sum() const;
     [[nodiscard]] value_type min() const;
