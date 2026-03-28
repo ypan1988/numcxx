@@ -19,6 +19,7 @@ int main() {
         for (std::size_t j = 0; j < m1.extent(1); ++j)
             std::cout << "m1(" << i << ", " << j << ") == " << m1(i, j) << "\n";
 
+    m2 *= 2;
     for (std::size_t i = 0; i < m2.extent(0); ++i)
         for (std::size_t j = 0; j < m2.extent(1); ++j)
             std::cout << "m2(" << i << ", " << j << ") == " << m2(i, j) << "\n";
