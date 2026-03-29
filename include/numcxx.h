@@ -60,17 +60,17 @@ public:
 //template <class Tp>
 //class indirect_array;
 
-template <class Tp, class Ex, class Lp>
-Tp* begin(ndarray<Tp, Ex, Lp>& v);
-
-template <class Tp, class Ex, class Lp>
-const Tp* begin(const ndarray<Tp, Ex, Lp>& v);
-
-template <class Tp, class Ex, class Lp>
-Tp* end(ndarray<Tp, Ex, Lp>& v);
-
-template <class Tp, class Ex, class Lp>
-const Tp* end(const ndarray<Tp, Ex, Lp>& v);
+//template <class Tp, class Ex, class Lp>
+//Tp* begin(ndarray<Tp, Ex, Lp>& v);
+//
+//template <class Tp, class Ex, class Lp>
+//const Tp* begin(const ndarray<Tp, Ex, Lp>& v);
+//
+//template <class Tp, class Ex, class Lp>
+//Tp* end(ndarray<Tp, Ex, Lp>& v);
+//
+//template <class Tp, class Ex, class Lp>
+//const Tp* end(const ndarray<Tp, Ex, Lp>& v);
 
 template <class Op, class A0>
 struct UnaryOp {
@@ -576,11 +576,11 @@ public:
     [[nodiscard]] value_type min() const;
     [[nodiscard]] value_type max() const;
 
-    [[nodiscard]] ndarray shift(int i) const;
-    [[nodiscard]] ndarray cshift(int i) const;
-    [[nodiscard]] ndarray apply(value_type __f(value_type)) const;
-    [[nodiscard]] ndarray apply(value_type __f(const value_type&)) const;
-    void resize(size_t n, value_type x = value_type());
+    //[[nodiscard]] ndarray shift(int i) const;
+    //[[nodiscard]] ndarray cshift(int i) const;
+    //[[nodiscard]] ndarray apply(value_type __f(value_type)) const;
+    //[[nodiscard]] ndarray apply(value_type __f(const value_type&)) const;
+    //void resize(size_t n, value_type x = value_type());
 
 private:
     template <class, class, class>
@@ -598,19 +598,19 @@ private:
     template <class>
     friend class nc_val_expr;
 
-    template <class Up, class Ex, class Lp>
-    friend Up* begin(ndarray<Up, Ex, Lp>& v);
+    //template <class Up, class Ex, class Lp>
+    //friend Up* begin(ndarray<Up, Ex, Lp>& v);
 
-    template <class Up, class Ex, class Lp>
-    friend const Up* begin(const ndarray<Up, Ex, Lp>& v);
+    //template <class Up, class Ex, class Lp>
+    //friend const Up* begin(const ndarray<Up, Ex, Lp>& v);
 
-    template <class Up, class Ex, class Lp>
-    friend Up* end(ndarray<Up, Ex, Lp>& v);
+    //template <class Up, class Ex, class Lp>
+    //friend Up* end(ndarray<Up, Ex, Lp>& v);
 
-    template <class Up, class Ex, class Lp>
-    friend const Up* end(const ndarray<Up, Ex, Lp>& v);
+    //template <class Up, class Ex, class Lp>
+    //friend const Up* end(const ndarray<Up, Ex, Lp>& v);
 
-    void __clear(size_t capacity);
+    //void __clear(size_t capacity);
     //ndarray& __assign_range(const value_type* __f, const value_type* __l);
 };
 
