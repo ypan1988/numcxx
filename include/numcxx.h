@@ -1889,8 +1889,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator>>=(const Expr& v) {
 
 template <class Tp, class Ex, class Lp>
 inline void ndarray<Tp, Ex, Lp>::swap(ndarray& v) noexcept {
-    std::swap(begin_, v.begin_);
-    std::swap(end_, v.end_);
+    std::swap(elem_, v.elem_);
 }
 
 template <class Tp, class Ex, class Lp>
@@ -1924,98 +1923,98 @@ inline Tp ndarray<Tp, Ex, Lp>::max() const {
     return *std::max_element(first, last);
 }
 
-template <class Tp, class Ex, class Lp>
-ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::shift(int i) const {
-    ndarray<value_type> r;
-    size_t n = size();
-    if (n) {
-        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-        const value_type* __sb;
-        value_type* __tb;
-        value_type* __te;
-        if (i >= 0) {
-            i = std::min(i, static_cast<int>(n));
-            __sb = begin_ + i;
-            __tb = r.begin_;
-            __te = r.begin_ + (n - i);
-        }
-        else {
-            i = std::min(-i, static_cast<int>(n));
-            __sb = begin_;
-            __tb = r.begin_ + i;
-            __te = r.begin_ + n;
-        }
-        for (; r.end_ != __tb; ++r.end_)
-            ::new ((void*)r.end_) value_type();
-        for (; r.end_ != __te; ++r.end_, ++__sb)
-            ::new ((void*)r.end_) value_type(*__sb);
-        for (__te = r.begin_ + n; r.end_ != __te; ++r.end_)
-            ::new ((void*)r.end_) value_type();
-    }
-    return r;
-}
+//template <class Tp, class Ex, class Lp>
+//ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::shift(int i) const {
+//    ndarray<value_type> r;
+//    size_t n = size();
+//    if (n) {
+//        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
+//        const value_type* __sb;
+//        value_type* __tb;
+//        value_type* __te;
+//        if (i >= 0) {
+//            i = std::min(i, static_cast<int>(n));
+//            __sb = begin_ + i;
+//            __tb = r.begin_;
+//            __te = r.begin_ + (n - i);
+//        }
+//        else {
+//            i = std::min(-i, static_cast<int>(n));
+//            __sb = begin_;
+//            __tb = r.begin_ + i;
+//            __te = r.begin_ + n;
+//        }
+//        for (; r.end_ != __tb; ++r.end_)
+//            ::new ((void*)r.end_) value_type();
+//        for (; r.end_ != __te; ++r.end_, ++__sb)
+//            ::new ((void*)r.end_) value_type(*__sb);
+//        for (__te = r.begin_ + n; r.end_ != __te; ++r.end_)
+//            ::new ((void*)r.end_) value_type();
+//    }
+//    return r;
+//}
 
-template <class Tp, class Ex, class Lp>
-ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::cshift(int i) const {
-    ndarray<value_type> r;
-    size_t n = size();
-    if (n) {
-        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-        i %= static_cast<int>(n);
-        const value_type* __m = i >= 0 ? begin_ + i : end_ + i;
-        for (const value_type* s = __m; s != end_; ++r.end_, ++s)
-            ::new ((void*)r.end_) value_type(*s);
-        for (const value_type* s = begin_; s != __m; ++r.end_, ++s)
-            ::new ((void*)r.end_) value_type(*s);
-    }
-    return r;
-}
-
-template <class Tp, class Ex, class Lp>
-ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(value_type)) const {
-    ndarray<value_type> r;
-    size_t n = size();
-    if (n) {
-        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-        for (const value_type* p = begin_; n; ++r.end_, ++p, --n)
-            ::new ((void*)r.end_) value_type(__f(*p));
-    }
-    return r;
-}
-
-template <class Tp, class Ex, class Lp>
-ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(const value_type&)) const {
-    ndarray<value_type> r;
-    size_t n = size();
-    if (n) {
-        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-        for (const value_type* p = begin_; n; ++r.end_, ++p, --n)
-            ::new ((void*)r.end_) value_type(__f(*p));
-    }
-    return r;
-}
-
-template <class Tp, class Ex, class Lp>
-inline void ndarray<Tp, Ex, Lp>::__clear(size_t capacity) {
-    if (begin_ != nullptr) {
-        while (end_ != begin_)
-            (--end_)->~value_type();
-        std::allocator<value_type>().deallocate(begin_, capacity);
-        begin_ = end_ = nullptr;
-    }
-}
-
-template <class Tp, class Ex, class Lp>
-void ndarray<Tp, Ex, Lp>::resize(size_t n, value_type x) {
-    __clear(size());
-    if (n) {
-        begin_ = end_ = allocator<value_type>().allocate(n);
-        auto __guard = std::__make_exception_guard([&] { __clear(n); });
-        for (size_t __n_left = n; __n_left; --__n_left, ++end_)
-            ::new ((void*)end_) value_type(x);
-        __guard.__complete();
-    }
-}
+//template <class Tp, class Ex, class Lp>
+//ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::cshift(int i) const {
+//    ndarray<value_type> r;
+//    size_t n = size();
+//    if (n) {
+//        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
+//        i %= static_cast<int>(n);
+//        const value_type* __m = i >= 0 ? begin_ + i : end_ + i;
+//        for (const value_type* s = __m; s != end_; ++r.end_, ++s)
+//            ::new ((void*)r.end_) value_type(*s);
+//        for (const value_type* s = begin_; s != __m; ++r.end_, ++s)
+//            ::new ((void*)r.end_) value_type(*s);
+//    }
+//    return r;
+//}
+//
+//template <class Tp, class Ex, class Lp>
+//ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(value_type)) const {
+//    ndarray<value_type> r;
+//    size_t n = size();
+//    if (n) {
+//        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
+//        for (const value_type* p = begin_; n; ++r.end_, ++p, --n)
+//            ::new ((void*)r.end_) value_type(__f(*p));
+//    }
+//    return r;
+//}
+//
+//template <class Tp, class Ex, class Lp>
+//ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(const value_type&)) const {
+//    ndarray<value_type> r;
+//    size_t n = size();
+//    if (n) {
+//        r.begin_ = r.end_ = allocator<value_type>().allocate(n);
+//        for (const value_type* p = begin_; n; ++r.end_, ++p, --n)
+//            ::new ((void*)r.end_) value_type(__f(*p));
+//    }
+//    return r;
+//}
+//
+//template <class Tp, class Ex, class Lp>
+//inline void ndarray<Tp, Ex, Lp>::__clear(size_t capacity) {
+//    if (begin_ != nullptr) {
+//        while (end_ != begin_)
+//            (--end_)->~value_type();
+//        std::allocator<value_type>().deallocate(begin_, capacity);
+//        begin_ = end_ = nullptr;
+//    }
+//}
+//
+//template <class Tp, class Ex, class Lp>
+//void ndarray<Tp, Ex, Lp>::resize(size_t n, value_type x) {
+//    __clear(size());
+//    if (n) {
+//        begin_ = end_ = allocator<value_type>().allocate(n);
+//        auto __guard = std::__make_exception_guard([&] { __clear(n); });
+//        for (size_t __n_left = n; __n_left; --__n_left, ++end_)
+//            ::new ((void*)end_) value_type(x);
+//        __guard.__complete();
+//    }
+//}
 
 template <class Tp, class Ex, class Lp>
 inline void swap(ndarray<Tp, Ex, Lp>& x, ndarray<Tp, Ex, Lp>& y) noexcept {
@@ -2696,15 +2695,15 @@ tanh(const Expr& x) {
     return nc_val_expr<Op>(Op(__tanh_expr<value_type>(), x));
 }
 
-template <class Tp, class Ex, class Lp>
-[[nodiscard]] inline Tp* begin(ndarray<Tp, Ex, Lp>& v) {
-    return v.begin_;
-}
-
-template <class Tp, class Ex, class Lp>
-[[nodiscard]] inline const Tp* begin(const ndarray<Tp, Ex, Lp>& v) {
-    return v.begin_;
-}
+//template <class Tp, class Ex, class Lp>
+//[[nodiscard]] inline Tp* begin(ndarray<Tp, Ex, Lp>& v) {
+//    return v.begin_;
+//}
+//
+//template <class Tp, class Ex, class Lp>
+//[[nodiscard]] inline const Tp* begin(const ndarray<Tp, Ex, Lp>& v) {
+//    return v.begin_;
+//}
 
 template <class Tp, class Ex, class Lp>
 [[nodiscard]] inline Tp* end(ndarray<Tp, Ex, Lp>& v) {
