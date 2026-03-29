@@ -1895,27 +1895,33 @@ inline void ndarray<Tp, Ex, Lp>::swap(ndarray& v) noexcept {
 
 template <class Tp, class Ex, class Lp>
 inline Tp ndarray<Tp, Ex, Lp>::sum() const {
-    if (begin_ == end_)
+    const value_type* first = elem_.data();
+    const value_type* last = elem_.data() + elem_.size();
+    if (first == last)
         return value_type();
-    const value_type* p = begin_;
+    const value_type* p = first;
     Tp r = *p;
-    for (++p; p != end_; ++p)
+    for (++p; p != last; ++p)
         r += *p;
     return r;
 }
 
 template <class Tp, class Ex, class Lp>
 inline Tp ndarray<Tp, Ex, Lp>::min() const {
-    if (begin_ == end_)
+    const value_type* first = elem_.data();
+    const value_type* last = elem_.data() + elem_.size();
+    if (first == last)
         return value_type();
-    return *std::min_element(begin_, end_);
+    return *std::min_element(first, last);
 }
 
 template <class Tp, class Ex, class Lp>
 inline Tp ndarray<Tp, Ex, Lp>::max() const {
-    if (begin_ == end_)
+    const value_type* first = elem_.data();
+    const value_type* last = elem_.data() + elem_.size();
+    if (first == last)
         return value_type();
-    return *std::max_element(begin_, end_);
+    return *std::max_element(first, last);
 }
 
 template <class Tp, class Ex, class Lp>
