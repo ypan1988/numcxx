@@ -407,7 +407,7 @@ template <class ValExpr>
 struct nc_val_expr_use_member_functions;
 
 template <class>
-struct nc_val_expr_use_member_functions : false_type {};
+struct nc_val_expr_use_member_functions : std::false_type{};
 
 //template <class Tp>
 //struct nc_val_expr_use_member_functions<slice_array<Tp> > : true_type {};
