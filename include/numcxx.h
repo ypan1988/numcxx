@@ -1665,25 +1665,25 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<Val
 
 template <class Tp, class Ex, class Lp>
 inline nc_val_expr<nc_unary_op<nc_unary_plus<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator+() const {
-    using Op = nc_unary_op<nc_unary_plus<Tp>, const ndarray<Tp>&>;
+    using Op = nc_unary_op<nc_unary_plus<Tp>, const ndarray<Tp, Ex, Lp>&>;
     return nc_val_expr<Op>(Op(nc_unary_plus<Tp>(), *this));
 }
 
 template <class Tp, class Ex, class Lp>
 inline nc_val_expr<nc_unary_op<std::negate<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator-() const {
-    using Op = nc_unary_op<std::negate<Tp>, const ndarray<Tp>&>;
+    using Op = nc_unary_op<std::negate<Tp>, const ndarray<Tp, Ex, Lp>&>;
     return nc_val_expr<Op>(Op(std::negate<Tp>(), *this));
 }
 
 template <class Tp, class Ex, class Lp>
 inline nc_val_expr<nc_unary_op<nc_bit_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator~() const {
-    using Op = nc_unary_op<nc_bit_not<Tp>, const ndarray<Tp>&>;
+    using Op = nc_unary_op<nc_bit_not<Tp>, const ndarray<Tp, Ex, Lp>&>;
     return nc_val_expr<Op>(Op(nc_bit_not<Tp>(), *this));
 }
 
 template <class Tp, class Ex, class Lp>
 inline nc_val_expr<nc_unary_op<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator!() const {
-    using Op = nc_unary_op<std::logical_not<Tp>, const ndarray<Tp>&>;
+    using Op = nc_unary_op<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp>&>;
     return nc_val_expr<Op>(Op(std::logical_not<Tp>(), *this));
 }
 
