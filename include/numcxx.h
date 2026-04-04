@@ -73,14 +73,14 @@ public:
 //const Tp* end(const ndarray<Tp, Ex, Lp>& v);
 
 template <class Op, class A0>
-struct UnaryOp {
+struct nc_unary_op {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
     Op op_;
     A0 a0_;
 
-    UnaryOp(const Op& op, const A0& a0) : op_(op), a0_(a0) {}
+    nc_unary_op(const Op& op, const A0& a0) : op_(op), a0_(a0) {}
 
     result_type operator[](size_t i) const { return op_(a0_[i]); }
 
@@ -88,7 +88,7 @@ struct UnaryOp {
 };
 
 template <class Op, class A0, class A1>
-struct BinaryOp {
+struct nc_binary_op {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
@@ -96,7 +96,7 @@ struct BinaryOp {
     A0 a0_;
     A1 a1_;
 
-    BinaryOp(const Op& op, const A0& a0, const A1& a1)
+    nc_binary_op(const Op& op, const A0& a0, const A1& a1)
         : op_(op), a0_(a0), a1_(a1) {
     }
 
@@ -522,10 +522,10 @@ public:
     //[[nodiscard]] indirect_array<value_type> operator[](ndarray<size_t, Extents, LayoutPolicy>&& __vs);
 
     // unary operators:
-    nc_val_expr<UnaryOp<nc_unary_plus<ElementType>, const ndarray&> > operator+() const;
-    nc_val_expr<UnaryOp<std::negate<ElementType>, const ndarray&> > operator-() const;
-    nc_val_expr<UnaryOp<nc_bit_not<ElementType>, const ndarray&> > operator~() const;
-    nc_val_expr<UnaryOp<std::logical_not<ElementType>, const ndarray&> > operator!() const;
+    nc_val_expr<nc_unary_op<nc_unary_plus<ElementType>, const ndarray&> > operator+() const;
+    nc_val_expr<nc_unary_op<std::negate<ElementType>, const ndarray&> > operator-() const;
+    nc_val_expr<nc_unary_op<nc_bit_not<ElementType>, const ndarray&> > operator~() const;
+    nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray&> > operator!() const;
 
     // computed assignment:
     ndarray& operator*=(const value_type& x);
@@ -632,14 +632,14 @@ typename Expr::value_type __get(const Expr& v, size_t i) {
 //extern template void ndarray<size_t>::resize(size_t, size_t);
 
 template <class Op, class Tp, class Ex, class Lp>
-struct UnaryOp<Op, ndarray<Tp, Ex, Lp> > {
+struct nc_unary_op<Op, ndarray<Tp, Ex, Lp> > {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
     Op op_;
     const ndarray<Tp, Ex, Lp>& a0_;
 
-    UnaryOp(const Op& op, const ndarray<Tp, Ex, Lp>& a0) : op_(op), a0_(a0) {}
+    nc_unary_op(const Op& op, const ndarray<Tp, Ex, Lp>& a0) : op_(op), a0_(a0) {}
 
     result_type operator[](size_t i) const { return op_(a0_[i]); }
 
@@ -647,7 +647,7 @@ struct UnaryOp<Op, ndarray<Tp, Ex, Lp> > {
 };
 
 template <class Op, class Tp, class Ex, class Lp, class A1>
-struct BinaryOp<Op, ndarray<Tp, Ex, Lp>, A1> {
+struct nc_binary_op<Op, ndarray<Tp, Ex, Lp>, A1> {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
@@ -655,7 +655,7 @@ struct BinaryOp<Op, ndarray<Tp, Ex, Lp>, A1> {
     const ndarray<Tp, Ex, Lp>& a0_;
     A1 a1_;
 
-    BinaryOp(const Op& op, const ndarray<Tp, Ex, Lp>& a0, const A1& a1)
+    nc_binary_op(const Op& op, const ndarray<Tp, Ex, Lp>& a0, const A1& a1)
         : op_(op), a0_(a0), a1_(a1) {
     }
 
@@ -665,7 +665,7 @@ struct BinaryOp<Op, ndarray<Tp, Ex, Lp>, A1> {
 };
 
 template <class Op, class A0, class Tp, class Ex, class Lp>
-struct BinaryOp<Op, A0, ndarray<Tp, Ex, Lp> > {
+struct nc_binary_op<Op, A0, ndarray<Tp, Ex, Lp> > {
     typedef typename Op::result_type result_type;
     using value_type = std::decay_t<result_type>;
 
@@ -673,7 +673,7 @@ struct BinaryOp<Op, A0, ndarray<Tp, Ex, Lp> > {
     A0 a0_;
     const ndarray<Tp, Ex, Lp>& a1_;
 
-    BinaryOp(const Op& op, const A0& a0, const ndarray<Tp, Ex, Lp>& a1)
+    nc_binary_op(const Op& op, const A0& a0, const ndarray<Tp, Ex, Lp>& a1)
         : op_(op), a0_(a0), a1_(a1) {
     }
 
@@ -686,7 +686,7 @@ template <class Op,
     class Tp1, class Ex1, class Lp1,
     class Tp2, class Ex2, class Lp2
 >
-struct BinaryOp<Op,
+struct nc_binary_op<Op,
     ndarray<Tp1, Ex1, Lp1>,
     ndarray<Tp2, Ex2, Lp2>
 > {
@@ -697,7 +697,7 @@ struct BinaryOp<Op,
     const ndarray<Tp1, Ex1, Lp1>& a0_;
     const ndarray<Tp2, Ex2, Lp2>& a1_;
 
-    BinaryOp(const Op& op, const ndarray<Tp1, Ex1, Lp1>& a0, const ndarray<Tp2, Ex2, Lp2>& a1)
+    nc_binary_op(const Op& op, const ndarray<Tp1, Ex1, Lp1>& a0, const ndarray<Tp2, Ex2, Lp2>& a1)
         : op_(op), a0_(a0), a1_(a1) {
     }
 
@@ -1333,23 +1333,23 @@ public:
     //    return nc_val_expr< _NewExpr >(_NewExpr(__vs, expr_));
     //}
 
-    nc_val_expr<UnaryOp<nc_unary_plus<value_type>, ValExpr> > operator+() const {
-        typedef UnaryOp<nc_unary_plus<value_type>, ValExpr> _NewExpr;
+    nc_val_expr<nc_unary_op<nc_unary_plus<value_type>, ValExpr> > operator+() const {
+        typedef nc_unary_op<nc_unary_plus<value_type>, ValExpr> _NewExpr;
         return nc_val_expr<_NewExpr>(_NewExpr(nc_unary_plus<value_type>(), expr_));
     }
 
-    nc_val_expr<UnaryOp<std::negate<value_type>, ValExpr> > operator-() const {
-        typedef UnaryOp<std::negate<value_type>, ValExpr> _NewExpr;
+    nc_val_expr<nc_unary_op<std::negate<value_type>, ValExpr> > operator-() const {
+        typedef nc_unary_op<std::negate<value_type>, ValExpr> _NewExpr;
         return nc_val_expr<_NewExpr>(_NewExpr(std::negate<value_type>(), expr_));
     }
 
-    nc_val_expr<UnaryOp<nc_bit_not<value_type>, ValExpr> > operator~() const {
-        typedef UnaryOp<nc_bit_not<value_type>, ValExpr> _NewExpr;
+    nc_val_expr<nc_unary_op<nc_bit_not<value_type>, ValExpr> > operator~() const {
+        typedef nc_unary_op<nc_bit_not<value_type>, ValExpr> _NewExpr;
         return nc_val_expr<_NewExpr>(_NewExpr(nc_bit_not<value_type>(), expr_));
     }
 
-    nc_val_expr<UnaryOp<std::logical_not<value_type>, ValExpr> > operator!() const {
-        typedef UnaryOp<std::logical_not<value_type>, ValExpr> _NewExpr;
+    nc_val_expr<nc_unary_op<std::logical_not<value_type>, ValExpr> > operator!() const {
+        typedef nc_unary_op<std::logical_not<value_type>, ValExpr> _NewExpr;
         return nc_val_expr<_NewExpr>(_NewExpr(std::logical_not<value_type>(), expr_));
     }
 
@@ -1396,17 +1396,17 @@ public:
         return nc_val_expr<nc_cshift_expr<ValExpr> >(nc_cshift_expr<ValExpr>(i, expr_));
     }
 
-    nc_val_expr<UnaryOp<nc_apply_expr<value_type, value_type(*)(value_type)>, ValExpr> >
+    nc_val_expr<nc_unary_op<nc_apply_expr<value_type, value_type(*)(value_type)>, ValExpr> >
         apply(value_type __f(value_type)) const {
         typedef nc_apply_expr<value_type, value_type(*)(value_type)> Op;
-        typedef UnaryOp<Op, ValExpr> _NewExpr;
+        typedef nc_unary_op<Op, ValExpr> _NewExpr;
         return nc_val_expr<_NewExpr>(_NewExpr(Op(__f), expr_));
     }
 
-    nc_val_expr<UnaryOp<nc_apply_expr<value_type, value_type(*)(const value_type&)>, ValExpr> >
+    nc_val_expr<nc_unary_op<nc_apply_expr<value_type, value_type(*)(const value_type&)>, ValExpr> >
         apply(value_type __f(const value_type&)) const {
         typedef nc_apply_expr<value_type, value_type(*)(const value_type&)> Op;
-        typedef UnaryOp<Op, ValExpr> _NewExpr;
+        typedef nc_unary_op<Op, ValExpr> _NewExpr;
         return nc_val_expr<_NewExpr>(_NewExpr(Op(__f), expr_));
     }
 };
@@ -1664,26 +1664,26 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<Val
 //}
 
 template <class Tp, class Ex, class Lp>
-inline nc_val_expr<UnaryOp<nc_unary_plus<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator+() const {
-    using Op = UnaryOp<nc_unary_plus<Tp>, const ndarray<Tp>&>;
+inline nc_val_expr<nc_unary_op<nc_unary_plus<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator+() const {
+    using Op = nc_unary_op<nc_unary_plus<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(nc_unary_plus<Tp>(), *this));
 }
 
 template <class Tp, class Ex, class Lp>
-inline nc_val_expr<UnaryOp<std::negate<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator-() const {
-    using Op = UnaryOp<std::negate<Tp>, const ndarray<Tp>&>;
+inline nc_val_expr<nc_unary_op<std::negate<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator-() const {
+    using Op = nc_unary_op<std::negate<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(std::negate<Tp>(), *this));
 }
 
 template <class Tp, class Ex, class Lp>
-inline nc_val_expr<UnaryOp<nc_bit_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator~() const {
-    using Op = UnaryOp<nc_bit_not<Tp>, const ndarray<Tp>&>;
+inline nc_val_expr<nc_unary_op<nc_bit_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator~() const {
+    using Op = nc_unary_op<nc_bit_not<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(nc_bit_not<Tp>(), *this));
 }
 
 template <class Tp, class Ex, class Lp>
-inline nc_val_expr<UnaryOp<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator!() const {
-    using Op = UnaryOp<std::logical_not<Tp>, const ndarray<Tp>&>;
+inline nc_val_expr<nc_unary_op<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator!() const {
+    using Op = nc_unary_op<std::logical_not<Tp>, const ndarray<Tp>&>;
     return nc_val_expr<Op>(Op(std::logical_not<Tp>(), *this));
 }
 
@@ -2024,536 +2024,536 @@ inline void swap(ndarray<Tp, Ex, Lp>& x, ndarray<Tp, Ex, Lp>& y) noexcept {
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::multiplies<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::multiplies<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator*(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::multiplies<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::multiplies<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::multiplies<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::multiplies<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::multiplies<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator*(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::multiplies<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::multiplies<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::multiplies<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::multiplies<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::multiplies<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator*(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::multiplies<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::multiplies<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::multiplies<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::divides<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::divides<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator/(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::divides<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::divides<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::divides<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::divides<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::divides<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator/(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::divides<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::divides<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::divides<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::divides<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::divides<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator/(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::divides<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::divides<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::divides<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::modulus<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::modulus<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator%(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::modulus<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::modulus<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::modulus<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::modulus<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::modulus<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator%(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::modulus<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::modulus<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::modulus<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::modulus<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::modulus<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator%(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::modulus<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::modulus<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::modulus<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::plus<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::plus<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator+(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::plus<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::plus<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::plus<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::plus<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::plus<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator+(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::plus<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::plus<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::plus<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::plus<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::plus<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator+(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::plus<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::plus<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::plus<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::minus<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::minus<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator-(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::minus<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::minus<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::minus<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::minus<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::minus<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator-(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::minus<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::minus<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::minus<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::minus<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::minus<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator-(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::minus<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::minus<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::minus<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::bit_xor<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::bit_xor<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator^(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::bit_xor<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::bit_xor<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::bit_xor<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::bit_xor<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::bit_xor<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator^(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::bit_xor<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::bit_xor<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::bit_xor<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::bit_xor<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::bit_xor<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator^(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::bit_xor<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::bit_xor<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::bit_xor<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::bit_and<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::bit_and<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator&(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::bit_and<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::bit_and<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::bit_and<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::bit_and<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::bit_and<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator&(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::bit_and<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::bit_and<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::bit_and<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::bit_and<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::bit_and<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator&(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::bit_and<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::bit_and<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::bit_and<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::bit_or<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::bit_or<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator|(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::bit_or<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::bit_or<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::bit_or<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::bit_or<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::bit_or<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator|(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::bit_or<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::bit_or<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::bit_or<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::bit_or<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::bit_or<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator|(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::bit_or<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::bit_or<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::bit_or<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<nc_bit_shift_left<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<nc_bit_shift_left<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator<<(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<nc_bit_shift_left<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<nc_bit_shift_left<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(nc_bit_shift_left<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr< BinaryOp<nc_bit_shift_left<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr< nc_binary_op<nc_bit_shift_left<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator<<(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_bit_shift_left<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<nc_bit_shift_left<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(nc_bit_shift_left<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr< BinaryOp<nc_bit_shift_left<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr< nc_binary_op<nc_bit_shift_left<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator<<(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_bit_shift_left<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<nc_bit_shift_left<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_bit_shift_left<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<nc_bit_shift_right<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<nc_bit_shift_right<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator>>(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<nc_bit_shift_right<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<nc_bit_shift_right<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(nc_bit_shift_right<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline nc_val_expr<
-    BinaryOp<nc_bit_shift_right<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+    nc_binary_op<nc_bit_shift_right<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
     operator>>(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_bit_shift_right<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<nc_bit_shift_right<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(nc_bit_shift_right<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr< BinaryOp<nc_bit_shift_right<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr< nc_binary_op<nc_bit_shift_right<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator>>(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_bit_shift_right<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<nc_bit_shift_right<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_bit_shift_right<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::logical_and<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::logical_and<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator&&(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::logical_and<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::logical_and<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::logical_and<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::logical_and<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::logical_and<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator&&(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::logical_and<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::logical_and<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::logical_and<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::logical_and<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::logical_and<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator&&(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::logical_and<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::logical_and<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::logical_and<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::logical_or<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::logical_or<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator||(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::logical_or<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::logical_or<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::logical_or<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::logical_or<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::logical_or<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator||(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::logical_or<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::logical_or<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::logical_or<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::logical_or<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::logical_or<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator||(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::logical_or<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::logical_or<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::logical_or<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::equal_to<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::equal_to<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator==(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::equal_to<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::equal_to<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::equal_to<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::equal_to<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::equal_to<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator==(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::equal_to<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::equal_to<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::equal_to<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::equal_to<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::equal_to<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator==(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::equal_to<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::equal_to<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::equal_to<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::not_equal_to<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::not_equal_to<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator!=(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::not_equal_to<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::not_equal_to<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::not_equal_to<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::not_equal_to<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::not_equal_to<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator!=(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::not_equal_to<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::not_equal_to<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::not_equal_to<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::not_equal_to<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::not_equal_to<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator!=(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::not_equal_to<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::not_equal_to<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::not_equal_to<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::less<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::less<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator<(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::less<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::less<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::less<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::less<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::less<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator<(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::less<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::less<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::less<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::less<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::less<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator<(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::less<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::less<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::less<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::greater<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::greater<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator>(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::greater<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::greater<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::greater<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::greater<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::greater<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator>(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::greater<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::greater<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::greater<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::greater<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::greater<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator>(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::greater<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::greater<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::greater<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::less_equal<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::less_equal<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator<=(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::less_equal<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::less_equal<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::less_equal<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::less_equal<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::less_equal<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator<=(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::less_equal<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::less_equal<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::less_equal<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::less_equal<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::less_equal<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator<=(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::less_equal<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::less_equal<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::less_equal<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
-inline nc_val_expr<BinaryOp<std::greater_equal<typename _Expr1::value_type>, _Expr1, _Expr2> >
+inline nc_val_expr<nc_binary_op<std::greater_equal<typename _Expr1::value_type>, _Expr1, _Expr2> >
 operator>=(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<std::greater_equal<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<std::greater_equal<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(std::greater_equal<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::greater_equal<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<std::greater_equal<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 operator>=(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::greater_equal<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<std::greater_equal<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(std::greater_equal<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 inline
-nc_val_expr<BinaryOp<std::greater_equal<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<std::greater_equal<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 operator>=(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<std::greater_equal<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<std::greater_equal<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(std::greater_equal<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_abs_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_abs_expr<typename Expr::value_type>, Expr> >
 abs(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_abs_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_abs_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_abs_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_acos_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_acos_expr<typename Expr::value_type>, Expr> >
 acos(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_acos_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_acos_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_acos_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_asin_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_asin_expr<typename Expr::value_type>, Expr> >
 asin(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_asin_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_asin_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_asin_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_atan_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_atan_expr<typename Expr::value_type>, Expr> >
 atan(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_atan_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_atan_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_atan_expr<value_type>(), x));
 }
 
@@ -2561,68 +2561,68 @@ template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
 [[nodiscard]] inline
-nc_val_expr<BinaryOp<nc_atan2_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
+nc_val_expr<nc_binary_op<nc_atan2_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
 atan2(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<nc_atan2_expr<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<nc_atan2_expr<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(nc_atan2_expr<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 [[nodiscard]] inline
-nc_val_expr<BinaryOp<nc_atan2_expr<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<nc_atan2_expr<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 atan2(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_atan2_expr<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<nc_atan2_expr<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(nc_atan2_expr<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 [[nodiscard]] inline
-nc_val_expr<BinaryOp<nc_atan2_expr<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<nc_atan2_expr<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 atan2(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_atan2_expr<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<nc_atan2_expr<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_atan2_expr<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_cos_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_cos_expr<typename Expr::value_type>, Expr> >
 cos(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_cos_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_cos_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_cos_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_cosh_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_cosh_expr<typename Expr::value_type>, Expr> >
 cosh(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_cosh_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_cosh_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_cosh_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_exp_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_exp_expr<typename Expr::value_type>, Expr> >
 exp(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_exp_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_exp_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_exp_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_log_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_log_expr<typename Expr::value_type>, Expr> >
 log(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_log_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_log_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_log_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_log10_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_log10_expr<typename Expr::value_type>, Expr> >
 log10(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_log10_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_log10_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_log10_expr<value_type>(), x));
 }
 
@@ -2630,68 +2630,68 @@ template <class _Expr1,
     class _Expr2,
     std::enable_if_t<nc_is_val_expr<_Expr1>::value&& nc_is_val_expr<_Expr2>::value, int> = 0>
 [[nodiscard]] inline
-nc_val_expr<BinaryOp<nc_pow_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
+nc_val_expr<nc_binary_op<nc_pow_expr<typename _Expr1::value_type>, _Expr1, _Expr2> >
 pow(const _Expr1& x, const _Expr2& y) {
     typedef typename _Expr1::value_type value_type;
-    typedef BinaryOp<nc_pow_expr<value_type>, _Expr1, _Expr2> Op;
+    typedef nc_binary_op<nc_pow_expr<value_type>, _Expr1, _Expr2> Op;
     return nc_val_expr<Op>(Op(nc_pow_expr<value_type>(), x, y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 [[nodiscard]] inline
-nc_val_expr<BinaryOp<nc_pow_expr<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
+nc_val_expr<nc_binary_op<nc_pow_expr<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
 pow(const Expr& x, const typename Expr::value_type& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_pow_expr<value_type>, Expr, nc_scalar_expr<value_type> > Op;
+    typedef nc_binary_op<nc_pow_expr<value_type>, Expr, nc_scalar_expr<value_type> > Op;
     return nc_val_expr<Op>(Op(nc_pow_expr<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
 [[nodiscard]] inline
-nc_val_expr<BinaryOp<nc_pow_expr<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
+nc_val_expr<nc_binary_op<nc_pow_expr<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
 pow(const typename Expr::value_type& x, const Expr& y) {
     typedef typename Expr::value_type value_type;
-    typedef BinaryOp<nc_pow_expr<value_type>, nc_scalar_expr<value_type>, Expr> Op;
+    typedef nc_binary_op<nc_pow_expr<value_type>, nc_scalar_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_pow_expr<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_sin_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_sin_expr<typename Expr::value_type>, Expr> >
 sin(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_sin_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_sin_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_sin_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_sinh_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_sinh_expr<typename Expr::value_type>, Expr> >
 sinh(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_sinh_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_sinh_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_sinh_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_sqrt_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_sqrt_expr<typename Expr::value_type>, Expr> >
 sqrt(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_sqrt_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_sqrt_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_sqrt_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_tan_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_tan_expr<typename Expr::value_type>, Expr> >
 tan(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_tan_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_tan_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_tan_expr<value_type>(), x));
 }
 
 template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<UnaryOp<nc_tanh_expr<typename Expr::value_type>, Expr> >
+[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_tanh_expr<typename Expr::value_type>, Expr> >
 tanh(const Expr& x) {
     typedef typename Expr::value_type value_type;
-    typedef UnaryOp<nc_tanh_expr<value_type>, Expr> Op;
+    typedef nc_unary_op<nc_tanh_expr<value_type>, Expr> Op;
     return nc_val_expr<Op>(Op(nc_tanh_expr<value_type>(), x));
 }
 
