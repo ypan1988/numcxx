@@ -617,17 +617,17 @@ private:
 //template <class Tp, size_t _Size>
 //ndarray(const Tp(&)[_Size], size_t) -> ndarray<Tp>;
 
-template <class Expr,
-    std::enable_if_t<nc_is_val_expr<Expr>::value&& nc_val_expr_use_member_functions<Expr>::value, int> = 0>
-typename Expr::value_type __get(const Expr& v, size_t i) {
-    return v.__get(i);
-}
-
-template <class Expr,
-    std::enable_if_t<nc_is_val_expr<Expr>::value && !nc_val_expr_use_member_functions<Expr>::value, int> = 0>
-typename Expr::value_type __get(const Expr& v, size_t i) {
-    return v[i];
-}
+//template <class Expr,
+//    std::enable_if_t<nc_is_val_expr<Expr>::value && nc_val_expr_use_member_functions<Expr>::value, int> = 0>
+//typename Expr::value_type __get(const Expr& v, size_t i) {
+//    return v.__get(i);
+//}
+//
+//template <class Expr,
+//    std::enable_if_t<nc_is_val_expr<Expr>::value && !nc_val_expr_use_member_functions<Expr>::value, int> = 0>
+//typename Expr::value_type __get(const Expr& v, size_t i) {
+//    return v[i];
+//}
 
 //extern template void ndarray<size_t>::resize(size_t, size_t);
 
@@ -1784,7 +1784,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator*=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t *= std::__get(v, i);
+        *t *= v[i];
     return *this;
 }
 
@@ -1795,7 +1795,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator/=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t /= std::__get(v, i);
+        *t /= v[i];
     return *this;
 }
 
@@ -1806,7 +1806,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator%=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t %= std::__get(v, i);
+        *t %= v[i];
     return *this;
 }
 
@@ -1817,7 +1817,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator+=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t += std::__get(v, i);
+        *t += v[i];
     return *this;
 }
 
@@ -1828,7 +1828,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator-=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t -= std::__get(v, i);
+        *t -= v[i];
     return *this;
 }
 
@@ -1839,7 +1839,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator^=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t ^= std::__get(v, i);
+        *t ^= v[i];
     return *this;
 }
 
@@ -1850,7 +1850,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator|=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t |= std::__get(v, i);
+        *t |= v[i];
     return *this;
 }
 
@@ -1861,7 +1861,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator&=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t &= std::__get(v, i);
+        *t &= v[i];
     return *this;
 }
 
@@ -1872,7 +1872,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator<<=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t <<= std::__get(v, i);
+        *t <<= v[i];
     return *this;
 }
 
@@ -1883,7 +1883,7 @@ inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator>>=(const Expr& v) {
     value_type* first = elem_.data();
     value_type* last = elem_.data() + elem_.size();
     for (value_type* t = first; t != last; ++t, ++i)
-        *t >>= std::__get(v, i);
+        *t >>= v[i];
     return *this;
 }
 
