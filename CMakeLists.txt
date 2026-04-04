@@ -33,3 +33,7 @@ target_compile_features(numcxx INTERFACE cxx_std_17)
 
 add_executable(demo src/demo.cpp)
 target_link_libraries(demo PRIVATE numcxx::numcxx)
+
+# Enable testing framework
+enable_testing()
+add_subdirectory(tests)
