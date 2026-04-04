@@ -491,19 +491,19 @@ public:
     //ndarray& operator=(const slice_array<value_type>& sa);
     //ndarray& operator=(const mask_array<value_type>& ma);
     //ndarray& operator=(const indirect_array<value_type>& ia);
-    //template <class ValExpr>
-    //ndarray& operator=(const nc_val_expr<ValExpr>& v);
+    template <class ValExpr>
+    ndarray& operator=(const nc_val_expr<ValExpr>& v);
 
     // element access:
-    //[[nodiscard]] const value_type& operator[](size_t i) const {
-    //    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[] index out of bounds");
-    //    return begin_[i];
-    //}
+    [[nodiscard]] const value_type& operator[](size_t i) const {
+        // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[] index out of bounds");
+        return data()[i];
+    }
 
-    //[[nodiscard]] value_type& operator[](size_t i) {
-    //    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[] index out of bounds");
-    //    return begin_[i];
-    //}
+    [[nodiscard]] value_type& operator[](size_t i) {
+        // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[] index out of bounds");
+        return data()[i];
+    }
 
     // subset operations:
     //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s) const;
@@ -1353,7 +1353,7 @@ public:
         return nc_val_expr<_NewExpr>(_NewExpr(std::logical_not<value_type>(), expr_));
     }
 
-    template<class Ex, class Lp>
+    //template<class Ex, class Lp>
     //operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
 
     size_t size() const { return expr_.size(); }
@@ -1600,17 +1600,17 @@ public:
 //    return *this;
 //}
 
-//template <class Tp, class Ex, class Lp>
-//template <class ValExpr>
-//inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<ValExpr>& v) {
-//    size_t n = v.size();
-//    if (size() != n)
-//        resize(n);
-//    value_type* t = begin_;
-//    for (size_t i = 0; i != n; ++t, ++i)
-//        *t = result_type(v[i]);
-//    return *this;
-//}
+template <class Tp, class Ex, class Lp>
+template <class ValExpr>
+inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<ValExpr>& v) {
+    size_t n = v.size();
+    if (size() != n)
+        ;//resize(n);
+    value_type* t = elem_.data();
+    for (size_t i = 0; i != n; ++t, ++i)
+        *t = result_type(v[i]);
+    return *this;
+}
 
 //template <class Tp, class Ex, class Lp>
 //inline nc_val_expr<__slice_expr<const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex, Lp>::operator[](slice s) const {
