@@ -2746,45 +2746,23 @@ using fvec = vec<float>;
 using fmat = mat<float>;
 using fcube = cube<float>;
 
-using ivec2 = vec_fixed<int, 2>;
-using ivec3 = vec_fixed<int, 3>;
-using ivec4 = vec_fixed<int, 4>;
-using imat22 = mat_fixed<int, 2, 2>;
-using imat33 = mat_fixed<int, 3, 3>;
-using imat44 = mat_fixed<int, 4, 4>;
-using icube222 = cube_fixed<int, 2, 2, 2>;
-using icube333 = cube_fixed<int, 3, 3, 3>;
-using icube444 = cube_fixed<int, 4, 4, 4>;
+// clang-format off
+using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
+using imat22   =  mat_fixed<int,      2, 2>   ; using imat33   =  mat_fixed<int,      3, 3>   ; using imat44   =  mat_fixed<int,      4, 4>   ;
+using icube222 = cube_fixed<int,      2, 2, 2>; using icube333 = cube_fixed<int,      3, 3, 3>; using icube444 = cube_fixed<int,      4, 4, 4>;
 
-using uvec2 = vec_fixed<unsigned int, 2>;
-using uvec3 = vec_fixed<unsigned int, 3>;
-using uvec4 = vec_fixed<unsigned int, 4>;
-using umat22 = mat_fixed<unsigned int, 2, 2>;
-using umat33 = mat_fixed<unsigned int, 3, 3>;
-using umat44 = mat_fixed<unsigned int, 4, 4>;
-using ucube222 = cube_fixed<unsigned int, 2, 2, 2>;
-using ucube333 = cube_fixed<unsigned int, 3, 3, 3>;
-using ucube444 = cube_fixed<unsigned int, 4, 4, 4>;
+using uvec2    =  vec_fixed<unsigned, 2>      ; using uvec3    =  vec_fixed<unsigned, 3>      ; using uvec4    =  vec_fixed<unsigned, 4>      ;
+using umat22   =  mat_fixed<unsigned, 2, 2>   ; using umat33   =  mat_fixed<unsigned, 3, 3>   ; using umat44   =  mat_fixed<unsigned, 4, 4>   ;
+using ucube222 = cube_fixed<unsigned, 2, 2, 2>; using ucube333 = cube_fixed<unsigned, 3, 3, 3>; using ucube444 = cube_fixed<unsigned, 4, 4, 4>;
 
-using dvec2 = vec_fixed<double, 2>;
-using dvec3 = vec_fixed<double, 3>;
-using dvec4 = vec_fixed<double, 4>;
-using dmat22 = mat_fixed<double, 2, 2>;
-using dmat33 = mat_fixed<double, 3, 3>;
-using dmat44 = mat_fixed<double, 4, 4>;
-using dcube222 = cube_fixed<double, 2, 2, 2>;
-using dcube333 = cube_fixed<double, 3, 3, 3>;
-using dcube444 = cube_fixed<double, 4, 4, 4>;
+using dvec2    =  vec_fixed<double,   2>      ; using dvec3    =  vec_fixed<double,   3>      ; using dvec4    =  vec_fixed<double,   4>      ;
+using dmat22   =  mat_fixed<double,   2, 2>   ; using dmat33   =  mat_fixed<double,   3, 3>   ; using dmat44   =  mat_fixed<double,   4, 4>   ;
+using dcube222 = cube_fixed<double,   2, 2, 2>; using dcube333 = cube_fixed<double,   3, 3, 3>; using dcube444 = cube_fixed<double,   4, 4, 4>;
 
-using fvec2 = vec_fixed<float, 2>;
-using fvec3 = vec_fixed<float, 3>;
-using fvec4 = vec_fixed<float, 4>;
-using fmat22 = mat_fixed<float, 2, 2>;
-using fmat33 = mat_fixed<float, 3, 3>;
-using fmat44 = mat_fixed<float, 4, 4>;
-using fcube222 = cube_fixed<float, 2, 2, 2>;
-using fcube333 = cube_fixed<float, 3, 3, 3>;
-using fcube444 = cube_fixed<float, 4, 4, 4>;
+using fvec2    =  vec_fixed<float,    2>      ; using fvec3    =  vec_fixed<float,    3>      ; using fvec4    =  vec_fixed<float,    4>      ;
+using fmat22   =  mat_fixed<float,    2, 2>   ; using fmat33   =  mat_fixed<float,    3, 3>   ; using fmat44   =  mat_fixed<float,    4, 4>   ;
+using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<float,    3, 3, 3>; using fcube444 = cube_fixed<float,    4, 4, 4>;
+// clang-format on
 
 }
 
