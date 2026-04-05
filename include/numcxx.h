@@ -2715,39 +2715,51 @@ template <class Tp, class Ex, class Lp>
     return v.end_;
 }
 
-template <typename T>
-using vec = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 1>>;
-template<class T, size_t N>
-using vec_fixed = ndarray<T, Kokkos::extents<size_t, N>>;
-
-template <typename T>
-using mat = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 2>>;
-template<class T, size_t M, size_t N>
-using mat_fixed = ndarray<T, Kokkos::extents<size_t, M, N>>;
-
-template <typename T>
-using cube = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 3>>;
-template<class T, size_t M, size_t N, size_t K>
-using cube_fixed = ndarray<T, Kokkos::extents<size_t, M, N, K>>;
-
 // clang-format off
-using ivec = vec<int>     ; using imat = mat<int>     ; using icube = cube<int>     ;
-using uvec = vec<unsigned>; using umat = mat<unsigned>; using ucube = cube<unsigned>;
-using dvec = vec<double>  ; using dmat = mat<double>  ; using dcube = cube<double>  ;
-using fvec = vec<float>   ; using fmat = mat<float>   ; using fcube = cube<float>   ;
+template <typename T> using vec  = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 1>>;
+template <typename T> using mat  = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 2>>;
+template <typename T> using cube = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 3>>;
 
+// int
+using ivec  =  vec<int>;
+using imat  =  mat<int>;
+using icube = cube<int>;
+
+// unsigned int
+using uvec  =  vec<unsigned>;
+using umat  =  mat<unsigned>;
+using ucube = cube<unsigned>;
+
+// double
+using dvec  =  vec<double>;
+using dmat  =  mat<double>; 
+using dcube = cube<double>;
+
+// float
+using fvec  =  vec<float>;
+using fmat  =  mat<float>;
+using fcube = cube<float>;
+
+template<class T, size_t N>                     using  vec_fixed = ndarray<T, Kokkos::extents<size_t, N>>      ;
+template<class T, size_t M, size_t N>           using  mat_fixed = ndarray<T, Kokkos::extents<size_t, M, N>>   ;
+template<class T, size_t M, size_t N, size_t K> using cube_fixed = ndarray<T, Kokkos::extents<size_t, M, N, K>>;
+
+// int
 using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
 using imat22   =  mat_fixed<int,      2, 2>   ; using imat33   =  mat_fixed<int,      3, 3>   ; using imat44   =  mat_fixed<int,      4, 4>   ;
 using icube222 = cube_fixed<int,      2, 2, 2>; using icube333 = cube_fixed<int,      3, 3, 3>; using icube444 = cube_fixed<int,      4, 4, 4>;
 
+// unsigned int
 using uvec2    =  vec_fixed<unsigned, 2>      ; using uvec3    =  vec_fixed<unsigned, 3>      ; using uvec4    =  vec_fixed<unsigned, 4>      ;
 using umat22   =  mat_fixed<unsigned, 2, 2>   ; using umat33   =  mat_fixed<unsigned, 3, 3>   ; using umat44   =  mat_fixed<unsigned, 4, 4>   ;
 using ucube222 = cube_fixed<unsigned, 2, 2, 2>; using ucube333 = cube_fixed<unsigned, 3, 3, 3>; using ucube444 = cube_fixed<unsigned, 4, 4, 4>;
 
+// double
 using dvec2    =  vec_fixed<double,   2>      ; using dvec3    =  vec_fixed<double,   3>      ; using dvec4    =  vec_fixed<double,   4>      ;
 using dmat22   =  mat_fixed<double,   2, 2>   ; using dmat33   =  mat_fixed<double,   3, 3>   ; using dmat44   =  mat_fixed<double,   4, 4>   ;
 using dcube222 = cube_fixed<double,   2, 2, 2>; using dcube333 = cube_fixed<double,   3, 3, 3>; using dcube444 = cube_fixed<double,   4, 4, 4>;
 
+// float
 using fvec2    =  vec_fixed<float,    2>      ; using fvec3    =  vec_fixed<float,    3>      ; using fvec4    =  vec_fixed<float,    4>      ;
 using fmat22   =  mat_fixed<float,    2, 2>   ; using fmat33   =  mat_fixed<float,    3, 3>   ; using fmat44   =  mat_fixed<float,    4, 4>   ;
 using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<float,    3, 3, 3>; using fcube444 = cube_fixed<float,    4, 4, 4>;
