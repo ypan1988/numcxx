@@ -10,6 +10,8 @@ FetchContent_MakeAvailable(googletest)
 set(TEST_TARGETS
     test_basic
     test_ndarray_fixed
+
+    test_et
 )
 
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)
