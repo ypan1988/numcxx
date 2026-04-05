@@ -2730,23 +2730,12 @@ using cube = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 3>>;
 template<class T, size_t M, size_t N, size_t K>
 using cube_fixed = ndarray<T, Kokkos::extents<size_t, M, N, K>>;
 
-using ivec = vec<int>;
-using imat = mat<int>;
-using icube = cube<int>;
-
-using uvec = vec<unsigned int>;
-using umat = mat<unsigned int>;
-using ucube = cube<unsigned int>;
-
-using dvec = vec<double>;
-using dmat = mat<double>;
-using dcube = cube<double>;
-
-using fvec = vec<float>;
-using fmat = mat<float>;
-using fcube = cube<float>;
-
 // clang-format off
+using ivec = vec<int>     ; using imat = mat<int>     ; using icube = cube<int>     ;
+using uvec = vec<unsigned>; using umat = mat<unsigned>; using ucube = cube<unsigned>;
+using dvec = vec<double>  ; using dmat = mat<double>  ; using dcube = cube<double>  ;
+using fvec = vec<float>   ; using fmat = mat<float>   ; using fcube = cube<float>   ;
+
 using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
 using imat22   =  mat_fixed<int,      2, 2>   ; using imat33   =  mat_fixed<int,      3, 3>   ; using imat44   =  mat_fixed<int,      4, 4>   ;
 using icube222 = cube_fixed<int,      2, 2, 2>; using icube333 = cube_fixed<int,      3, 3, 3>; using icube444 = cube_fixed<int,      4, 4, 4>;
