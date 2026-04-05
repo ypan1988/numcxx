@@ -2715,6 +2715,31 @@ template <class Tp, class Ex, class Lp>
     return v.end_;
 }
 
+template <typename T>
+using vec = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 1>>;
+
+template <typename T>
+using mat = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 2>>;
+
+template <typename T>
+using cube = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 3>>;
+
+using ivec = vec<int>;
+using imat = mat<int>;
+using icube = cube<int>;
+
+using uvec = vec<unsigned int>;
+using umat = mat<unsigned int>;
+using ucube = cube<unsigned int>;
+
+using dvec = vec<double>;
+using dmat = mat<double>;
+using dcube = cube<double>;
+
+using fvec = vec<float>;
+using fmat = mat<float>;
+using fcube = cube<float>;
+
 }
 
 #endif  // NUMCXX_H_
