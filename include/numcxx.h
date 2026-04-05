@@ -1,4 +1,18 @@
-﻿#ifndef NUMCXX_H_
+﻿//===-------------------------------numcxx.h-------------------------------===//
+//
+// Portions of this file are derived from the LLVM libc++ `valarray` code.
+// Original libc++ source code is licensed under the Apache License v2.0 with
+// LLVM Exceptions (See https://llvm.org/LICENSE.txt).
+// 
+// Modifications, enhancements, and additional code:
+//  Copyright (c) 2026 Yi Pan
+//  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// 
+// See the LICENSE file for the detail of NumCxx license.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef NUMCXX_H_
 #define NUMCXX_H_
 
 #include <algorithm>
