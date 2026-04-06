@@ -21,6 +21,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 // #  include <__memory/addressof.h>
@@ -42,23 +43,26 @@ namespace numcxx {
 template <class ElementType, class Extents, class LayoutPolicy> class ndarray;
 
 class slice {
-  size_t start_;
-  size_t size_;
-  size_t stride_;
+private:
+  std::optional<int> start_;
+  std::optional<int> stop_;
+  int step_ = 1;
 
 public:
-  slice() : start_(0), size_(0), stride_(0) {}
+  slice() = default;
 
-  slice(size_t __start, size_t __size, size_t __stride)
-      : start_(__start), size_(__size), stride_(__stride) {}
+  slice(std::optional<int> start, std::optional<int> stop, int step = 1)
+      : start_(start), stop_(stop), step_(step) {
+    assert(step != 0 && "slice step cannot be zero");
+  }
 
-  [[nodiscard]] size_t start() const { return start_; }
-  [[nodiscard]] size_t size() const { return size_; }
-  [[nodiscard]] size_t stride() const { return stride_; }
+  [[nodiscard]] std::optional<int> start() const { return start_; }
+  [[nodiscard]] std::optional<int> stop() const { return stop_; }
+  [[nodiscard]] int step() const { return step_; }
 
   friend bool operator==(const slice &x, const slice &y) {
-    return x.start() == y.start() && x.size() == y.size() &&
-           x.stride() == y.stride();
+    return x.start() == y.start() && x.stop() == y.stop() &&
+           x.step() == y.step();
   }
 };
 
