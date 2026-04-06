@@ -12,7 +12,9 @@ set(TEST_TARGETS
     test_ndarray_fixed
     test_assign
     test_et
-    test_et_op
+    test_et_binary_op
+    test_et_binary_fn
+    test_et_unary_op
 )
 
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)
