@@ -2035,7 +2035,6 @@ inline void swap(ndarray<Tp, Ex, Lp>& x, ndarray<Tp, Ex, Lp>& y) noexcept {
     x.swap(y);
 }
 
-
 #define NUMCXX_MAKE_BINARY_OP(OP, FUNCTOR)                                              \
 template <class Expr1,                                                                  \
           class Expr2,                                                                  \
@@ -2073,6 +2072,53 @@ operator OP (const typename Expr::value_type& x, const Expr& y) {               
                               y));                                                      \
 }
 
+#define NUMCXX_MAKE_BINARY_FN(FN, FUNCTOR)                                              \
+template <class Expr1,                                                                  \
+          class Expr2,                                                                  \
+          std::enable_if_t<nc_is_val_expr<Expr1>::value &&                              \
+                           nc_is_val_expr<Expr2>::value, int> = 0>                      \
+inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr1::value_type>,                    \
+                   Expr1, Expr2>>                                                       \
+FN(const Expr1& x, const Expr2& y) {                                                    \
+    typedef typename Expr1::value_type value_type;                                      \
+    typedef nc_binary_op<FUNCTOR<value_type>, Expr1, Expr2> Op;                         \
+    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(), x, y));                            \
+}                                                                                       \
+                                                                                        \
+template <class Expr ,                                                                  \
+          std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>                       \
+inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr::value_type>,                     \
+                   Expr, nc_scalar_expr<typename Expr::value_type>>>                    \
+FN(const Expr& x, const typename Expr::value_type& y) {                                 \
+    typedef typename Expr::value_type value_type;                                       \
+    typedef nc_binary_op<FUNCTOR<value_type>, Expr, nc_scalar_expr<value_type>> Op;     \
+    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(),                                    \
+                              x,                                                        \
+                              nc_scalar_expr<value_type>(y, x.size())));                \
+}                                                                                       \
+                                                                                        \
+template <class Expr ,                                                                  \
+          std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>                       \
+inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr::value_type>,                     \
+                   nc_scalar_expr<typename Expr::value_type>, Expr>>                    \
+FN(const typename Expr::value_type& x, const Expr& y) {                                 \
+    typedef typename Expr::value_type value_type;                                       \
+    typedef nc_binary_op<FUNCTOR<value_type>, nc_scalar_expr<value_type>, Expr> Op;     \
+    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(),                                    \
+                              nc_scalar_expr<value_type>(x, y.size()),                  \
+                              y));                                                      \
+}
+
+#define NUMCXX_MAKE_UNARY_OP(FN, FUNCTOR)                                               \
+template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>           \
+[[nodiscard]] inline nc_val_expr<nc_unary_op<FUNCTOR<typename Expr::value_type>, Expr>> \
+FN (const Expr& x) {                                                                    \
+    typedef typename Expr::value_type value_type;                                       \
+    typedef nc_unary_op<FUNCTOR<value_type>, Expr> Op;                                  \
+    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(), x));                               \
+}
+
+// applies binary operators to each element of two ndarrays, or a ndarray and a value
 NUMCXX_MAKE_BINARY_OP(+, std::plus)
 NUMCXX_MAKE_BINARY_OP(-, std::minus)
 NUMCXX_MAKE_BINARY_OP(*, std::multiplies)
@@ -2086,6 +2132,7 @@ NUMCXX_MAKE_BINARY_OP(>>, nc_bit_shift_right)
 NUMCXX_MAKE_BINARY_OP(&&, std::logical_and)
 NUMCXX_MAKE_BINARY_OP(||, std::logical_or)
 
+// compares two ndarrays or a ndarray with a value
 NUMCXX_MAKE_BINARY_OP(==, std::equal_to)
 NUMCXX_MAKE_BINARY_OP(!=, std::not_equal_to)
 NUMCXX_MAKE_BINARY_OP(< , std::less)
@@ -2093,175 +2140,31 @@ NUMCXX_MAKE_BINARY_OP(<=, std::less_equal)
 NUMCXX_MAKE_BINARY_OP(> , std::greater)
 NUMCXX_MAKE_BINARY_OP(>=, std::greater_equal)
 
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_abs_expr<typename Expr::value_type>, Expr> >
-abs(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_abs_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_abs_expr<value_type>(), x));
-}
+// absolute function
+NUMCXX_MAKE_UNARY_OP(abs, nc_abs_expr)
 
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_acos_expr<typename Expr::value_type>, Expr> >
-acos(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_acos_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_acos_expr<value_type>(), x));
-}
+// exponential functions
+NUMCXX_MAKE_UNARY_OP(exp, nc_exp_expr)
+NUMCXX_MAKE_UNARY_OP(log, nc_log_expr)
+NUMCXX_MAKE_UNARY_OP(log10, nc_log10_expr)
 
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_asin_expr<typename Expr::value_type>, Expr> >
-asin(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_asin_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_asin_expr<value_type>(), x));
-}
+// power function
+NUMCXX_MAKE_BINARY_FN(pow, nc_pow_expr)
+NUMCXX_MAKE_UNARY_OP(sqrt, nc_sqrt_expr)
 
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_atan_expr<typename Expr::value_type>, Expr> >
-atan(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_atan_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_atan_expr<value_type>(), x));
-}
+// trigonometric functions
+NUMCXX_MAKE_UNARY_OP(sin, nc_sin_expr)
+NUMCXX_MAKE_UNARY_OP(cos, nc_cos_expr)
+NUMCXX_MAKE_UNARY_OP(tan, nc_tan_expr)
+NUMCXX_MAKE_UNARY_OP(asin, nc_asin_expr)
+NUMCXX_MAKE_UNARY_OP(acos, nc_acos_expr)
+NUMCXX_MAKE_UNARY_OP(atan, nc_atan_expr)
+NUMCXX_MAKE_BINARY_FN(atan2, nc_atan2_expr)
 
-template <class Expr1,
-    class Expr2,
-    std::enable_if_t<nc_is_val_expr<Expr1>::value&& nc_is_val_expr<Expr2>::value, int> = 0>
-[[nodiscard]] inline
-nc_val_expr<nc_binary_op<nc_atan2_expr<typename Expr1::value_type>, Expr1, Expr2> >
-atan2(const Expr1& x, const Expr2& y) {
-    typedef typename Expr1::value_type value_type;
-    typedef nc_binary_op<nc_atan2_expr<value_type>, Expr1, Expr2> Op;
-    return nc_val_expr<Op>(Op(nc_atan2_expr<value_type>(), x, y));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline
-nc_val_expr<nc_binary_op<nc_atan2_expr<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
-atan2(const Expr& x, const typename Expr::value_type& y) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_binary_op<nc_atan2_expr<value_type>, Expr, nc_scalar_expr<value_type> > Op;
-    return nc_val_expr<Op>(Op(nc_atan2_expr<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline
-nc_val_expr<nc_binary_op<nc_atan2_expr<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
-atan2(const typename Expr::value_type& x, const Expr& y) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_binary_op<nc_atan2_expr<value_type>, nc_scalar_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_atan2_expr<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_cos_expr<typename Expr::value_type>, Expr> >
-cos(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_cos_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_cos_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_cosh_expr<typename Expr::value_type>, Expr> >
-cosh(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_cosh_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_cosh_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_exp_expr<typename Expr::value_type>, Expr> >
-exp(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_exp_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_exp_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_log_expr<typename Expr::value_type>, Expr> >
-log(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_log_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_log_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_log10_expr<typename Expr::value_type>, Expr> >
-log10(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_log10_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_log10_expr<value_type>(), x));
-}
-
-template <class Expr1,
-    class Expr2,
-    std::enable_if_t<nc_is_val_expr<Expr1>::value&& nc_is_val_expr<Expr2>::value, int> = 0>
-[[nodiscard]] inline
-nc_val_expr<nc_binary_op<nc_pow_expr<typename Expr1::value_type>, Expr1, Expr2> >
-pow(const Expr1& x, const Expr2& y) {
-    typedef typename Expr1::value_type value_type;
-    typedef nc_binary_op<nc_pow_expr<value_type>, Expr1, Expr2> Op;
-    return nc_val_expr<Op>(Op(nc_pow_expr<value_type>(), x, y));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline
-nc_val_expr<nc_binary_op<nc_pow_expr<typename Expr::value_type>, Expr, nc_scalar_expr<typename Expr::value_type> > >
-pow(const Expr& x, const typename Expr::value_type& y) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_binary_op<nc_pow_expr<value_type>, Expr, nc_scalar_expr<value_type> > Op;
-    return nc_val_expr<Op>(Op(nc_pow_expr<value_type>(), x, nc_scalar_expr<value_type>(y, x.size())));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline
-nc_val_expr<nc_binary_op<nc_pow_expr<typename Expr::value_type>, nc_scalar_expr<typename Expr::value_type>, Expr> >
-pow(const typename Expr::value_type& x, const Expr& y) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_binary_op<nc_pow_expr<value_type>, nc_scalar_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_pow_expr<value_type>(), nc_scalar_expr<value_type>(x, y.size()), y));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_sin_expr<typename Expr::value_type>, Expr> >
-sin(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_sin_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_sin_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_sinh_expr<typename Expr::value_type>, Expr> >
-sinh(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_sinh_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_sinh_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_sqrt_expr<typename Expr::value_type>, Expr> >
-sqrt(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_sqrt_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_sqrt_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_tan_expr<typename Expr::value_type>, Expr> >
-tan(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_tan_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_tan_expr<value_type>(), x));
-}
-
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-[[nodiscard]] inline nc_val_expr<nc_unary_op<nc_tanh_expr<typename Expr::value_type>, Expr> >
-tanh(const Expr& x) {
-    typedef typename Expr::value_type value_type;
-    typedef nc_unary_op<nc_tanh_expr<value_type>, Expr> Op;
-    return nc_val_expr<Op>(Op(nc_tanh_expr<value_type>(), x));
-}
+// hyperbolic functions
+NUMCXX_MAKE_UNARY_OP(sinh, nc_sinh_expr)
+NUMCXX_MAKE_UNARY_OP(cosh, nc_cosh_expr)
+NUMCXX_MAKE_UNARY_OP(tanh, nc_tanh_expr)
 
 //template <class Tp, class Ex, class Lp>
 //[[nodiscard]] inline Tp* begin(ndarray<Tp, Ex, Lp>& v) {
