@@ -2155,24 +2155,24 @@ NUMCXX_MAKE_UNARY_OP(sinh, nc_sinh_expr)
 NUMCXX_MAKE_UNARY_OP(cosh, nc_cosh_expr)
 NUMCXX_MAKE_UNARY_OP(tanh, nc_tanh_expr)
 
-// template <class Tp, class Ex, class Lp>
-//[[nodiscard]] inline Tp* begin(ndarray<Tp, Ex, Lp>& v) {
-//     return v.begin_;
-// }
-//
-// template <class Tp, class Ex, class Lp>
-//[[nodiscard]] inline const Tp* begin(const ndarray<Tp, Ex, Lp>& v) {
-//     return v.begin_;
-// }
+template <class Tp, class Ex, class Lp>
+[[nodiscard]] inline Tp *begin(ndarray<Tp, Ex, Lp> &v) {
+  return v.data();
+}
+
+template <class Tp, class Ex, class Lp>
+[[nodiscard]] inline const Tp *begin(const ndarray<Tp, Ex, Lp> &v) {
+  return v.data();
+}
 
 template <class Tp, class Ex, class Lp>
 [[nodiscard]] inline Tp *end(ndarray<Tp, Ex, Lp> &v) {
-  return v.end_;
+  return v.data() + v.size();
 }
 
 template <class Tp, class Ex, class Lp>
 [[nodiscard]] inline const Tp *end(const ndarray<Tp, Ex, Lp> &v) {
-  return v.end_;
+  return v.data() + v.size();
 }
 
 // clang-format off
