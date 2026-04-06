@@ -2015,44 +2015,52 @@ inline void swap(ndarray<Tp, Ex, Lp> &x, ndarray<Tp, Ex, Lp> &y) noexcept {
   x.swap(y);
 }
 
+// clang-format off
 #define NUMCXX_MAKE_BINARY_OP(OP, FUNCTOR)                                     \
   template <class Expr1, class Expr2,                                          \
             std::enable_if_t<nc_is_val_expr<Expr1>::value &&                   \
-                                 nc_is_val_expr<Expr2>::value,                 \
-                             int> = 0>                                         \
-  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr1::value_type>, Expr1,  \
-                                  Expr2>> operator OP(const Expr1 & x,         \
-                                                      const Expr2 & y) {       \
+                             nc_is_val_expr<Expr2>::value, int> = 0>           \
+  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr1::value_type>,         \
+                                  Expr1,                                       \
+                                  Expr2>>                                      \
+  operator OP(const Expr1 & x, const Expr2 & y) {                              \
     typedef typename Expr1::value_type value_type;                             \
-    typedef nc_binary_op<FUNCTOR<value_type>, Expr1, Expr2> Op;                \
-    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(), x, y));                   \
+    typedef          nc_binary_op<FUNCTOR<value_type>,                         \
+                                  Expr1,                                       \
+                                  Expr2> Op;                                   \
+    return nc_val_expr<Op>    (Op(FUNCTOR<value_type>(),                       \
+                                  x,                                           \
+                                  y));                                         \
   }                                                                            \
                                                                                \
   template <class Expr,                                                        \
             std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>            \
-  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr::value_type>, Expr,    \
+  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr::value_type>,          \
+                                  Expr,                                        \
                                   nc_scalar_expr<typename Expr::value_type>>>  \
   operator OP(const Expr & x, const typename Expr::value_type & y) {           \
     typedef typename Expr::value_type value_type;                              \
-    typedef nc_binary_op<FUNCTOR<value_type>, Expr,                            \
-                         nc_scalar_expr<value_type>>                           \
-        Op;                                                                    \
-    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(), x,                        \
-                              nc_scalar_expr<value_type>(y, x.size())));       \
+    typedef          nc_binary_op<FUNCTOR<value_type>,                         \
+                                  Expr,                                        \
+                                  nc_scalar_expr<value_type>> Op;              \
+    return nc_val_expr<Op>    (Op(FUNCTOR<value_type>(),                       \
+                                  x,                                           \
+                                  nc_scalar_expr<value_type>(y, x.size())));   \
   }                                                                            \
                                                                                \
   template <class Expr,                                                        \
             std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>            \
-  inline nc_val_expr<                                                          \
-      nc_binary_op<FUNCTOR<typename Expr::value_type>,                         \
-                   nc_scalar_expr<typename Expr::value_type>, Expr>>           \
+  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr::value_type>,          \
+                                  nc_scalar_expr<typename Expr::value_type>,   \
+                                  Expr>>                                       \
   operator OP(const typename Expr::value_type & x, const Expr & y) {           \
     typedef typename Expr::value_type value_type;                              \
-    typedef nc_binary_op<FUNCTOR<value_type>, nc_scalar_expr<value_type>,      \
-                         Expr>                                                 \
-        Op;                                                                    \
-    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(),                           \
-                              nc_scalar_expr<value_type>(x, y.size()), y));    \
+    typedef          nc_binary_op<FUNCTOR<value_type>,                         \
+                                  nc_scalar_expr<value_type>,                  \
+                                  Expr> Op;                                    \
+    return nc_val_expr<Op>    (Op(FUNCTOR<value_type>(),                       \
+                                  nc_scalar_expr<value_type>(x, y.size()),     \
+                                  y));                                         \
   }
 
 #define NUMCXX_MAKE_BINARY_FN(FN, FUNCTOR)                                     \
@@ -2105,6 +2113,7 @@ inline void swap(ndarray<Tp, Ex, Lp> &x, ndarray<Tp, Ex, Lp> &y) noexcept {
     typedef nc_unary_op<FUNCTOR<value_type>, Expr> Op;                         \
     return nc_val_expr<Op>(Op(FUNCTOR<value_type>(), x));                      \
   }
+// clang-format on
 
 // applies binary operators to each element of two ndarrays, or a ndarray and a
 // value
