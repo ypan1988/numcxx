@@ -286,15 +286,17 @@ public:
   template <class> friend class nc_val_expr;
 };
 
-template <typename T> struct is_slice_or_int : std::false_type {};
-template <> struct is_slice_or_int<int> : std::true_type {};
-template <> struct is_slice_or_int<slice> : std::true_type {};
+template <typename T>
+struct is_slice_or_integral
+    : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> ||
+                         std::is_integral_v<std::decay_t<T>>> {};
 
 template <typename T>
-inline constexpr bool is_slice_or_int_v = is_slice_or_int<T>::value;
+inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
 
 template <typename... Args>
-inline constexpr bool are_all_slice_or_int_v = (is_slice_or_int_v<Args> && ...);
+inline constexpr bool are_all_slice_or_integral_v =
+    (is_slice_or_integral_v<Args> && ...);
 
 template <class ValExpr> class nc_val_expr;
 
