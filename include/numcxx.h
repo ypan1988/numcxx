@@ -286,6 +286,16 @@ public:
   template <class> friend class nc_val_expr;
 };
 
+template <typename T> struct is_slice_or_int : std::false_type {};
+template <> struct is_slice_or_int<int> : std::true_type {};
+template <> struct is_slice_or_int<slice> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_slice_or_int_v = is_slice_or_int<T>::value;
+
+template <typename... Args>
+inline constexpr bool are_all_slice_or_int_v = (is_slice_or_int_v<Args> && ...);
+
 template <class ValExpr> class nc_val_expr;
 
 template <class ValExpr> struct nc_is_val_expr : std::false_type {};
