@@ -547,6 +547,15 @@ private:
 
   // void __clear(size_t capacity);
   // ndarray& __assign_range(const value_type* __f, const value_type* __l);
+  template <typename Integer>
+  static size_t to_submdspan_arg(Integer idx, size_t dim_len) {
+    static_assert(std::is_integral_v<Integer>,
+                  "Index must be an integral type");
+    Integer res = idx < 0 ? idx + static_cast<Integer>(dim_len) : idx;
+    assert(res >= 0 && static_cast<size_t>(res) < dim_len &&
+           "Index out of bounds");
+    return static_cast<size_t>(res);
+  }
 };
 
 // template <class Tp, size_t _Size>
