@@ -59,6 +59,20 @@ public:
   [[nodiscard]] std::optional<int> start() const { return start_; }
   [[nodiscard]] std::optional<int> stop() const { return stop_; }
   [[nodiscard]] int step() const { return step_; }
+  [[nodiscard]] bool is_all(size_t dim_len) const {
+    if (step_ != 1)
+      return false;
+
+    int start = start_.value_or(0);
+    int stop = stop_.value_or(static_cast<int>(dim_len));
+
+    if (start < 0)
+      start += static_cast<int>(dim_len);
+    if (stop < 0)
+      stop += static_cast<int>(dim_len);
+
+    return start == 0 && stop == static_cast<int>(dim_len);
+  }
 
   friend bool operator==(const slice &x, const slice &y) {
     return x.start() == y.start() && x.stop() == y.stop() &&
@@ -555,6 +569,11 @@ private:
     assert(res >= 0 && static_cast<size_t>(res) < dim_len &&
            "Index out of bounds");
     return static_cast<size_t>(res);
+  }
+
+  static auto to_submdspan_arg(const slice &s, size_t dim_len) {
+    if (s.is_all(dim_len))
+      return Kokkos::full_extent;
   }
 };
 
