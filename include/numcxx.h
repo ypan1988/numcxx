@@ -29,6 +29,7 @@
 // #  include <__utility/exception_guard.h>
 
 #include <mdspan/mdarray.hpp>
+#include <mdspan/mdspan.hpp>
 
 namespace numcxx::detail {
 using Kokkos::dextents;
@@ -67,9 +68,9 @@ public:
 };
 
 // clang-format off
-template <class Tp> class slice_view;
-template <class Tp> class mask_view;
-template <class Tp> class indirect_view;
+template <class Tp, class Ex, class Lp> class slice_view;
+template <class Tp, class Ex, class Lp> class mask_view;
+template <class Tp, class Ex, class Lp> class indirect_view;
 
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
@@ -675,6 +676,26 @@ struct nc_binary_op<Op, ndarray<Tp1, Ex1, Lp1>, ndarray<Tp2, Ex2, Lp2>> {
   result_type operator[](size_t i) const { return op_(a0_[i], a1_[i]); }
 
   size_t size() const { return a0_.size(); }
+};
+
+// slice_view
+template <class ElementType, class Extents,
+          class LayoutPolicy = detail::layout_right>
+class slice_view {
+public:
+  using value_type = ElementType;
+  using result_type = ElementType;
+  using extents_type = Extents;
+  using layout_type = LayoutPolicy;
+
+private:
+  Kokkos::mdspan<ElementType, Extents> span_;
+
+public:
+  explicit slice_view(Kokkos::mdspan<ElementType, Extents> span) : span_(span) {}
+
+  [[nodiscard]] const value_type &operator[](size_t i) const { return span_[i]; }
+  [[nodiscard]] value_type &operator[](size_t i) { return span_[i]; }
 };
 
 // slice_array
