@@ -558,42 +558,36 @@ private:
   }
 
   static auto to_submdspan_arg(const slice &s, size_t dim_len) {
-    // to check it is a valid slice
+    auto resolve_index = [dim_len](std::optional<int> idx, int default_val) {
+      int val;
+      if (idx.has_value()) {
+        val = idx.value();
+        if (val < 0)
+          val += static_cast<int>(dim_len);
+      } else {
+        val = default_val;
+      }
+      return val;
+    };
+
     int step = s.step();
-    int start;
-    if (s.start().has_value()) {
-      start = s.start().value();
-      if (start < 0)
-        start += dim_len;
-    } else {
-      start = (s.step() > 0) ? 0 : dim_len - 1;
-    }
+    int start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
+    int stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
 
-    int stop;
-    if (s.stop().has_value()) {
-      stop = s.stop().value();
-      if (stop < 0)
-        stop += dim_len;
-    } else {
-      stop = (s.step() > 0) ? dim_len : -1;
-    }
-
-    int diff = stop - start;
-    size_t extent = 0;
-    if (step == 1 || step == -1)
-      extent = static_cast<size_t>(std::abs(diff));
-    else {
-      extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
-    }
-
-    if (extent == dim_len && start == 0 && s.step() == 1) {
+    if (start == 0 && stop == dim_len && s.step() == 1) {
       return Kokkos::full_extent;
     }
 
-    return Kokkos::strided_slice{.offset = start,
+    int diff = stop - start;
+    assert(diff * step > 0 && "invalid slice");
+
+    size_t offset = static_cast<size_t>(start);
+    size_t extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
+    size_t stride = static_cast<size_t>(std::abs(s.step()));
+
+    return Kokkos::strided_slice{.offset = offset,
                                  .extent = extent,
-                                 .stride =
-                                     static_cast<size_t>(std::abs(s.step()))};
+                                 .stride =stride};
   }
 };
 
