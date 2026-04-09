@@ -722,10 +722,13 @@ public:
   explicit slice_view(Kokkos::mdspan<ElementType, Extents> span)
       : span_(span) {}
 
-  [[nodiscard]] const value_type &operator[](size_t i) const {
-    return span_[i];
-  }
-  [[nodiscard]] value_type &operator[](size_t i) { return span_[i]; }
+  // clang-format off
+  [[nodiscard]] const value_type &operator[](size_t i) const { return span_[i]; }
+  [[nodiscard]]       value_type &operator[](size_t i)       { return span_[i]; }
+
+  auto extents() const { return span_.extents(); }
+  size_t size()  const { return span_.size(); }
+  // clang-format on
 };
 
 // slice_array
