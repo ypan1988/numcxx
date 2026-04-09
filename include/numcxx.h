@@ -31,6 +31,33 @@
 #include <mdspan/mdarray.hpp>
 #include <mdspan/mdspan.hpp>
 
+#ifndef NUMCXX_NO_DEBUG
+#define NUMCXX_ASSERT(expr, msg)                                               \
+  do {                                                                         \
+    if (!(expr)) {                                                             \
+      std::cerr << "numcxx assertion failed: " << (msg) << "\n"                \
+                << "  at " << __FILE__ << ":" << __LINE__ << " (" << __func__  \
+                << ")\n";                                                      \
+      std::abort();                                                            \
+    }                                                                          \
+  } while (0)
+#else
+#define NUMCXX_ASSERT(expr, msg) ((void)0)
+#endif
+
+#ifndef NUMCXX_NO_EXCEPTIONS
+#define NUMCXX_THROW(exception_type, msg)                                      \
+  do {                                                                         \
+    throw exception_type(msg);                                                 \
+  } while (0)
+#else
+#define NUMCXX_THROW(exception_type, msg)                                      \
+  do {                                                                         \
+    std::cerr << "numcxx critical error: " << (msg) << "\n";                   \
+    std::abort();                                                              \
+  } while (0)
+#endif
+
 namespace numcxx::detail {
 using Kokkos::dextents;
 using Kokkos::extents;
@@ -692,9 +719,12 @@ private:
   Kokkos::mdspan<ElementType, Extents> span_;
 
 public:
-  explicit slice_view(Kokkos::mdspan<ElementType, Extents> span) : span_(span) {}
+  explicit slice_view(Kokkos::mdspan<ElementType, Extents> span)
+      : span_(span) {}
 
-  [[nodiscard]] const value_type &operator[](size_t i) const { return span_[i]; }
+  [[nodiscard]] const value_type &operator[](size_t i) const {
+    return span_[i];
+  }
   [[nodiscard]] value_type &operator[](size_t i) { return span_[i]; }
 };
 
