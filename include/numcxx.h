@@ -574,7 +574,7 @@ private:
     int start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
     int stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
 
-    if (start == 0 && stop == dim_len && s.step() == 1) {
+    if (step == 1 && start == 0 && stop == dim_len) {
       return Kokkos::full_extent;
     }
 
@@ -585,9 +585,8 @@ private:
     size_t extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
     size_t stride = static_cast<size_t>(std::abs(s.step()));
 
-    return Kokkos::strided_slice{.offset = offset,
-                                 .extent = extent,
-                                 .stride =stride};
+    return Kokkos::strided_slice<size_t, size_t, size_t>{offset, extent,
+                                                         stride};
   }
 };
 
