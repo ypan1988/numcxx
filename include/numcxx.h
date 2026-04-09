@@ -59,20 +59,6 @@ public:
   [[nodiscard]] std::optional<int> start() const { return start_; }
   [[nodiscard]] std::optional<int> stop() const { return stop_; }
   [[nodiscard]] int step() const { return step_; }
-  [[nodiscard]] bool is_all(size_t dim_len) const {
-    if (step_ != 1)
-      return false;
-
-    int start = start_.value_or(0);
-    int stop = stop_.value_or(static_cast<int>(dim_len));
-
-    if (start < 0)
-      start += static_cast<int>(dim_len);
-    if (stop < 0)
-      stop += static_cast<int>(dim_len);
-
-    return start == 0 && stop == static_cast<int>(dim_len);
-  }
 
   friend bool operator==(const slice &x, const slice &y) {
     return x.start() == y.start() && x.stop() == y.stop() &&
@@ -572,8 +558,42 @@ private:
   }
 
   static auto to_submdspan_arg(const slice &s, size_t dim_len) {
-    if (s.is_all(dim_len))
+    // to check it is a valid slice
+    int step = s.step();
+    int start;
+    if (s.start().has_value()) {
+      start = s.start().value();
+      if (start < 0)
+        start += dim_len;
+    } else {
+      start = (s.step() > 0) ? 0 : dim_len - 1;
+    }
+
+    int stop;
+    if (s.stop().has_value()) {
+      stop = s.stop().value();
+      if (stop < 0)
+        stop += dim_len;
+    } else {
+      stop = (s.step() > 0) ? dim_len : -1;
+    }
+
+    int diff = stop - start;
+    size_t extent = 0;
+    if (step == 1 || step == -1)
+      extent = static_cast<size_t>(std::abs(diff));
+    else {
+      extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
+    }
+
+    if (extent == dim_len && start == 0 && s.step() == 1) {
       return Kokkos::full_extent;
+    }
+
+    return Kokkos::strided_slice{.offset = start,
+                                 .extent = extent,
+                                 .stride =
+                                     static_cast<size_t>(std::abs(s.step()))};
   }
 };
 
