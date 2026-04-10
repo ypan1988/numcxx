@@ -414,6 +414,13 @@ public:
     return elem_(idxs...);
   }
 
+  // template <typename... Args> auto operator()(Args... args) const {
+  //   static_assert(are_all_slice_or_integral_v<Args...>,
+  //                 "Each argument must be slice or an integral type");
+  //   static_assert(sizeof(... Args) == rank(),
+  //                 "Number of arguments mush match array rank");
+  // }
+
   constexpr pointer data() noexcept { return elem_.data(); }
   constexpr const_pointer data() const noexcept { return elem_.data(); }
 
@@ -615,6 +622,13 @@ private:
 
     return Kokkos::strided_slice<size_t, size_t, size_t>{offset, extent,
                                                          stride};
+  }
+
+  template <typename... Args, size_t... Is>
+  auto apply_slices(std::index_sequence<Is...>, Args &&...args) const {
+    std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
+    return Kokkos::submdspan(elem_.to_mdspan(),
+                             to_submdspan_arg(args, dims[Is])...);
   }
 };
 
