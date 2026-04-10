@@ -409,17 +409,30 @@ public:
     return elem_(idxs...);
   }
 
-  template <class... SizeTypes>
-  constexpr const_reference operator()(SizeTypes... idxs) const noexcept {
-    return elem_(idxs...);
-  }
-
-  // template <typename... Args> auto operator()(Args... args) const {
-  //   static_assert(are_all_slice_or_integral_v<Args...>,
-  //                 "Each argument must be slice or an integral type");
-  //   static_assert(sizeof(... Args) == rank(),
-  //                 "Number of arguments mush match array rank");
+  // template <class... SizeTypes>
+  // constexpr const_reference operator()(SizeTypes... idxs) const noexcept {
+  //   return elem_(idxs...);
   // }
+
+  template <typename... Args> auto operator()(Args &&...args) const {
+    static_assert(are_all_slice_or_integral_v<Args...>,
+                  "Each argument must be slice or an integral type");
+    static_assert(sizeof...(Args) == rank(),
+                  "Number of arguments mush match array rank");
+
+    auto sub_mdspan = apply_slices(std::index_sequence_for<Args...>{},
+                                   std::forward<Args>(args)...);
+
+    constexpr size_t result_rank = std::decay_t<decltype(sub_mdspan)>::rank();
+    if constexpr (result_rank == 0)
+      return sub_mdspan();
+
+    using ViewType =
+        slice_view<value_type,
+                   typename std::decay_t<decltype(sub_mdspan)>::extents_type,
+                   layout_type>;
+    return ViewType(sub_mdspan);
+  }
 
   constexpr pointer data() noexcept { return elem_.data(); }
   constexpr const_pointer data() const noexcept { return elem_.data(); }
