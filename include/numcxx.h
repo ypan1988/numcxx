@@ -417,7 +417,7 @@ public:
   template <typename... Args> auto operator()(Args &&...args) const {
     static_assert(are_all_slice_or_integral_v<Args...>,
                   "Each argument must be slice or an integral type");
-    static_assert(sizeof...(Args) == rank(),
+    static_assert(sizeof...(Args) == Extents::rank(),
                   "Number of arguments mush match array rank");
 
     auto sub_mdspan = apply_slices(std::index_sequence_for<Args...>{},
