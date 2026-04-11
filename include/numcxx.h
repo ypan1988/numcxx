@@ -2364,6 +2364,7 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 
 namespace numcxx::random {
 
+// 引擎管理
 inline std::mt19937 &get_engine() {
   static thread_local std::mt19937 engine(std::random_device{}());
   return engine;
@@ -2379,9 +2380,56 @@ void fill_random(NdArray &arr, Distribution &&dist) {
     arr.data()[i] = dist(engine);
   }
 }
+
+// 检测 NdArray 是否为静态维度（所有维度大小编译期已知）
+template <typename NdArray> struct is_static_ndarray {
+  static constexpr bool value = [] {
+    constexpr auto ext = NdArray::extents_type{};
+    for (size_t r = 0; r < NdArray::extents_type::rank(); ++r) {
+      if (ext.extent(r) == std::dynamic_extent)
+        return false;
+    }
+    return true;
+  }();
+};
+
+// 从 initializer_list 构造 extents（运行时检查大小）
+template <size_t Rank>
+auto make_extents(const std::initializer_list<size_t> &shape) {
+  if (shape.size() != Rank) {
+    NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
+  }
+  std::array<size_t, Rank> dims;
+  std::copy(shape.begin(), shape.end(), dims.begin());
+  return extents(dims);
+}
 } // namespace detail
 
-// rand
+// ---------- 1. rand: uniform [0,1) ----------
+// 版本1：通过模板参数指定返回类型（静态或动态）
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType rand() {
+  NdArrayType arr;
+  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<!detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType rand(std::initializer_list<size_t> shape) {
+  constexpr size_t rank = NdArrayType::extents_type::rank();
+  auto ext = detail::make_extents<rank>(shape);
+  NdArrayType arr(ext);
+  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+// 版本2：保留原有的变长参数版本（自动推导类型）
 template <typename... Dims> auto rand(Dims... dims) {
   static_assert((std::is_integral_v<Dims> && ...),
                 "dimensions must be integers");
@@ -2392,14 +2440,29 @@ template <typename... Dims> auto rand(Dims... dims) {
   return arr;
 }
 
-template <typename NdArrayType> NdArrayType rand() {
+// ---------- 2. randn: standard normal ----------
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType randn() {
   NdArrayType arr;
-  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  std::normal_distribution<double> dist(0.0, 1.0);
   detail::fill_random(arr, dist);
   return arr;
 }
 
-// randn
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<!detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType randn(std::initializer_list<size_t> shape) {
+  constexpr size_t rank = NdArrayType::extents_type::rank();
+  auto ext = detail::make_extents<rank>(shape);
+  NdArrayType arr(ext);
+  std::normal_distribution<double> dist(0.0, 1.0);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
 template <typename... Dims> auto randn(Dims... dims) {
   static_assert((std::is_integral_v<Dims> && ...),
                 "dimensions must be integers");
@@ -2410,50 +2473,61 @@ template <typename... Dims> auto randn(Dims... dims) {
   return arr;
 }
 
-template <typename NdArrayType> NdArrayType randn() {
-  NdArrayType arr;
-  std::normal_distribution<double> dist(0.0, 1.0);
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-// uniform
-template <typename... Dims>
-auto uniform(double low, double high, Dims... dims) {
-  static_assert((std::is_integral_v<Dims> && ...),
-                "dimensions must be integers");
-  using Extents = decltype(numcxx::extents(dims...));
-  ndarray<double, Extents> arr(dims...);
-  std::uniform_real_distribution<double> dist(low, high);
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-template <typename NdArrayType> NdArrayType uniform(double low, double high) {
+// ---------- 3. uniform [low, high) ----------
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType uniform(double low, double high) {
   NdArrayType arr;
   std::uniform_real_distribution<double> dist(low, high);
   detail::fill_random(arr, dist);
   return arr;
 }
 
-// randint
-template <typename... Dims> auto randint(int low, int high, Dims... dims) {
-  static_assert((std::is_integral_v<Dims> && ...),
-                "dimensions must be integers");
-  using Extents = decltype(numcxx::extents(dims...));
-  ndarray<int, Extents> arr(dims...);
-  std::uniform_int_distribution<int> dist(low, high - 1);
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<!detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType uniform(double low, double high,
+                    std::initializer_list<size_t> shape) {
+  constexpr size_t rank = NdArrayType::extents_type::rank();
+  auto ext = detail::make_extents<rank>(shape);
+  NdArrayType arr(ext);
+  std::uniform_real_distribution<double> dist(low, high);
   detail::fill_random(arr, dist);
   return arr;
 }
 
-template <typename NdArrayType> NdArrayType randint(int low, int high) {
+// 一维整数形状便捷版本
+inline auto uniform(double low, double high, size_t n) {
+  return uniform<ndarray<double, decltype(extents(n))>>(low, high, {n});
+}
+
+// ---------- 4. randint [low, high) ----------
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType randint(int low, int high) {
   NdArrayType arr;
   std::uniform_int_distribution<int> dist(low, high - 1);
   detail::fill_random(arr, dist);
   return arr;
 }
 
+template <
+    typename NdArrayType,
+    typename = std::enable_if_t<!detail::is_static_ndarray<NdArrayType>::value>>
+NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
+  constexpr size_t rank = NdArrayType::extents_type::rank();
+  auto ext = detail::make_extents<rank>(shape);
+  NdArrayType arr(ext);
+  std::uniform_int_distribution<int> dist(low, high - 1);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+inline auto randint(int low, int high, size_t n) {
+  return randint<ndarray<int, decltype(extents(n))>>(low, high, {n});
+}
 } // namespace numcxx::random
 
 #endif // NUMCXX_H_
