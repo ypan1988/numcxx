@@ -73,7 +73,7 @@ using std::extents;
 using std::layout_left;
 using std::layout_right;
 using std::mdarray;
-using std::mdspan
+using std::mdspan;
 #else
 using Kokkos::dextents;
 using Kokkos::extents;
@@ -87,8 +87,15 @@ using Kokkos::Experimental::mdarray;
 namespace numcxx {
 
 template <size_t Rank> using dextents = detail::dextents<size_t, Rank>;
+#if NUMCXX_USE_STD
 template <size_t... Extents> using extents = detail::extents<Extents...>;
+#else
+template <size_t... Extents>
+using extents = detail::extents<size_t, Extents...>;
+#endif
+} // namespace numcxx
 
+namespace numcxx {
 template <class ElementType, class Extents, class LayoutPolicy> class ndarray;
 
 class slice {
