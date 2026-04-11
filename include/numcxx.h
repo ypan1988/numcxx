@@ -404,17 +404,7 @@ public:
 
   ~ndarray() = default;
 
-  // template <class... SizeTypes>
-  // constexpr reference operator()(SizeTypes... idxs) noexcept {
-  //   return elem_(idxs...);
-  // }
-
-  // template <class... SizeTypes>
-  // constexpr const_reference operator()(SizeTypes... idxs) const noexcept {
-  //   return elem_(idxs...);
-  // }
-
-  template <typename... Args> auto operator()(Args &&...args) const {
+  template <typename... Args> decltype(auto) operator()(Args &&...args) const {
     static_assert(sizeof...(Args) == Extents::rank(),
                   "Number of arguments mush match array rank");
     static_assert(are_all_slice_or_integral_v<Args...>,
@@ -425,13 +415,13 @@ public:
     using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
     if constexpr (sub_mdspan_type::rank() == 0)
-      return sub_mdspan();
+      return data()[elem_.to_mdspan().mapping()(args...)];
     else
       return slice_view<value_type, typename sub_mdspan_type::extents_type,
                         layout_type>(sub_mdspan);
   }
 
-  template <typename... Args> auto operator()(Args &&...args) {
+  template <typename... Args> decltype(auto) operator()(Args &&...args) {
     static_assert(sizeof...(Args) == Extents::rank(),
                   "Number of arguments mush match array rank");
     static_assert(are_all_slice_or_integral_v<Args...>,
@@ -442,7 +432,7 @@ public:
     using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
     if constexpr (sub_mdspan_type::rank() == 0)
-      return sub_mdspan();
+      return data()[elem_.to_mdspan().mapping()(args...)];
     else
       return slice_view<value_type, typename sub_mdspan_type::extents_type,
                         layout_type>(sub_mdspan);
