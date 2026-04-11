@@ -22,6 +22,7 @@
 #include <initializer_list>
 #include <memory>
 #include <optional>
+#include <random>
 #include <type_traits>
 #include <utility>
 #include <version>
@@ -67,21 +68,21 @@ namespace numcxx::detail {
 #if NUMCXX_USE_STD
 using std::dextents;
 using std::extents;
+using std::full_extent;
 using std::layout_left;
 using std::layout_right;
-using std::strided_slice;
-using std::full_extent;
-using std::mdspan;
-using std::submdspan;
 using std::mdarray;
+using std::mdspan;
+using std::strided_slice;
+using std::submdspan;
 #else
 using Kokkos::dextents;
 using Kokkos::extents;
+using Kokkos::full_extent;
 using Kokkos::layout_left;
 using Kokkos::layout_right;
-using Kokkos::strided_slice;
-using Kokkos::full_extent;
 using Kokkos::mdspan;
+using Kokkos::strided_slice;
 using Kokkos::submdspan;
 using Kokkos::Experimental::mdarray;
 #endif
@@ -2360,5 +2361,99 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 // clang-format on
 
 } // namespace numcxx
+
+namespace numcxx::random {
+
+inline std::mt19937 &get_engine() {
+  static thread_local std::mt19937 engine(std::random_device{}());
+  return engine;
+}
+
+inline void seed(unsigned int value) { get_engine().seed(value); }
+
+namespace detail {
+template <typename NdArray, typename Distribution>
+void fill_random(NdArray &arr, Distribution &&dist) {
+  auto &engine = get_engine();
+  for (size_t i = 0; i < arr.size(); ++i) {
+    arr.data()[i] = dist(engine);
+  }
+}
+} // namespace detail
+
+// rand
+template <typename... Dims> auto rand(Dims... dims) {
+  static_assert((std::is_integral_v<Dims> && ...),
+                "dimensions must be integers");
+  using Extents = decltype(numcxx::extents(dims...));
+  ndarray<double, Extents> arr(dims...);
+  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+template <typename NdArrayType> NdArrayType rand() {
+  NdArrayType arr;
+  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+// randn
+template <typename... Dims> auto randn(Dims... dims) {
+  static_assert((std::is_integral_v<Dims> && ...),
+                "dimensions must be integers");
+  using Extents = decltype(numcxx::extents(dims...));
+  ndarray<double, Extents> arr(dims...);
+  std::normal_distribution<double> dist(0.0, 1.0);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+template <typename NdArrayType> NdArrayType randn() {
+  NdArrayType arr;
+  std::normal_distribution<double> dist(0.0, 1.0);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+// uniform
+template <typename... Dims>
+auto uniform(double low, double high, Dims... dims) {
+  static_assert((std::is_integral_v<Dims> && ...),
+                "dimensions must be integers");
+  using Extents = decltype(numcxx::extents(dims...));
+  ndarray<double, Extents> arr(dims...);
+  std::uniform_real_distribution<double> dist(low, high);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+template <typename NdArrayType> NdArrayType uniform(double low, double high) {
+  NdArrayType arr;
+  std::uniform_real_distribution<double> dist(low, high);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+// randint
+template <typename... Dims> auto randint(int low, int high, Dims... dims) {
+  static_assert((std::is_integral_v<Dims> && ...),
+                "dimensions must be integers");
+  using Extents = decltype(numcxx::extents(dims...));
+  ndarray<int, Extents> arr(dims...);
+  std::uniform_int_distribution<int> dist(low, high - 1);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+template <typename NdArrayType> NdArrayType randint(int low, int high) {
+  NdArrayType arr;
+  std::uniform_int_distribution<int> dist(low, high - 1);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+} // namespace numcxx::random
 
 #endif // NUMCXX_H_
