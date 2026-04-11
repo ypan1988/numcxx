@@ -85,44 +85,23 @@ using Kokkos::Experimental::mdarray;
 } // namespace numcxx::detail
 
 namespace numcxx {
+using size_type = std::size_t;
+using index_type = int; // TODO: replace int with std::ptrdiff_t
 
-template <size_t Rank> using dextents = detail::dextents<size_t, Rank>;
+template <size_type Rank> using dextents = detail::dextents<size_type, Rank>;
+
 #if NUMCXX_USE_STD
-template <size_t... Extents> using extents = detail::extents<Extents...>;
+template <size_type... Extents> using extents = detail::extents<Extents...>;
 #else
-template <size_t... Extents>
-using extents = detail::extents<size_t, Extents...>;
+template <size_type... Extents>
+using extents = detail::extents<size_type, Extents...>;
 #endif
 } // namespace numcxx
 
 namespace numcxx {
-template <class ElementType, class Extents, class LayoutPolicy> class ndarray;
-
-class slice {
-private:
-  std::optional<int> start_;
-  std::optional<int> stop_;
-  int step_ = 1;
-
-public:
-  slice() = default;
-
-  slice(std::optional<int> start, std::optional<int> stop, int step = 1)
-      : start_(start), stop_(stop), step_(step) {
-    assert(step != 0 && "slice step cannot be zero");
-  }
-
-  [[nodiscard]] std::optional<int> start() const { return start_; }
-  [[nodiscard]] std::optional<int> stop() const { return stop_; }
-  [[nodiscard]] int step() const { return step_; }
-
-  friend bool operator==(const slice &x, const slice &y) {
-    return x.start() == y.start() && x.stop() == y.stop() &&
-           x.step() == y.step();
-  }
-};
-
 // clang-format off
+                                        class slice;
+template <class Tp, class Ex, class Lp> class ndarray;
 template <class Tp, class Ex, class Lp> class slice_view;
 template <class Tp, class Ex, class Lp> class mask_view;
 template <class Tp, class Ex, class Lp> class indirect_view;
@@ -132,6 +111,31 @@ template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp
 template <class Tp, class Ex, class Lp>       Tp *end  (      ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
 // clang-format on
+
+class slice {
+private:
+  std::optional<index_type> start_;
+  std::optional<index_type> stop_;
+  index_type step_ = 1;
+
+public:
+  slice() = default;
+
+  slice(std::optional<index_type> start, std::optional<index_type> stop,
+        index_type step = 1)
+      : start_(start), stop_(stop), step_(step) {
+    assert(step != 0 && "slice step cannot be zero");
+  }
+
+  [[nodiscard]] std::optional<index_type> start() const { return start_; }
+  [[nodiscard]] std::optional<index_type> stop() const { return stop_; }
+  [[nodiscard]] index_type step() const { return step_; }
+
+  friend bool operator==(const slice &x, const slice &y) {
+    return x.start() == y.start() && x.stop() == y.stop() &&
+           x.step() == y.step();
+  }
+};
 
 template <class Op, class A0> struct nc_unary_op {
   typedef typename Op::result_type result_type;
