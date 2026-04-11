@@ -69,14 +69,18 @@ using std::dextents;
 using std::extents;
 using std::layout_left;
 using std::layout_right;
-using std::mdarray;
+using std::strided_slice;
+using std::full_extent;
 using std::mdspan;
 using std::submdspan;
+using std::mdarray;
 #else
 using Kokkos::dextents;
 using Kokkos::extents;
 using Kokkos::layout_left;
 using Kokkos::layout_right;
+using Kokkos::strided_slice;
+using Kokkos::full_extent;
 using Kokkos::mdspan;
 using Kokkos::submdspan;
 using Kokkos::Experimental::mdarray;
@@ -607,7 +611,7 @@ private:
     int stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
 
     if (step == 1 && start == 0 && stop == dim_len) {
-      return Kokkos::full_extent;
+      return detail::full_extent;
     }
 
     int diff = stop - start;
@@ -617,7 +621,7 @@ private:
     size_t extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
     size_t stride = static_cast<size_t>(std::abs(s.step()));
 
-    return Kokkos::strided_slice<size_t, size_t, size_t>{offset, extent,
+    return detail::strided_slice<size_t, size_t, size_t>{offset, extent,
                                                          stride};
   }
 
