@@ -25,9 +25,6 @@
 #include <type_traits>
 #include <utility>
 #include <version>
-// #  include <__memory/addressof.h>
-// #  include <__memory/uninitialized_algorithms.h>
-// #  include <__utility/exception_guard.h>
 
 #if __cplusplus >= 202600L
 #define NUMCXX_USE_STD 1
@@ -236,43 +233,6 @@ template <class Tp> struct nc_atan2_expr { typedef Tp result_type; Tp operator()
 template <class Tp> struct nc_pow_expr   { typedef Tp result_type; Tp operator()(const Tp& x, const Tp& y) const { return std::pow  (x, y); } };
 // clang-format on
 
-// template <class ValExpr>
-// class __slice_expr {
-//     typedef std::remove_reference_t<ValExpr> _RmExpr;
-//
-// public:
-//     typedef typename _RmExpr::value_type value_type;
-//     typedef value_type result_type;
-//
-// private:
-//     ValExpr expr_;
-//     size_t start_;
-//     size_t size_;
-//     size_t stride_;
-//
-//     __slice_expr(const slice& __sl, const _RmExpr& e)
-//         : expr_(e), start_(__sl.start()), size_(__sl.size()),
-//         stride_(__sl.stride()) {
-//     }
-//
-// public:
-//     result_type operator[](size_t i) const { return expr_[start_ + i *
-//     stride_]; }
-//
-//     size_t size() const { return size_; }
-//
-//     template <class>
-//     friend class nc_val_expr;
-//     template <class, class, class>
-//     friend class ndarray;
-// };
-//
-// template <class ValExpr>
-// class __mask_expr;
-//
-// template <class ValExpr>
-// class __indirect_expr;
-
 template <class ValExpr> class nc_shift_expr {
   typedef std::remove_reference_t<ValExpr> _RmExpr;
 
@@ -377,20 +337,6 @@ struct nc_is_val_expr<ndarray<Tp, Ex, Lp>> : std::true_type {};
 // template <class Tp>
 // struct nc_is_val_expr<indirect_array<Tp> > : true_type {};
 
-// The functions using a nc_val_expr access the elements by their index.
-// ndarray and the libc++ lazy proxies have an operator[]. The
-// Standard proxy array's don't have this operator, instead they have a
-// implementation specific accessor
-//   __get(size_t)
-//
-// The functions use the non-member function
-//   __get(nc_val_expr, size_t)
-//
-// If the nc_val_expr is a specialization of nc_val_expr_use_member_functions it
-// uses the nc_val_expr's member function
-//   __get(size_t)
-// else it uses the nc_val_expr's member function
-//   operator[](size_t)
 template <class ValExpr> struct nc_val_expr_use_member_functions;
 
 template <class> struct nc_val_expr_use_member_functions : std::false_type {};
