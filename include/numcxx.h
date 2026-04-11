@@ -71,12 +71,14 @@ using std::layout_left;
 using std::layout_right;
 using std::mdarray;
 using std::mdspan;
+using std::submdspan;
 #else
 using Kokkos::dextents;
 using Kokkos::extents;
 using Kokkos::layout_left;
 using Kokkos::layout_right;
 using Kokkos::mdspan;
+using Kokkos::submdspan;
 using Kokkos::Experimental::mdarray;
 #endif
 } // namespace numcxx::detail
@@ -622,14 +624,14 @@ private:
   template <typename... Args, size_t... Is>
   auto apply_slices(std::index_sequence<Is...>, Args &&...args) const {
     std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
-    return Kokkos::submdspan(elem_.to_mdspan(),
+    return detail::submdspan(elem_.to_mdspan(),
                              to_submdspan_arg(args, dims[Is])...);
   }
 
   template <typename... Args, size_t... Is>
   auto apply_slices(std::index_sequence<Is...>, Args &&...args) {
     std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
-    return Kokkos::submdspan(elem_.to_mdspan(),
+    return detail::submdspan(elem_.to_mdspan(),
                              to_submdspan_arg(args, dims[Is])...);
   }
 };
@@ -732,10 +734,10 @@ public:
   using layout_type = LayoutPolicy;
 
 private:
-  Kokkos::mdspan<ElementType, Extents> span_;
+  detail::mdspan<ElementType, Extents> span_;
 
 public:
-  explicit slice_view(Kokkos::mdspan<ElementType, Extents> span)
+  explicit slice_view(detail::mdspan<ElementType, Extents> span)
       : span_(span) {}
 
   // clang-format off
@@ -2304,9 +2306,9 @@ template <class Tp, class Ex, class Lp>
 }
 
 // clang-format off
-template <typename T> using vec  = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 1>>;
-template <typename T> using mat  = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 2>>;
-template <typename T> using cube = numcxx::ndarray<T, Kokkos::dextents<std::size_t, 3>>;
+template <typename T> using vec  = numcxx::ndarray<T, detail::dextents<std::size_t, 1>>;
+template <typename T> using mat  = numcxx::ndarray<T, detail::dextents<std::size_t, 2>>;
+template <typename T> using cube = numcxx::ndarray<T, detail::dextents<std::size_t, 3>>;
 
 // int
 using ivec  =  vec<int>;
@@ -2328,9 +2330,9 @@ using fvec  =  vec<float>;
 using fmat  =  mat<float>;
 using fcube = cube<float>;
 
-template<class T, size_t N>                     using  vec_fixed = ndarray<T, Kokkos::extents<size_t, N>>      ;
-template<class T, size_t M, size_t N>           using  mat_fixed = ndarray<T, Kokkos::extents<size_t, M, N>>   ;
-template<class T, size_t M, size_t N, size_t K> using cube_fixed = ndarray<T, Kokkos::extents<size_t, M, N, K>>;
+template<class T, size_t N>                     using  vec_fixed = ndarray<T, detail::extents<size_t, N>>      ;
+template<class T, size_t M, size_t N>           using  mat_fixed = ndarray<T, detail::extents<size_t, M, N>>   ;
+template<class T, size_t M, size_t N, size_t K> using cube_fixed = ndarray<T, detail::extents<size_t, M, N, K>>;
 
 // int
 using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
