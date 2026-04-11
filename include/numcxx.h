@@ -24,12 +24,20 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <version>
 // #  include <__memory/addressof.h>
 // #  include <__memory/uninitialized_algorithms.h>
 // #  include <__utility/exception_guard.h>
 
+#if __cplusplus >= 202600L
+#define NUMCXX_USE_STD 1
+#include <mdarray>
+#include <mdspan>
+#else
+#define NUMCXX_USE_STD 0
 #include <mdspan/mdarray.hpp>
 #include <mdspan/mdspan.hpp>
+#endif
 
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
@@ -59,14 +67,27 @@
 #endif
 
 namespace numcxx::detail {
+#if NUMCXX_USE_STD
+using std::dextents;
+using std::extents;
+using std::layout_left;
+using std::layout_right;
+using std::mdarray;
+using std::mdspan
+#else
 using Kokkos::dextents;
 using Kokkos::extents;
 using Kokkos::layout_left;
 using Kokkos::layout_right;
+using Kokkos::mdspan;
 using Kokkos::Experimental::mdarray;
+#endif
 } // namespace numcxx::detail
 
 namespace numcxx {
+
+template <size_t Rank> using dextents = detail::dextents<size_t, Rank>;
+template <size_t... Extents> using extents = detail::extents<Extents...>;
 
 template <class ElementType, class Extents, class LayoutPolicy> class ndarray;
 
