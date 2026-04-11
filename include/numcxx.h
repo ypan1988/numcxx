@@ -404,10 +404,10 @@ public:
 
   ~ndarray() = default;
 
-  template <class... SizeTypes>
-  constexpr reference operator()(SizeTypes... idxs) noexcept {
-    return elem_(idxs...);
-  }
+  // template <class... SizeTypes>
+  // constexpr reference operator()(SizeTypes... idxs) noexcept {
+  //   return elem_(idxs...);
+  // }
 
   // template <class... SizeTypes>
   // constexpr const_reference operator()(SizeTypes... idxs) const noexcept {
@@ -426,9 +426,26 @@ public:
 
     if constexpr (sub_mdspan_type::rank() == 0)
       return sub_mdspan();
+    else
+      return slice_view<value_type, typename sub_mdspan_type::extents_type,
+                        layout_type>(sub_mdspan);
+  }
 
-    return slice_view<value_type, typename sub_mdspan_type::extents_type,
-                      layout_type>(sub_mdspan);
+  template <typename... Args> auto operator()(Args &&...args) {
+    static_assert(sizeof...(Args) == Extents::rank(),
+                  "Number of arguments mush match array rank");
+    static_assert(are_all_slice_or_integral_v<Args...>,
+                  "Each argument must be slice or an integral type");
+
+    auto sub_mdspan = apply_slices(std::index_sequence_for<Args...>{},
+                                   std::forward<Args>(args)...);
+    using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
+
+    if constexpr (sub_mdspan_type::rank() == 0)
+      return sub_mdspan();
+    else
+      return slice_view<value_type, typename sub_mdspan_type::extents_type,
+                        layout_type>(sub_mdspan);
   }
 
   constexpr pointer data() noexcept { return elem_.data(); }
@@ -636,6 +653,13 @@ private:
 
   template <typename... Args, size_t... Is>
   auto apply_slices(std::index_sequence<Is...>, Args &&...args) const {
+    std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
+    return Kokkos::submdspan(elem_.to_mdspan(),
+                             to_submdspan_arg(args, dims[Is])...);
+  }
+
+  template <typename... Args, size_t... Is>
+  auto apply_slices(std::index_sequence<Is...>, Args &&...args) {
     std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
     return Kokkos::submdspan(elem_.to_mdspan(),
                              to_submdspan_arg(args, dims[Is])...);
