@@ -2493,10 +2493,6 @@ NdArrayType uniform(double low, double high,
   return arr;
 }
 
-//inline auto uniform(double low, double high, size_t n) {
-//  return uniform<ndarray<double, decltype(extents(n))>>(low, high, {n});
-//}
-
 // ---------- 4. randint [low, high) ----------
 template <
     typename NdArrayType,
@@ -2520,9 +2516,6 @@ NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
   return arr;
 }
 
-//inline auto randint(int low, int high, size_t n) {
-//  return randint<ndarray<int, decltype(extents(n))>>(low, high, {n});
-//}
 } // namespace numcxx::random
 
 #endif // NUMCXX_H_
