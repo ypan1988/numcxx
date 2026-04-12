@@ -2390,11 +2390,7 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 
 } // namespace numcxx
 
-//==============================================================================
-// [numcxx.random]
-// Random Number Generation
-//==============================================================================
-
+// [numcxx.random] random generation
 namespace numcxx::random {
 
 inline std::mt19937 &get_engine() {
@@ -2429,8 +2425,7 @@ template <typename NdArrayType,
           typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType rand() {
   NdArrayType arr;
-  std::uniform_real_distribution<double> dist(0.0, 1.0);
-  detail::fill_random(arr, dist);
+  detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
 }
 
@@ -2438,20 +2433,8 @@ template <typename NdArrayType,
           typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType rand(std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  auto ext = detail::make_extents<rank>(shape);
-  NdArrayType arr(ext);
-  std::uniform_real_distribution<double> dist(0.0, 1.0);
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-template <typename... Dims> auto rand(Dims... dims) {
-  static_assert((std::is_integral_v<Dims> && ...),
-                "dimensions must be integers");
-  using Extents = decltype(numcxx::extents(dims...));
-  ndarray<double, Extents> arr(dims...);
-  std::uniform_real_distribution<double> dist(0.0, 1.0);
-  detail::fill_random(arr, dist);
+  NdArrayType arr(detail::make_extents<rank>(shape));
+  detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
 }
 
@@ -2460,8 +2443,7 @@ template <typename NdArrayType,
           typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType randn() {
   NdArrayType arr;
-  std::normal_distribution<double> dist(0.0, 1.0);
-  detail::fill_random(arr, dist);
+  detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
 }
 
@@ -2469,20 +2451,8 @@ template <typename NdArrayType,
           typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType randn(std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  auto ext = detail::make_extents<rank>(shape);
-  NdArrayType arr(ext);
-  std::normal_distribution<double> dist(0.0, 1.0);
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-template <typename... Dims> auto randn(Dims... dims) {
-  static_assert((std::is_integral_v<Dims> && ...),
-                "dimensions must be integers");
-  using Extents = decltype(numcxx::extents(dims...));
-  ndarray<double, Extents> arr(dims...);
-  std::normal_distribution<double> dist(0.0, 1.0);
-  detail::fill_random(arr, dist);
+  NdArrayType arr(detail::make_extents<rank>(shape));
+  detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
 }
 
@@ -2491,8 +2461,7 @@ template <typename NdArrayType,
           typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType uniform(double low, double high) {
   NdArrayType arr;
-  std::uniform_real_distribution<double> dist(low, high);
-  detail::fill_random(arr, dist);
+  detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
 }
 
@@ -2501,10 +2470,8 @@ template <typename NdArrayType,
 NdArrayType uniform(double low, double high,
                     std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  auto ext = detail::make_extents<rank>(shape);
-  NdArrayType arr(ext);
-  std::uniform_real_distribution<double> dist(low, high);
-  detail::fill_random(arr, dist);
+  NdArrayType arr(detail::make_extents<rank>(shape));
+  detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
 }
 
@@ -2513,8 +2480,7 @@ template <typename NdArrayType,
           typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType randint(int low, int high) {
   NdArrayType arr;
-  std::uniform_int_distribution<int> dist(low, high - 1);
-  detail::fill_random(arr, dist);
+  detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
 }
 
@@ -2522,10 +2488,8 @@ template <typename NdArrayType,
           typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  auto ext = detail::make_extents<rank>(shape);
-  NdArrayType arr(ext);
-  std::uniform_int_distribution<int> dist(low, high - 1);
-  detail::fill_random(arr, dist);
+  NdArrayType arr(detail::make_extents<rank>(shape));
+  detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
 }
 
