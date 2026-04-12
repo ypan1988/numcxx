@@ -2364,7 +2364,6 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 
 namespace numcxx::random {
 
-// 引擎管理
 inline std::mt19937 &get_engine() {
   static thread_local std::mt19937 engine(std::random_device{}());
   return engine;
@@ -2381,12 +2380,12 @@ void fill_random(NdArray &arr, Distribution &&dist) {
   }
 }
 
-// 检测 NdArray 是否为静态维度（所有维度大小编译期已知）
-template <typename NdArray> struct is_static_ndarray {
+template <typename NdArrayType> struct is_static_ndarray {
+  using Extents = typename NdArrayType::extents_type;
+
   static constexpr bool value = [] {
-    constexpr auto ext = NdArray::extents_type{};
-    for (size_t r = 0; r < NdArray::extents_type::rank(); ++r) {
-      if (ext.extent(r) == std::dynamic_extent)
+    for (size_t i = 0; i < Extents::rank(); ++i) {
+      if (Extents::static_extent(i) == Kokkos::dynamic_extent)
         return false;
     }
     return true;
