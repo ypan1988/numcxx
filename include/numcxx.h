@@ -2390,6 +2390,11 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 
 } // namespace numcxx
 
+//==============================================================================
+// [numcxx.random]
+// Random Number Generation
+//==============================================================================
+
 namespace numcxx::random {
 
 inline std::mt19937 &get_engine() {
@@ -2420,9 +2425,8 @@ auto make_extents(const std::initializer_list<size_t> &shape) {
 } // namespace detail
 
 // ---------- 1. rand: uniform [0,1) ----------
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType rand() {
   NdArrayType arr;
   std::uniform_real_distribution<double> dist(0.0, 1.0);
@@ -2430,9 +2434,8 @@ NdArrayType rand() {
   return arr;
 }
 
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType rand(std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
   auto ext = detail::make_extents<rank>(shape);
@@ -2453,9 +2456,8 @@ template <typename... Dims> auto rand(Dims... dims) {
 }
 
 // ---------- 2. randn: standard normal ----------
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType randn() {
   NdArrayType arr;
   std::normal_distribution<double> dist(0.0, 1.0);
@@ -2463,9 +2465,8 @@ NdArrayType randn() {
   return arr;
 }
 
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType randn(std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
   auto ext = detail::make_extents<rank>(shape);
@@ -2486,9 +2487,8 @@ template <typename... Dims> auto randn(Dims... dims) {
 }
 
 // ---------- 3. uniform [low, high) ----------
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType uniform(double low, double high) {
   NdArrayType arr;
   std::uniform_real_distribution<double> dist(low, high);
@@ -2496,9 +2496,8 @@ NdArrayType uniform(double low, double high) {
   return arr;
 }
 
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType uniform(double low, double high,
                     std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
@@ -2510,9 +2509,8 @@ NdArrayType uniform(double low, double high,
 }
 
 // ---------- 4. randint [low, high) ----------
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType randint(int low, int high) {
   NdArrayType arr;
   std::uniform_int_distribution<int> dist(low, high - 1);
@@ -2520,9 +2518,8 @@ NdArrayType randint(int low, int high) {
   return arr;
 }
 
-template <
-    typename NdArrayType,
-    typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
+template <typename NdArrayType,
+          typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
   auto ext = detail::make_extents<rank>(shape);
