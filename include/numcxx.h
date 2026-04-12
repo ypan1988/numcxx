@@ -2404,7 +2404,6 @@ auto make_extents(const std::initializer_list<size_t> &shape) {
 } // namespace detail
 
 // ---------- 1. rand: uniform [0,1) ----------
-// 版本1：通过模板参数指定返回类型（静态或动态）
 template <
     typename NdArrayType,
     typename = std::enable_if_t<detail::is_static_ndarray<NdArrayType>::value>>
@@ -2427,7 +2426,6 @@ NdArrayType rand(std::initializer_list<size_t> shape) {
   return arr;
 }
 
-// 版本2：保留原有的变长参数版本（自动推导类型）
 template <typename... Dims> auto rand(Dims... dims) {
   static_assert((std::is_integral_v<Dims> && ...),
                 "dimensions must be integers");
@@ -2495,7 +2493,6 @@ NdArrayType uniform(double low, double high,
   return arr;
 }
 
-// 一维整数形状便捷版本
 //inline auto uniform(double low, double high, size_t n) {
 //  return uniform<ndarray<double, decltype(extents(n))>>(low, high, {n});
 //}
