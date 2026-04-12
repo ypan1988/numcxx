@@ -2378,6 +2378,30 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 //
 // [numcxx.factory] ndarray creation
 //
+
+template <typename T>
+ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
+  static_assert(std::is_arithmetic_v<T>,
+                "arange requires an arithmetic value type");
+
+  const size_t n = std::ceil((stop - start) / step);
+
+  ndarray<T, dextents<1>> arr({n});
+  T *p = arr.data();
+
+  T value = start;
+  for (size_t i = 0; i < n; ++i) {
+    p[i] = value;
+    value += step;
+  }
+
+  return arr;
+}
+
+template <typename T> ndarray<T, dextents<1>> arange(T stop) {
+  return arange<T>(T(0), stop, T(1));
+}
+
 template <typename NdArrayType,
           typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType ones() {
@@ -2411,22 +2435,6 @@ NdArrayType zeros(std::initializer_list<size_t> shape) {
   std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(0));
   return arr;
 }
-
-//template <
-//    typename NdArrayType,
-//    typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
-//NdArrayType arange() {
-//  NdArrayType arr;
-//
-//  using value_type = typename NdArrayType::value_type;
-//  value_type *p = arr.data();
-//
-//  for (size_t i = 0; i < arr.size(); ++i) {
-//    p[i] = static_cast<value_type>(i);
-//  }
-//
-//  return arr;
-//}
 
 //
 // [numcxx.random] random number generation
