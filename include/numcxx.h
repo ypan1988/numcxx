@@ -2372,8 +2372,8 @@ inline std::mt19937 &get_engine() {
 inline void seed(unsigned int value) { get_engine().seed(value); }
 
 namespace detail {
-template <typename NdArray, typename Distribution>
-void fill_random(NdArray &arr, Distribution &&dist) {
+template <typename NdArrayType, typename Distribution>
+void fill_random(NdArrayType &arr, Distribution &&dist) {
   auto &engine = get_engine();
   for (size_t i = 0; i < arr.size(); ++i) {
     arr.data()[i] = dist(engine);
@@ -2392,7 +2392,6 @@ template <typename NdArrayType> struct is_static_ndarray {
   }();
 };
 
-// 从 initializer_list 构造 extents（运行时检查大小）
 template <size_t Rank>
 auto make_extents(const std::initializer_list<size_t> &shape) {
   if (shape.size() != Rank) {
