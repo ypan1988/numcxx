@@ -2380,6 +2380,23 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 //
 template <typename NdArrayType,
           typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
+NdArrayType ones() {
+  NdArrayType arr;
+  std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(1));
+  return arr;
+}
+
+template <typename NdArrayType,
+          typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
+NdArrayType ones(std::initializer_list<size_t> shape) {
+  constexpr size_t rank = NdArrayType::extents_type::rank();
+  NdArrayType arr(detail::make_extents<rank>(shape));
+  std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(1));
+  return arr;
+}
+
+template <typename NdArrayType,
+          typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
 NdArrayType zeros() {
   NdArrayType arr;
   std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(0));
