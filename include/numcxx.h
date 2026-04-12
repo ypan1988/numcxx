@@ -2322,6 +2322,9 @@ template <class Tp, class Ex, class Lp>
   return v.data() + v.size();
 }
 
+//
+// [numcxx.aliases] type aliases
+//
 // clang-format off
 template <typename T> using vec  = numcxx::ndarray<T, detail::dextents<std::size_t, 1>>;
 template <typename T> using mat  = numcxx::ndarray<T, detail::dextents<std::size_t, 2>>;
@@ -2372,6 +2375,9 @@ using fmat22   =  mat_fixed<float,    2, 2>   ; using fmat33   =  mat_fixed<floa
 using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<float,    3, 3, 3>; using fcube444 = cube_fixed<float,    4, 4, 4>;
 // clang-format on
 
+//
+// [numcxx.factory] ndarray creation
+//
 //template <
 //    typename NdArrayType,
 //    typename = std::enable_if_t<is_static_ndarray<NdArrayType>::value>>
@@ -2388,10 +2394,10 @@ using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<floa
 //  return arr;
 //}
 
-} // namespace numcxx
-
-// [numcxx.random] random generation
-namespace numcxx::random {
+//
+// [numcxx.random] random number generation
+//
+namespace random {
 
 inline std::mt19937 &get_engine() {
   static thread_local std::mt19937 engine(std::random_device{}());
@@ -2493,6 +2499,7 @@ NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
   return arr;
 }
 
-} // namespace numcxx::random
+} // namespace random
+} // namespace numcxx
 
 #endif // NUMCXX_H_
