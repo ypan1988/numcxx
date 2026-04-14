@@ -2376,10 +2376,21 @@ using fmat22   =  mat_fixed<float,    2, 2>   ; using fmat33   =  mat_fixed<floa
 using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<float,    3, 3, 3>; using fcube444 = cube_fixed<float,    4, 4, 4>;
 // clang-format on
 
+namespace detail {
+template <size_t Rank>
+auto make_extents(const std::initializer_list<size_t> &shape) {
+  if (shape.size() != Rank) {
+    NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
+  }
+  std::array<size_t, Rank> dims;
+  std::copy(shape.begin(), shape.end(), dims.begin());
+  return extents(dims);
+}
+} // namespace detail
+
 //
 // [numcxx.factory] ndarray creation
 //
-
 template <typename T>
 ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
   static_assert(std::is_arithmetic_v<T>,
@@ -2458,15 +2469,6 @@ void fill_random(NdArrayType &arr, Distribution &&dist) {
   }
 }
 
-template <size_t Rank>
-auto make_extents(const std::initializer_list<size_t> &shape) {
-  if (shape.size() != Rank) {
-    NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
-  }
-  std::array<size_t, Rank> dims;
-  std::copy(shape.begin(), shape.end(), dims.begin());
-  return extents(dims);
-}
 } // namespace detail
 
 // ---------- 1. rand: uniform [0,1) ----------
