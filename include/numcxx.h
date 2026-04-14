@@ -37,6 +37,45 @@
 #include <mdspan/mdspan.hpp>
 #endif
 
+namespace numcxx {
+using size_type = std::size_t;
+using index_type = int; // TODO: replace int with std::ptrdiff_t
+
+namespace detail {
+#if NUMCXX_USE_STD
+using std::dextents;
+using std::extents;
+using std::full_extent;
+using std::layout_left;
+using std::layout_right;
+using std::mdarray;
+using std::mdspan;
+using std::strided_slice;
+using std::submdspan;
+#else
+using Kokkos::dextents;
+using Kokkos::extents;
+using Kokkos::full_extent;
+using Kokkos::layout_left;
+using Kokkos::layout_right;
+using Kokkos::mdspan;
+using Kokkos::strided_slice;
+using Kokkos::submdspan;
+using Kokkos::Experimental::mdarray;
+#endif
+} // namespace detail
+
+template <size_type Rank> using dextents = detail::dextents<size_type, Rank>;
+
+#if NUMCXX_USE_STD
+template <size_type... Extents> using extents = detail::extents<Extents...>;
+#else
+template <size_type... Extents>
+using extents = detail::extents<size_type, Extents...>;
+#endif
+
+} // namespace numcxx
+
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
   do {                                                                         \
@@ -63,44 +102,6 @@
     std::abort();                                                              \
   } while (0)
 #endif
-
-namespace numcxx::detail {
-#if NUMCXX_USE_STD
-using std::dextents;
-using std::extents;
-using std::full_extent;
-using std::layout_left;
-using std::layout_right;
-using std::mdarray;
-using std::mdspan;
-using std::strided_slice;
-using std::submdspan;
-#else
-using Kokkos::dextents;
-using Kokkos::extents;
-using Kokkos::full_extent;
-using Kokkos::layout_left;
-using Kokkos::layout_right;
-using Kokkos::mdspan;
-using Kokkos::strided_slice;
-using Kokkos::submdspan;
-using Kokkos::Experimental::mdarray;
-#endif
-} // namespace numcxx::detail
-
-namespace numcxx {
-using size_type = std::size_t;
-using index_type = int; // TODO: replace int with std::ptrdiff_t
-
-template <size_type Rank> using dextents = detail::dextents<size_type, Rank>;
-
-#if NUMCXX_USE_STD
-template <size_type... Extents> using extents = detail::extents<Extents...>;
-#else
-template <size_type... Extents>
-using extents = detail::extents<size_type, Extents...>;
-#endif
-} // namespace numcxx
 
 namespace numcxx {
 // clang-format off
