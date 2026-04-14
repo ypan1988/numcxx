@@ -2502,9 +2502,9 @@ namespace linalg {}
 // [numcxx.aliases] type aliases
 //
 // clang-format off
-template <typename T> using vec  = numcxx::ndarray<T, detail::dextents<std::size_t, 1>>;
-template <typename T> using mat  = numcxx::ndarray<T, detail::dextents<std::size_t, 2>>;
-template <typename T> using cube = numcxx::ndarray<T, detail::dextents<std::size_t, 3>>;
+template <typename T> using vec  = numcxx::ndarray<T, dextents<1>>;
+template <typename T> using mat  = numcxx::ndarray<T, dextents<2>>;
+template <typename T> using cube = numcxx::ndarray<T, dextents<3>>;
 
 // int
 using ivec  =  vec<int>;
@@ -2526,9 +2526,9 @@ using fvec  =  vec<float>;
 using fmat  =  mat<float>;
 using fcube = cube<float>;
 
-template<class T, size_t N>                     using  vec_fixed = ndarray<T, detail::extents<size_t, N>>      ;
-template<class T, size_t M, size_t N>           using  mat_fixed = ndarray<T, detail::extents<size_t, M, N>>   ;
-template<class T, size_t M, size_t N, size_t K> using cube_fixed = ndarray<T, detail::extents<size_t, M, N, K>>;
+template<class T, size_type N>                           using  vec_fixed = ndarray<T, extents<N>>      ;
+template<class T, size_type M, size_type N>              using  mat_fixed = ndarray<T, extents<M, N>>   ;
+template<class T, size_type M, size_type N, size_type K> using cube_fixed = ndarray<T, extents<M, N, K>>;
 
 // int
 using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
