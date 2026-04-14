@@ -2431,7 +2431,7 @@ template <typename NdArrayType,
           typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType rand(std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+  NdArrayType arr(::numcxx::detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
 }
@@ -2449,7 +2449,7 @@ template <typename NdArrayType,
           typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType randn(std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+  NdArrayType arr(::numcxx::detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
 }
@@ -2468,7 +2468,7 @@ template <typename NdArrayType,
 NdArrayType uniform(double low, double high,
                     std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+  NdArrayType arr(::numcxx::detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
 }
@@ -2486,7 +2486,7 @@ template <typename NdArrayType,
           typename = std::enable_if_t<!is_static_ndarray<NdArrayType>::value>>
 NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
   constexpr size_t rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+  NdArrayType arr(::numcxx::detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
 }
