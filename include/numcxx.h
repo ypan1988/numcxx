@@ -2494,6 +2494,10 @@ NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
 } // namespace random
 
 //
+// [numcxx.linalg] TODO: linear algebra
+//
+
+//
 // [numcxx.aliases] type aliases
 //
 // clang-format off
