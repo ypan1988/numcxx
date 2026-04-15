@@ -337,19 +337,6 @@ template <class Tp, class Ex, class Lp> struct nc_is_val_expr<mask_view    <Tp, 
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<indirect_view<Tp, Ex, Lp>> : std::true_type {};
 // clang-format on
 
-template <class ValExpr> struct nc_val_expr_use_member_functions;
-
-template <class> struct nc_val_expr_use_member_functions : std::false_type {};
-
-// template <class Tp>
-// struct nc_val_expr_use_member_functions<slice_array<Tp> > : true_type {};
-//
-// template <class Tp>
-// struct nc_val_expr_use_member_functions<mask_array<Tp> > : true_type {};
-//
-// template <class Tp>
-// struct nc_val_expr_use_member_functions<indirect_array<Tp> > : true_type {};
-
 template <typename NdArrayType> struct is_static_ndarray {
   using Extents = typename NdArrayType::extents_type;
 
@@ -648,20 +635,6 @@ private:
 
 // template <class Tp, size_t _Size>
 // ndarray(const Tp(&)[_Size], size_t) -> ndarray<Tp>;
-
-// template <class Expr,
-//     std::enable_if_t<nc_is_val_expr<Expr>::value &&
-//     nc_val_expr_use_member_functions<Expr>::value, int> = 0>
-// typename Expr::value_type __get(const Expr& v, size_t i) {
-//     return v.__get(i);
-// }
-//
-// template <class Expr,
-//     std::enable_if_t<nc_is_val_expr<Expr>::value &&
-//     !nc_val_expr_use_member_functions<Expr>::value, int> = 0>
-// typename Expr::value_type __get(const Expr& v, size_t i) {
-//     return v[i];
-// }
 
 // extern template void ndarray<size_t>::resize(size_t, size_t);
 
