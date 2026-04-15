@@ -326,24 +326,16 @@ template <typename... Args>
 inline constexpr bool are_all_slice_or_integral_v =
     (is_slice_or_integral_v<Args> && ...);
 
-template <class ValExpr> class nc_val_expr;
+// clang-format off
+template <class ValExpr> class  nc_val_expr                                              ;
+template <class ValExpr> struct nc_is_val_expr                       : std::false_type {};
+template <class ValExpr> struct nc_is_val_expr<nc_val_expr<ValExpr>> : std::true_type  {};
 
-template <class ValExpr> struct nc_is_val_expr : std::false_type {};
-
-template <class ValExpr>
-struct nc_is_val_expr<nc_val_expr<ValExpr>> : std::true_type {};
-
-template <class Tp, class Ex, class Lp>
-struct nc_is_val_expr<ndarray<Tp, Ex, Lp>> : std::true_type {};
-
-// template <class Tp>
-// struct nc_is_val_expr<slice_array<Tp> > : true_type {};
-//
-// template <class Tp>
-// struct nc_is_val_expr<mask_array<Tp> > : true_type {};
-//
-// template <class Tp>
-// struct nc_is_val_expr<indirect_array<Tp> > : true_type {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<ndarray      <Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<slice_view   <Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<mask_view    <Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<indirect_view<Tp, Ex, Lp>> : std::true_type {};
+// clang-format on
 
 template <class ValExpr> struct nc_val_expr_use_member_functions;
 
