@@ -6,17 +6,11 @@
 <a id="ndarray-classes"></a>
 ## 1. Vector, Matrix, Cube and NdArray Classes
 
-### 1.0 `ndarray<Tp, Ex, Lp>`
-+ template class represents a **generic, multidimensional array container**.
-  ``` cpp
-  template<class ElementType,
-           class Extents,
-           class LayoutPolicy = layout_right>
-  class mdarray;
-  ```
-+ **`ElementType / Tp`**: The type of the stored elements.
-+ **`Extents / Ex`**: Describes the rank (i.e., number of dimensions) and size of each dimension. Both dynamic (dextents) and compile-time (extents) extents are supported.
-+ **`LayoutPolicy / Lp`**: Specifies how multidimensional indices are mapped to linear storage. By default, layout_right (row-major ordering) is used.
+### 1.0 `ndarray<T, Extents, LayoutPolicy>`
++ template class represents a **generic, multidimensional array**.
++ **`T`**: The type of the stored elements.
++ **`Extents`**: Describes the rank (i.e., number of dimensions) and size of each dimension. Both dynamic (dextents) and compile-time (extents) extents are supported.
++ **`LayoutPolicy`**: Specifies how multidimensional indices are mapped to linear storage. By default, layout_right (row-major ordering) is used.
 + Note that Vector, Matrix, Cube classes are **specializations of ndarray** distinguished by Extents.
 
 ### 1.1.1 `mat<T>`(dynamic) / `mat_fixed<T, M, N>`(static)
