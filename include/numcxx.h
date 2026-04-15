@@ -2364,9 +2364,14 @@ NdArrayType zeros(std::initializer_list<size_t> shape) {
 // [numcxx.random] random number generation
 //
 namespace random {
+inline std::mt19937 &get_engine() {
+  static thread_local std::mt19937 engine(std::random_device{}());
+  return engine;
+}
+
+inline void seed(unsigned int value) { get_engine().seed(value); }
 
 namespace detail {
-
 using ::numcxx::detail::make_extents;
 
 template <typename NdArrayType, typename Distribution>
@@ -2376,15 +2381,7 @@ void fill_random(NdArrayType &arr, Distribution &&dist) {
     arr.data()[i] = dist(engine);
   }
 }
-
 } // namespace detail
-
-inline std::mt19937 &get_engine() {
-  static thread_local std::mt19937 engine(std::random_device{}());
-  return engine;
-}
-
-inline void seed(unsigned int value) { get_engine().seed(value); }
 
 // ---------- 1. rand: uniform [0,1) ----------
 template <typename NdArrayType,
