@@ -1,0 +1,43 @@
+# API Documentation for NumCxx
+## 0. Overview
++ [Vector, Matrix, Cube and NdArray Classes](#ndarray-classes)
++ [Member functions and Slicing](#member-functions-and-slicing)
+
+<a id="ndarray-classes"></a>
+## 1. Vector, Matrix, Cube and NdArray Classes
+
+### 1.0 `ndarray<Tp, Ex, Lp>`
++ template class represents a **generic, multidimensional array container**.
+  ``` cpp
+  template<class ElementType,
+           class Extents,
+           class LayoutPolicy = layout_right>
+  class mdarray;
+  ```
++ **`ElementType / Tp`**: The type of the stored elements.
++ **`Extents / Ex`**: Describes the rank (i.e., number of dimensions) and size of each dimension. Both dynamic (dextents) and compile-time (extents) extents are supported.
++ **`LayoutPolicy / Lp`**: Specifies how multidimensional indices are mapped to linear storage. By default, layout_right (row-major ordering) is used.
++ Note that Vector, Matrix, Cube classes are **specializations of ndarray** distinguished by Extents.
+
+### 1.1.1 `mat<T>`(dynamic) / `mat_fixed<T, M, N>`(static)
++ Classes for dense matrices with `dynamic` and `static` dimensions. The elements are stored in row-major ordering (i.e., row by row) by default
++ The root ndarray classes are `ndarray<T, dextents<size_t, 2>>`(dynamic) and `ndarray<T, extents<size_t, M, N>>`(static)
++ For convenience, the following matrix typedefs are defined:
+	+ typedef for matrix (dynamic)
+	``` cpp
+	dmat = mat<double>
+	fmat = mat<float>
+	imat = mat<int>
+	umat = mat<unsigned int>
++ typedef for matrix (static) (e.g., `dmat22 = mat_fixed<double, 2, 2>`)
+
+| type   | full type     |
+| -----  | ------------  |
+| `dmat22`/`dmat33`/`dmat44`/ |`mat_fixed<double, 2, 2>` / `mat_fixed<double, 3, 3>`/ `mat_fixed<double, 4, 4>`|
+| `fmat22`/`fmat33`/`fmat44`/ |`mat_fixed<float, 2, 2>` / `mat_fixed<float, 3, 3>` / `mat_fixed<float, 4, 4>`|
+
+### 1.1.2 `mat_fixed<T, M, N>`(static)
+
+
+<a id="member-functions-and-slicing"></a>
+## Member functions and Slicing
