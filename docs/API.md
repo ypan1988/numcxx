@@ -11,7 +11,13 @@
 + **`T`**: The type of the stored elements.
 + **`Extents`**: Describes the rank (i.e., number of dimensions) and size of each dimension. Both dynamic (dextents) and compile-time (extents) extents are supported.
 + **`LayoutPolicy`**: Specifies how multidimensional indices are mapped to linear storage. By default, layout_right (row-major ordering) is used.
-+ Note that Vector, Matrix, Cube classes are **specializations of ndarray** distinguished by Extents.
++ Vector, Matrix, Cube classes are **specializations of ndarray** distinguished by Extents:
+
+  |dimensions|dynamic extents|fixed extents|
+  |----------|---------------|-------------|
+  |1D|`vec<T> = numcxx::ndarray<T, dextents<1>>`|`vec_fixed<T, N> = ndarray<T, extents<N>>`|
+  |2D|`mat<T> = numcxx::ndarray<T, dextents<2>>`|`mat_fixed<T, M, N> = ndarray<T, extents<M, N>>`| 
+  |3D|`cube<T> = numcxx::ndarray<T, dextents<3>>`|`cube_fixed<T, M, N, K> = ndarray<T, extents<M, N, K>>`|
 
 ### 1.1.1 `mat<T>`(dynamic) / `mat_fixed<T, M, N>`(static)
 + Classes for dense matrices with `dynamic` and `static` dimensions. The elements are stored in row-major ordering (i.e., row by row) by default
