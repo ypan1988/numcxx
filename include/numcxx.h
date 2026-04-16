@@ -353,17 +353,21 @@ template <class ElementType, class Extents,
           class LayoutPolicy = detail::layout_right>
 class ndarray {
 public:
+  using element_type = ElementType;
+  using value_type = std::remove_cv_t<element_type>;
+
   using extents_type = Extents;
+  using index_type = typename extents_type::index_type;
+  using size_type = typename extents_type::size_type;
+  using rank_type = typename extents_type::rank_type;
+
   using layout_type = LayoutPolicy;
   using mapping_type = typename layout_type::template mapping<extents_type>;
-  using element_type = ElementType;
+
   using mdspan_type = detail::mdspan<element_type, extents_type, layout_type>;
   using const_mdspan_type =
       detail::mdspan<const element_type, extents_type, layout_type>;
-  using value_type = std::remove_cv_t<element_type>;
-  using index_type = typename Extents::index_type;
-  using size_type = typename Extents::size_type;
-  using rank_type = typename Extents::rank_type;
+
   using pointer = element_type *;
   using reference = element_type &;
   using const_pointer = const element_type *;
