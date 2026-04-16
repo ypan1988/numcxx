@@ -353,15 +353,21 @@ template <class ElementType, class Extents,
           class LayoutPolicy = detail::layout_right>
 class ndarray {
 public:
-  using value_type = ElementType;
-  using result_type = ElementType;
   using extents_type = Extents;
   using layout_type = LayoutPolicy;
-
-  using pointer = ElementType *;
-  using const_pointer = const ElementType *;
-  using reference = ElementType &;
-  using const_reference = const ElementType &;
+  using mapping_type = typename layout_type::template mapping<extents_type>;
+  using element_type = ElementType;
+  using mdspan_type = detail::mdspan<element_type, extents_type, layout_type>;
+  using const_mdspan_type =
+      detail::mdspan<const element_type, extents_type, layout_type>;
+  using value_type = std::remove_cv_t<element_type>;
+  using index_type = typename Extents::index_type;
+  using size_type = typename Extents::size_type;
+  using rank_type = typename Extents::rank_type;
+  using pointer = element_type *;
+  using reference = element_type &;
+  using const_pointer = const element_type *;
+  using const_reference = const element_type &;
 
 private:
   detail::mdarray<ElementType, Extents, LayoutPolicy, std::vector<ElementType>>
@@ -538,9 +544,9 @@ public:
   // member functions:
   void swap(ndarray &v) noexcept;
 
-  [[nodiscard]] value_type sum() const;
-  [[nodiscard]] value_type min() const;
-  [[nodiscard]] value_type max() const;
+  [[nodiscard]] element_type sum() const;
+  [[nodiscard]] element_type min() const;
+  [[nodiscard]] element_type max() const;
 
   //[[nodiscard]] ndarray shift(int i) const;
   //[[nodiscard]] ndarray cshift(int i) const;
@@ -1676,7 +1682,7 @@ ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<ValExpr> &v) {
     ; // resize(n);
   value_type *t = elem_.data();
   for (size_t i = 0; i != n; ++t, ++i)
-    *t = result_type(v[i]);
+    *t = value_type(v[i]);
   return *this;
 }
 
@@ -1990,11 +1996,11 @@ inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
 
 template <class Tp, class Ex, class Lp>
 inline Tp ndarray<Tp, Ex, Lp>::sum() const {
-  const value_type *first = elem_.data();
-  const value_type *last = elem_.data() + elem_.size();
+  const_pointer first = elem_.data();
+  const_pointer last = elem_.data() + elem_.size();
   if (first == last)
-    return value_type();
-  const value_type *p = first;
+    return Tp{};
+  const_pointer p = first;
   Tp r = *p;
   for (++p; p != last; ++p)
     r += *p;
@@ -2003,19 +2009,19 @@ inline Tp ndarray<Tp, Ex, Lp>::sum() const {
 
 template <class Tp, class Ex, class Lp>
 inline Tp ndarray<Tp, Ex, Lp>::min() const {
-  const value_type *first = elem_.data();
-  const value_type *last = elem_.data() + elem_.size();
+  const_pointer first = elem_.data();
+  const_pointer last = elem_.data() + elem_.size();
   if (first == last)
-    return value_type();
+    return Tp{};
   return *std::min_element(first, last);
 }
 
 template <class Tp, class Ex, class Lp>
 inline Tp ndarray<Tp, Ex, Lp>::max() const {
-  const value_type *first = elem_.data();
-  const value_type *last = elem_.data() + elem_.size();
+  const_pointer first = elem_.data();
+  const_pointer last = elem_.data() + elem_.size();
   if (first == last)
-    return value_type();
+    return Tp{};
   return *std::max_element(first, last);
 }
 
