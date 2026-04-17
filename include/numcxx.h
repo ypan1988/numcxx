@@ -349,6 +349,7 @@ template <typename NdArrayType> struct is_static_ndarray {
   }();
 };
 
+// [numcxx.ndarray]
 template <class ElementType, class Extents,
           class LayoutPolicy = detail::layout_right>
 class ndarray {
@@ -425,12 +426,18 @@ public:
                         layout_type>(sub_mdspan);
   }
 
-  constexpr pointer data() noexcept { return elem_.data(); }
+  // clang-format off
+  constexpr       pointer data()       noexcept { return elem_.data(); }
   constexpr const_pointer data() const noexcept { return elem_.data(); }
 
-  constexpr const Extents &extents() const noexcept { return elem_.extents(); }
-  constexpr size_t extent(size_t r) const noexcept { return elem_.extent(r); }
-  constexpr size_t size() const noexcept { return elem_.size(); }
+  static constexpr rank_type rank()                     noexcept { return extents_type::rank()          ; }
+  static constexpr rank_type rank_dynamic()             noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr size_type static_extent(size_type r) noexcept { return extents_type::static_extent(r); }
+
+  constexpr const extents_type& extents() const noexcept { return elem_.extents(); }
+  constexpr size_type extent(size_type r) const noexcept { return elem_.extent(r); }
+  constexpr size_type size()              const noexcept { return elem_.size()   ; }
+  //clang-format on
 
   // construct/destroy:
   // ndarray() : begin_(nullptr), end_(nullptr) {}
