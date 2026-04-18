@@ -68,13 +68,8 @@ using Kokkos::Experimental::mdarray;
 } // namespace detail
 
 template <size_type Rank> using dextents = detail::dextents<size_type, Rank>;
-
-#if NUMCXX_USE_STD
-template <size_type... Extents> using extents = detail::extents<Extents...>;
-#else
 template <size_type... Extents>
 using extents = detail::extents<size_type, Extents...>;
-#endif
 
 } // namespace numcxx
 
@@ -346,18 +341,12 @@ inline constexpr bool is_static_extents_v = Extents::rank_dynamic() == 0;
 
 template <typename NdArrayType>
 inline constexpr bool is_static_ndarray_v =
-    NdArrayType::extents_type::rank_dynamic() == 0;
+    is_static_extents_v<typename NdArrayType::extents_type>;
 
-template <class Extents>
-constexpr size_type calc_static_extents_size() noexcept {
-  static_assert(Extents::rank_dynamic() == 0,
-                "calc_static_extents_size requires fully static extents");
-  size_type size = 1;
-  for (size_type i = 0; i < Extents::rank(); ++i) {
-    size *= Extents::static_extent(i);
-  }
-  return size;
-}
+template <typename Extents> struct static_extents_size;
+template <size_type... Dims>
+struct static_extents_size<numcxx::extents<Dims...>>
+    : std::integral_constant<size_type, (Dims * ...)> {};
 
 template <class ElementType, class Extents,
           bool IsStaticExtents = is_static_extents_v<Extents>>
@@ -365,7 +354,7 @@ struct mdarray_container_selector;
 
 template <class ElementType, class Extents>
 struct mdarray_container_selector<ElementType, Extents, true> {
-  using type = std::array<ElementType, calc_static_extents_size<Extents>()>;
+  using type = std::array<ElementType, static_extents_size<Extents>::value>;
 };
 
 template <class ElementType, class Extents>
