@@ -16,6 +16,7 @@
 #define NUMCXX_H_
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -25,6 +26,7 @@
 #include <random>
 #include <type_traits>
 #include <utility>
+#include <vector>
 #include <version>
 
 #if __cplusplus >= 202600L
@@ -338,10 +340,44 @@ template <class Tp, class Ex, class Lp> struct nc_is_val_expr<indirect_view<Tp, 
 // clang-format on
 
 namespace detail {
+
+template <typename Extents>
+inline constexpr bool is_static_extents_v = Extents::rank_dynamic() == 0;
+
 template <typename NdArrayType>
 inline constexpr bool is_static_ndarray_v =
     NdArrayType::extents_type::rank_dynamic() == 0;
+
+template <class Extents>
+constexpr size_type calc_static_extents_size() noexcept {
+  static_assert(Extents::rank_dynamic() == 0,
+                "calc_static_extents_size requires fully static extents");
+  size_type size = 1;
+  for (size_type i = 0; i < Extents::rank(); ++i) {
+    size *= Extents::static_extent(i);
+  }
+  return size;
 }
+
+template <class ElementType, class Extents,
+          bool IsStaticExtents = is_static_extents_v<Extents>>
+struct mdarray_container_selector;
+
+template <class ElementType, class Extents>
+struct mdarray_container_selector<ElementType, Extents, true> {
+  using type = std::array<ElementType, calc_static_extents_size<Extents>()>;
+};
+
+template <class ElementType, class Extents>
+struct mdarray_container_selector<ElementType, Extents, false> {
+  using type = std::vector<ElementType>;
+};
+
+template <class ElementType, class Extents>
+using mdarray_container_t =
+    typename mdarray_container_selector<ElementType, Extents>::type;
+
+} // namespace detail
 
 // [numcxx.ndarray]
 template <class ElementType, class Extents,
@@ -369,7 +405,8 @@ public:
   using const_reference = const element_type &;
 
 private:
-  detail::mdarray<ElementType, Extents, LayoutPolicy, std::vector<ElementType>>
+  detail::mdarray<ElementType, Extents, LayoutPolicy,
+                  detail::mdarray_container_t<ElementType, Extents>>
       elem_;
 
 public:
