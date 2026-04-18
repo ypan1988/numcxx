@@ -2398,6 +2398,7 @@ inline std::mt19937 &get_engine() {
 inline void seed(unsigned int value) { get_engine().seed(value); }
 
 namespace detail {
+using ::numcxx::detail::is_static_ndarray_v;
 using ::numcxx::detail::make_extents;
 
 template <typename NdArrayType, typename Distribution>
