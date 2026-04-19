@@ -451,41 +451,8 @@ public:
 
   ~ndarray() = default;
 
-  template <typename... Args> decltype(auto) operator()(Args &&...args) const {
-    static_assert(sizeof...(Args) == Extents::rank(),
-                  "Number of arguments mush match array rank");
-    static_assert(are_all_slice_or_integral_v<Args...>,
-                  "Each argument must be slice or an integral type");
-
-    auto sub_mdspan = detail::slice_utils::make_submdspan(
-        elem_.to_mdspan(), std::index_sequence_for<Args...>{},
-        std::forward<Args>(args)...);
-    using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
-
-    if constexpr (sub_mdspan_type::rank() == 0)
-      return data()[elem_.to_mdspan().mapping()(args...)];
-    else
-      return slice_view<value_type, typename sub_mdspan_type::extents_type,
-                        layout_type>(sub_mdspan);
-  }
-
-  template <typename... Args> decltype(auto) operator()(Args &&...args) {
-    static_assert(sizeof...(Args) == Extents::rank(),
-                  "Number of arguments mush match array rank");
-    static_assert(are_all_slice_or_integral_v<Args...>,
-                  "Each argument must be slice or an integral type");
-
-    auto sub_mdspan = detail::slice_utils::make_submdspan(
-        elem_.to_mdspan(), std::index_sequence_for<Args...>{},
-        std::forward<Args>(args)...);
-    using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
-
-    if constexpr (sub_mdspan_type::rank() == 0)
-      return data()[elem_.to_mdspan().mapping()(args...)];
-    else
-      return slice_view<value_type, typename sub_mdspan_type::extents_type,
-                        layout_type>(sub_mdspan);
-  }
+  template <typename... Args> decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> decltype(auto) operator()(Args &&...args);
 
   // clang-format off
   constexpr       pointer data()       noexcept { return elem_.data(); }
@@ -769,6 +736,45 @@ public:
   size_t size()  const { return span_.size(); }
   // clang-format on
 };
+
+namespace detail {
+template <typename MdSpan, typename... Args>
+decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
+  auto sub_mdspan = detail::slice_utils::make_submdspan(
+      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
+      std::forward<Args>(args)...);
+  using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
+
+  if constexpr (sub_mdspan_type::rank() == 0)
+    return sub_mdspan();
+  else
+    return slice_view<typename sub_mdspan_type::element_type,
+                      typename sub_mdspan_type::extents_type,
+                      typename sub_mdspan_type::layout_type>(sub_mdspan);
+}
+} // namespace detail
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments mush match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+
+  return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments mush match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+
+  return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
+}
 
 // slice_array
 
