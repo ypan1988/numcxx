@@ -366,6 +366,46 @@ template <class ElementType, class Extents>
 using mdarray_container_t =
     typename mdarray_container_selector<ElementType, Extents>::type;
 
+namespace slice_utils {
+template <typename Integer>
+static size_t to_submdspan_arg(Integer idx, size_t dim_len) {
+  static_assert(std::is_integral_v<Integer>, "Index must be an integral type");
+  Integer res = idx < 0 ? idx + static_cast<Integer>(dim_len) : idx;
+  assert(res >= 0 && static_cast<size_t>(res) < dim_len &&
+         "Index out of bounds");
+  return static_cast<size_t>(res);
+}
+
+static auto to_submdspan_arg(const slice &s, size_t dim_len) {
+  auto resolve_index = [dim_len](std::optional<int> idx, int default_val) {
+    int val;
+    if (idx.has_value()) {
+      val = idx.value();
+      if (val < 0)
+        val += static_cast<int>(dim_len);
+    } else {
+      val = default_val;
+    }
+    return val;
+  };
+
+  int step = s.step();
+  int start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
+  int stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
+
+  int diff = stop - start;
+  assert(diff * step > 0 && "invalid slice");
+
+  size_t offset = static_cast<size_t>(start);
+  size_t extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
+  size_t stride = static_cast<size_t>(std::abs(s.step()));
+
+  return ::numcxx::detail::strided_slice<size_t, size_t, size_t>{offset, extent,
+                                                                 stride};
+}
+
+} // namespace slice_utils
+
 } // namespace detail
 
 // [numcxx.ndarray]
@@ -613,60 +653,19 @@ private:
 
   // void __clear(size_t capacity);
   // ndarray& __assign_range(const value_type* __f, const value_type* __l);
-  template <typename Integer>
-  static size_t to_submdspan_arg(Integer idx, size_t dim_len) {
-    static_assert(std::is_integral_v<Integer>,
-                  "Index must be an integral type");
-    Integer res = idx < 0 ? idx + static_cast<Integer>(dim_len) : idx;
-    assert(res >= 0 && static_cast<size_t>(res) < dim_len &&
-           "Index out of bounds");
-    return static_cast<size_t>(res);
-  }
-
-  static auto to_submdspan_arg(const slice &s, size_t dim_len) {
-    auto resolve_index = [dim_len](std::optional<int> idx, int default_val) {
-      int val;
-      if (idx.has_value()) {
-        val = idx.value();
-        if (val < 0)
-          val += static_cast<int>(dim_len);
-      } else {
-        val = default_val;
-      }
-      return val;
-    };
-
-    int step = s.step();
-    int start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
-    int stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
-
-    if (step == 1 && start == 0 && stop == dim_len) {
-      return detail::full_extent;
-    }
-
-    int diff = stop - start;
-    assert(diff * step > 0 && "invalid slice");
-
-    size_t offset = static_cast<size_t>(start);
-    size_t extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
-    size_t stride = static_cast<size_t>(std::abs(s.step()));
-
-    return detail::strided_slice<size_t, size_t, size_t>{offset, extent,
-                                                         stride};
-  }
 
   template <typename... Args, size_t... Is>
   auto apply_slices(std::index_sequence<Is...>, Args &&...args) const {
     std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
     return detail::submdspan(elem_.to_mdspan(),
-                             to_submdspan_arg(args, dims[Is])...);
+                             detail::slice_utils::to_submdspan_arg(args, dims[Is])...);
   }
 
   template <typename... Args, size_t... Is>
   auto apply_slices(std::index_sequence<Is...>, Args &&...args) {
     std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
     return detail::submdspan(elem_.to_mdspan(),
-                             to_submdspan_arg(args, dims[Is])...);
+                             detail::slice_utils::to_submdspan_arg(args, dims[Is])...);
   }
 };
 
