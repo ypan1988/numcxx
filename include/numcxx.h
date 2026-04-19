@@ -368,33 +368,34 @@ using mdarray_container_t =
 
 namespace slice_utils {
 template <typename Integer>
-static size_t to_submdspan_arg(Integer idx, size_t dim_len) {
+inline size_type to_submdspan_arg(Integer idx, size_type dim_len) {
   static_assert(std::is_integral_v<Integer>, "Index must be an integral type");
   Integer res = idx < 0 ? idx + static_cast<Integer>(dim_len) : idx;
-  assert(res >= 0 && static_cast<size_t>(res) < dim_len &&
+  assert(res >= 0 && static_cast<size_type>(res) < dim_len &&
          "Index out of bounds");
-  return static_cast<size_t>(res);
+  return static_cast<size_type>(res);
 }
 
-static auto to_submdspan_arg(const slice &s, size_t dim_len) {
-  auto resolve_index = [dim_len](std::optional<int> idx, int default_val) {
-    int val = idx.has_value() ? idx.value() : default_val;
-    return (val < 0) ? val + static_cast<int>(dim_len) : val;
+inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
+  auto resolve_index = [dim_len](std::optional<index_type> idx,
+                                 index_type default_val) {
+    index_type val = idx.has_value() ? idx.value() : default_val;
+    return (val < 0) ? val + static_cast<index_type>(dim_len) : val;
   };
 
-  int step = s.step();
-  int start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
-  int stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
+  index_type step = s.step();
+  index_type start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
+  index_type stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
 
-  int diff = stop - start;
+  index_type diff = stop - start;
   assert(diff * step > 0 && "invalid slice");
 
-  size_t offset = static_cast<size_t>(start);
-  size_t extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
-  size_t stride = static_cast<size_t>(std::abs(s.step()));
+  size_type offset = static_cast<size_type>(start);
+  size_type extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
+  size_type stride = static_cast<size_type>(std::abs(s.step()));
 
-  return ::numcxx::detail::strided_slice<size_t, size_t, size_t>{offset, extent,
-                                                                 stride};
+  return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
+      offset, extent, stride};
 }
 
 } // namespace slice_utils
