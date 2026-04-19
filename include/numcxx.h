@@ -378,15 +378,8 @@ static size_t to_submdspan_arg(Integer idx, size_t dim_len) {
 
 static auto to_submdspan_arg(const slice &s, size_t dim_len) {
   auto resolve_index = [dim_len](std::optional<int> idx, int default_val) {
-    int val;
-    if (idx.has_value()) {
-      val = idx.value();
-      if (val < 0)
-        val += static_cast<int>(dim_len);
-    } else {
-      val = default_val;
-    }
-    return val;
+    int val = idx.has_value() ? idx.value() : default_val;
+    return (val < 0) ? val + static_cast<int>(dim_len) : val;
   };
 
   int step = s.step();
