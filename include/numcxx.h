@@ -367,20 +367,18 @@ using mdarray_container_t =
     typename mdarray_container_selector<ElementType, Extents>::type;
 
 namespace slice_utils {
-template <typename Integer>
-inline size_type to_submdspan_arg(Integer idx, size_type dim_len) {
-  static_assert(std::is_integral_v<Integer>, "Index must be an integral type");
-  Integer res = idx < 0 ? idx + static_cast<Integer>(dim_len) : idx;
+inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
+  index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
   assert(res >= 0 && static_cast<size_type>(res) < dim_len &&
          "Index out of bounds");
   return static_cast<size_type>(res);
 }
 
 inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
-  auto resolve_index = [dim_len](std::optional<index_type> idx,
+  auto resolve_index = [dim_len](std::optional<index_type> idx_raw,
                                  index_type default_val) {
-    index_type val = idx.has_value() ? idx.value() : default_val;
-    return (val < 0) ? val + static_cast<index_type>(dim_len) : val;
+    index_type idx = idx_raw.has_value() ? idx_raw.value() : default_val;
+    return (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
   };
 
   index_type step = s.step();
