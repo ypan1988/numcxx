@@ -398,6 +398,13 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
       offset, extent, stride};
 }
 
+template <typename MdSpan, typename... Args, size_t... Is>
+auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
+  std::array<size_t, sizeof...(Args)> dims = {src.extent(Is)...};
+  return detail::submdspan(std::forward<MdSpan>(src),
+                           to_submdspan_arg(args, dims[Is])...);
+}
+
 } // namespace slice_utils
 
 } // namespace detail
@@ -452,8 +459,9 @@ public:
     static_assert(are_all_slice_or_integral_v<Args...>,
                   "Each argument must be slice or an integral type");
 
-    auto sub_mdspan = apply_slices(std::index_sequence_for<Args...>{},
-                                   std::forward<Args>(args)...);
+    auto sub_mdspan = detail::slice_utils::make_submdspan(
+        elem_.to_mdspan(), std::index_sequence_for<Args...>{},
+        std::forward<Args>(args)...);
     using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
     if constexpr (sub_mdspan_type::rank() == 0)
@@ -469,8 +477,9 @@ public:
     static_assert(are_all_slice_or_integral_v<Args...>,
                   "Each argument must be slice or an integral type");
 
-    auto sub_mdspan = apply_slices(std::index_sequence_for<Args...>{},
-                                   std::forward<Args>(args)...);
+    auto sub_mdspan = detail::slice_utils::make_submdspan(
+        elem_.to_mdspan(), std::index_sequence_for<Args...>{},
+        std::forward<Args>(args)...);
     using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
     if constexpr (sub_mdspan_type::rank() == 0)
@@ -647,20 +656,6 @@ private:
 
   // void __clear(size_t capacity);
   // ndarray& __assign_range(const value_type* __f, const value_type* __l);
-
-  template <typename... Args, size_t... Is>
-  auto apply_slices(std::index_sequence<Is...>, Args &&...args) const {
-    std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
-    return detail::submdspan(elem_.to_mdspan(),
-                             detail::slice_utils::to_submdspan_arg(args, dims[Is])...);
-  }
-
-  template <typename... Args, size_t... Is>
-  auto apply_slices(std::index_sequence<Is...>, Args &&...args) {
-    std::array<size_t, sizeof...(Args)> dims = {elem_.extent(Is)...};
-    return detail::submdspan(elem_.to_mdspan(),
-                             detail::slice_utils::to_submdspan_arg(args, dims[Is])...);
-  }
 };
 
 // template <class Tp, size_t _Size>
