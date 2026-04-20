@@ -722,10 +722,10 @@ public:
   using const_reference = const element_type &;
 
 private:
-  detail::mdspan<ElementType, Extents> span_;
+  mdspan_type span_;
 
 public:
-  explicit slice_view(detail::mdspan<ElementType, Extents> span)
+  explicit slice_view(mdspan_type span)
       : span_(span) {}
 
   // clang-format off
