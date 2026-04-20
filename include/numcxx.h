@@ -732,6 +732,9 @@ public:
   [[nodiscard]] const value_type &operator[](size_t i) const { return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_t i)       { return span_[i]; }
 
+  template <typename... Args> decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> decltype(auto) operator()(Args &&...args);
+
   auto extents() const { return span_.extents(); }
   size_t size()  const { return span_.size(); }
   // clang-format on
@@ -774,6 +777,28 @@ decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
                 "Each argument must be slice or an integral type");
 
   return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments mush match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+
+  return detail::access_slice(span_, std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments mush match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+
+  return detail::access_slice(span_, std::forward<Args>(args)...);
 }
 
 // slice_array

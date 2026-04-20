@@ -12,6 +12,7 @@ set(TEST_TARGETS
     test_storage
     test_ndarray_fixed
     test_assign
+    test_element_access
     test_et
     test_et_binary_op
     test_et_binary_fn
