@@ -86,21 +86,21 @@ TEST(ElementAccess, SliceViewDirectElement) {
 //  // slice + index -> rank-0
 //  EXPECT_EQ(v(slice{0, 1}, 3), 13);
 //}
-//
-//TEST(ElementAccess, ConstSliceViewElementAccess) {
-//  numcxx::imat a(2, 2);
-//  a(0, 0) = 5;
-//  a(0, 1) = 6;
-//  a(1, 0) = 7;
-//  a(1, 1) = 8;
-//
-//  const auto v = a(slice{0, 2}, slice{0, 2});
-//
-//  // Must bind to const reference
-//  const int &r = v(1, 1);
-//  EXPECT_EQ(r, 8);
-//}
-//
+
+TEST(ElementAccess, ConstSliceViewElementAccess) {
+  numcxx::imat a(2, 2);
+  a(0, 0) = 5;
+  a(0, 1) = 6;
+  a(1, 0) = 7;
+  a(1, 1) = 8;
+
+  const auto v = a(slice{0, 2}, slice{0, 2});
+
+  // Must bind to const reference
+  const int &r = v(1, 1);
+  EXPECT_EQ(r, 8);
+}
+
 ///* ============================================================
 // * Chained slicing (critical regression coverage)
 // * ============================================================ */
