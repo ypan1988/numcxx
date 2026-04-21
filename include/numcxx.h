@@ -749,6 +749,7 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
   if constexpr (sub_mdspan_type::rank() == 0)
+    // all dimensions were indexed with integral indices.
     return sub_mdspan();
   else
     return slice_view<typename sub_mdspan_type::element_type,
