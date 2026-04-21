@@ -101,17 +101,17 @@ TEST(ElementAccess, ConstSliceViewElementAccess) {
   EXPECT_EQ(r, 8);
 }
 
-///* ============================================================
-// * Chained slicing (critical regression coverage)
-// * ============================================================ */
-//
-//TEST(ElementAccess, ChainedSlicingToElement) {
-//  numcxx::imat a(3, 4);
-//  fill_2d(a);
-//
-//  // ndarray -> slice_view -> element
-//  EXPECT_EQ(a(slice{1, 3}, slice{0, 4})(1, 2), 22);
-//
-//  // ndarray -> slice_view -> rank-0 via slice + index
-//  EXPECT_EQ(a(slice{1, 3}, slice{0, 4})(slice{0, 1}, 3), 13);
-//}
+/* ============================================================
+ * Chained slicing (critical regression coverage)
+ * ============================================================ */
+
+TEST(ElementAccess, ChainedSlicingToElement) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  // ndarray -> slice_view -> element
+  EXPECT_EQ(a(slice{1, 3}, slice{0, 4})(1, 2), 22);
+
+  // ndarray -> slice_view -> rank-1 view -> scalar via [0]
+  EXPECT_EQ(a(slice{1, 3}, slice{0, 4})(slice{0, 1}, 3)[0], 13);
+}
