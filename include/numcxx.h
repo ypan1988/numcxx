@@ -696,7 +696,7 @@ struct nc_binary_op<Op, ndarray<Tp1, Ex1, Lp1>, ndarray<Tp2, Ex2, Lp2>> {
   size_t size() const { return a0_.size(); }
 };
 
-// slice_view
+// [numcxx.slice_view]
 template <class ElementType, class Extents,
           class LayoutPolicy = detail::layout_right>
 class slice_view {
@@ -737,6 +737,8 @@ public:
 
   auto extents() const { return span_.extents(); }
   size_t size()  const { return span_.size(); }
+
+  constexpr auto data_handle() const noexcept { return span_.data_handle(); }
   // clang-format on
 };
 
