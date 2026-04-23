@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <random>
@@ -457,16 +458,8 @@ public:
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
   // element access (flattened)
-  [[nodiscard]] const value_type &operator[](size_t i) const {
-    // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[]
-    // index out of bounds");
-    return data()[i];
-  }
-  [[nodiscard]] value_type &operator[](size_t i) {
-    // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[]
-    // index out of bounds");
-    return data()[i];
-  }
+  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
+  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
 
   // observers
   static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
@@ -735,8 +728,8 @@ public:
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
   // element access (flattened)
-  [[nodiscard]]    const   value_type      &operator[](size_t i) const          { return span_[i]; }
-  [[nodiscard]]            value_type      &operator[](size_t i)                { return span_[i]; }
+  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return span_[i]; }
 
   // observers
   static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
