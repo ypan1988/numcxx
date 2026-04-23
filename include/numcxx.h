@@ -518,15 +518,12 @@ public:
   //[[nodiscard]] indirect_array<value_type> operator[](ndarray<size_t, Extents,
   // LayoutPolicy>&& __vs);
 
+  // clang-format off
   // unary operators:
-  nc_val_expr<nc_unary_op<nc_unary_plus<ElementType>, const ndarray &>>
-  operator+() const;
-  nc_val_expr<nc_unary_op<std::negate<ElementType>, const ndarray &>>
-  operator-() const;
-  nc_val_expr<nc_unary_op<nc_bit_not<ElementType>, const ndarray &>>
-  operator~() const;
-  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>>
-  operator!() const;
+  nc_val_expr<nc_unary_op<nc_unary_plus   <ElementType>, const ndarray &>> operator+() const;
+  nc_val_expr<nc_unary_op<std::negate     <ElementType>, const ndarray &>> operator-() const;
+  nc_val_expr<nc_unary_op<nc_bit_not      <ElementType>, const ndarray &>> operator~() const;
+  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>> operator!() const;
 
   // computed assignment:
   ndarray &operator*=(const value_type &x);
@@ -540,35 +537,17 @@ public:
   ndarray &operator<<=(const value_type &x);
   ndarray &operator>>=(const value_type &x);
 
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator*=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator/=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator%=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator+=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator-=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator^=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator|=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator&=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator<<=(const Expr &v);
-
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>
-  ndarray &operator>>=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator*=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator/=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator%=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator+=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator-=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator^=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator|=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator&=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator<<=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator>>=(const Expr &v);
+  // clang-format on
 
   // member functions:
   void swap(ndarray &v) noexcept;
