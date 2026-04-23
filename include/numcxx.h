@@ -735,11 +735,8 @@ public:
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
-  auto extents() const { return span_.extents(); }
-  size_t size()  const { return span_.size(); }
-
-  // Returns a const reference to the underlying data handle.
-  // This is an advanced interface for interoperability with std::mdspan.
+  constexpr size_t      size() const noexcept { return span_.size()       ; }
+  constexpr auto     extents() const noexcept { return span_.extents()    ; }
   constexpr auto data_handle() const noexcept { return span_.data_handle(); }
   // clang-format on
 };
