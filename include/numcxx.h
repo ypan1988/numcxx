@@ -455,16 +455,16 @@ public:
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
   // clang-format off
-  constexpr       pointer data()       noexcept { return elem_.data(); }
-  constexpr const_pointer data() const noexcept { return elem_.data(); }
-
-  static constexpr rank_type rank()                     noexcept { return extents_type::rank()          ; }
-  static constexpr rank_type rank_dynamic()             noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr size_type static_extent(size_type r) noexcept { return extents_type::static_extent(r); }
-
-  constexpr const extents_type& extents() const noexcept { return elem_.extents(); }
-  constexpr size_type extent(size_type r) const noexcept { return elem_.extent(r); }
-  constexpr size_type size()              const noexcept { return elem_.size()   ; }
+  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
+  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr          size_type        extent(size_type r) const noexcept { return elem_.extent(r); }
+         constexpr          size_type                     size() const noexcept { return elem_.size()   ; }
+         constexpr               bool                    empty() const noexcept { return elem_.empty()  ; }
+         constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
+         constexpr const extents_type&                 extents() const noexcept { return elem_.extents(); }
+         constexpr      const_pointer                     data() const noexcept { return elem_.data()   ; }
+         constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
   //clang-format on
 
   // construct/destroy:
@@ -735,13 +735,15 @@ public:
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
-  static constexpr rank_type rank()                     noexcept { return extents_type::rank()          ; }
-  static constexpr rank_type rank_dynamic()             noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr size_type static_extent(size_type r) noexcept { return extents_type::static_extent(r); }
-
-  constexpr size_t      size() const noexcept { return span_.size()       ; }
-  constexpr auto     extents() const noexcept { return span_.extents()    ; }
-  constexpr auto data_handle() const noexcept { return span_.data_handle(); }
+  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
+  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr          size_type        extent(size_type r) const noexcept { return span_.extent(r)    ; }
+         constexpr          size_type                     size() const noexcept { return span_.size()       ; }
+         constexpr               bool                    empty() const noexcept { return span_.empty()      ; }
+         constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
+         constexpr const extents_type&                 extents() const noexcept { return span_.extents()    ; }
+         constexpr               auto              data_handle() const noexcept { return span_.data_handle(); }
   // clang-format on
 };
 
