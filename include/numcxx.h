@@ -451,10 +451,24 @@ public:
 
   ~ndarray() = default;
 
+  // clang-format off
+  // element access
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
-  // clang-format off
+  // element access (flattened)
+  [[nodiscard]] const value_type &operator[](size_t i) const {
+    // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[]
+    // index out of bounds");
+    return data()[i];
+  }
+  [[nodiscard]] value_type &operator[](size_t i) {
+    // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[]
+    // index out of bounds");
+    return data()[i];
+  }
+
+  // observers
   static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
   static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
   static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
@@ -489,19 +503,6 @@ public:
   // ndarray& operator=(const mask_array<value_type>& ma);
   // ndarray& operator=(const indirect_array<value_type>& ia);
   template <class ValExpr> ndarray &operator=(const nc_val_expr<ValExpr> &v);
-
-  // element access:
-  [[nodiscard]] const value_type &operator[](size_t i) const {
-    // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[]
-    // index out of bounds");
-    return data()[i];
-  }
-
-  [[nodiscard]] value_type &operator[](size_t i) {
-    // _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size(), "ndarray::operator[]
-    // index out of bounds");
-    return data()[i];
-  }
 
   // subset operations:
   //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s)
@@ -729,12 +730,15 @@ public:
       : span_(span) {}
 
   // clang-format off
-  [[nodiscard]] const value_type &operator[](size_t i) const { return span_[i]; }
-  [[nodiscard]]       value_type &operator[](size_t i)       { return span_[i]; }
-
+  // element access
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
+  // element access (flattened)
+  [[nodiscard]]    const   value_type      &operator[](size_t i) const          { return span_[i]; }
+  [[nodiscard]]            value_type      &operator[](size_t i)                { return span_[i]; }
+
+  // observers
   static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
   static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
   static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
