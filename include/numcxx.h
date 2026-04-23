@@ -439,20 +439,19 @@ private:
       elem_;
 
 public:
+  // clang-format off
+  // construct/destroy:
   constexpr ndarray() = default;
   constexpr ndarray(const ndarray &v) = default;
   constexpr ndarray(ndarray &&v) noexcept = default;
-
-  template <class... SizeTypes>
-  explicit constexpr ndarray(SizeTypes... dyn_exts)
-      : elem_(Extents(dyn_exts...)) {}
-
-  constexpr ndarray &operator=(const ndarray &v) = default;
-  constexpr ndarray &operator=(ndarray &&v) noexcept = default;
-
+  template <class... SizeTypes> explicit constexpr ndarray(SizeTypes... dyn_exts) : elem_(Extents(dyn_exts...)) {}
   ~ndarray() = default;
 
-  // clang-format off
+  // assignment:
+  constexpr ndarray &operator=(const ndarray &v) = default;
+  constexpr ndarray &operator=(ndarray &&v) noexcept = default;
+  template <class ValExpr> ndarray &operator=(const nc_val_expr<ValExpr> &v);
+
   // element access
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
   template <typename... Args> decltype(auto) operator()(Args &&...args);
@@ -474,7 +473,6 @@ public:
          constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
   //clang-format on
 
-  // construct/destroy:
   // ndarray() : begin_(nullptr), end_(nullptr) {}
   // inline explicit ndarray(size_t n);
   // ndarray(const value_type& x, size_t n);
@@ -487,7 +485,6 @@ public:
   // ndarray(const indirect_array<value_type>& ia);
   // inline ~ndarray();
 
-  // assignment:
   // ndarray& operator=(const ndarray& v);
   // ndarray& operator=(ndarray&& v) noexcept;
   // ndarray& operator=(std::initializer_list<value_type>);
@@ -495,7 +492,6 @@ public:
   // ndarray& operator=(const slice_array<value_type>& sa);
   // ndarray& operator=(const mask_array<value_type>& ma);
   // ndarray& operator=(const indirect_array<value_type>& ia);
-  template <class ValExpr> ndarray &operator=(const nc_val_expr<ValExpr> &v);
 
   // subset operations:
   //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s)
