@@ -694,8 +694,7 @@ private:
   mdspan_type span_;
 
 public:
-  explicit slice_view(mdspan_type span)
-      : span_(span) {}
+  explicit slice_view(mdspan_type span) : span_(span) {}
 
   // clang-format off
   // element access
@@ -703,8 +702,8 @@ public:
   template <typename... Args> decltype(auto) operator()(Args &&...args);
 
   // element access (flattened)
-  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return span_[i]; }
-  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
+  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
 
   // observers
   static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
@@ -717,6 +716,15 @@ public:
          constexpr const extents_type&                 extents() const noexcept { return span_.extents()    ; }
          constexpr               auto              data_handle() const noexcept { return span_.data_handle(); }
   // clang-format on
+private:
+  size_type calc_offset(size_type i) const noexcept {
+    size_type offset = 0, remaining = i;
+    for (rank_type r = rank(); r-- > 0;) {
+      offset += (remaining % extent(r)) * span_.stride(r);
+      remaining /= extent(r);
+    }
+    return offset;
+  }
 };
 
 namespace detail {
