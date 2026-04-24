@@ -433,11 +433,6 @@ public:
   using const_pointer = const element_type *;
   using const_reference = const element_type &;
 
-private:
-  detail::mdarray<ElementType, Extents, LayoutPolicy,
-                  detail::mdarray_container_t<ElementType, Extents>>
-      elem_;
-
 public:
   // clang-format off
   // construct/destroy:
@@ -588,6 +583,11 @@ private:
 
   // void __clear(size_t capacity);
   // ndarray& __assign_range(const value_type* __f, const value_type* __l);
+
+private:
+  detail::mdarray<ElementType, Extents, LayoutPolicy,
+                  detail::mdarray_container_t<ElementType, Extents>>
+      elem_;
 };
 
 // template <class Tp, size_t _Size>
@@ -688,9 +688,6 @@ public:
   using const_pointer = const element_type *;
   using const_reference = const element_type &;
 
-private:
-  mdspan_type span_;
-
 public:
   explicit slice_view(mdspan_type span) : span_(span) {}
 
@@ -739,6 +736,9 @@ private:
     }
     return offset;
   }
+
+private:
+  mdspan_type span_;
 };
 
 namespace detail {
