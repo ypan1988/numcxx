@@ -564,9 +564,7 @@ public:
 
 private:
   template <class, class, class> friend class ndarray;
-  // template <class>
-  // friend class slice_array;
-  // template <class>
+  template <class, class, class> friend class slice_view;
   // friend class mask_array;
   // template <class>
   // friend class __mask_expr;
@@ -716,6 +714,22 @@ public:
          constexpr const extents_type&                 extents() const noexcept { return span_.extents()    ; }
          constexpr               auto              data_handle() const noexcept { return span_.data_handle(); }
   // clang-format on
+
+public:
+  // clang-format off
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator*=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator/=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator%=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator+=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator-=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator^=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator&=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator|=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator<<=(const Expr& v) const;
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator>>=(const Expr& v) const;
+  // clang-format on
+
 private:
   size_type calc_offset(size_type i) const noexcept {
     size_type offset = 0, remaining = i;
@@ -802,39 +816,6 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
 //     size_t stride_;
 //
 // public:
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator*=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator/=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator%=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator+=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator-=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator^=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator&=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator|=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator<<=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator>>=(const Expr& v) const;
-//
 //     slice_array(slice_array const&) = default;
 //
 //     const slice_array& operator=(const slice_array& sa) const;
