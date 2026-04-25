@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "numcxx.h"
+#include <numeric>
 
 TEST(NdarrayScalarCompoundAssign, AddAssign) {
     numcxx::dmat A(2, 3);
