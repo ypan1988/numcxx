@@ -521,16 +521,16 @@ public:
   nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>> operator!() const;
 
   // computed assignment:
+  ndarray &operator+=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b; }, x); }
+  ndarray &operator-=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b; }, x); }
   ndarray &operator*=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b; }, x); }
-  ndarray &operator/=(const value_type &x);
-  ndarray &operator%=(const value_type &x);
-  ndarray &operator+=(const value_type &x);
-  ndarray &operator-=(const value_type &x);
-  ndarray &operator^=(const value_type &x);
-  ndarray &operator&=(const value_type &x);
-  ndarray &operator|=(const value_type &x);
-  ndarray &operator<<=(const value_type &x);
-  ndarray &operator>>=(const value_type &x);
+  ndarray &operator/=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b; }, x); }
+  ndarray &operator%=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b; }, x); }
+  ndarray &operator&=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b; }, x); }
+  ndarray &operator|=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b; }, x); }
+  ndarray &operator^=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b; }, x); }
+  ndarray &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
+  ndarray &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
 
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator*=(const Expr &v);
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator/=(const Expr &v);
@@ -1837,106 +1837,6 @@ inline nc_val_expr<
 ndarray<Tp, Ex, Lp>::operator!() const {
   using Op = nc_unary_op<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp> &>;
   return nc_val_expr<Op>(Op(std::logical_not<Tp>(), *this));
-}
-
-// template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp> &
-// ndarray<Tp, Ex, Lp>::operator*=(const value_type &x) {
-//   value_type *first = elem_.data();
-//   value_type *last = elem_.data() + elem_.size();
-//   for (value_type *p = first; p != last; ++p)
-//     *p *= x;
-//   return *this;
-// }
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator/=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p /= x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator%=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p %= x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator+=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p += x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator-=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p -= x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator^=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p ^= x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator&=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p &= x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator|=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p |= x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator<<=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p <<= x;
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator>>=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p >>= x;
-  return *this;
 }
 
 template <class Tp, class Ex, class Lp>
