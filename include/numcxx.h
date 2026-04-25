@@ -521,7 +521,7 @@ public:
   nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>> operator!() const;
 
   // computed assignment:
-  ndarray &operator*=(const value_type &x);
+  ndarray &operator*=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b; }, x); }
   ndarray &operator/=(const value_type &x);
   ndarray &operator%=(const value_type &x);
   ndarray &operator+=(const value_type &x);
@@ -583,6 +583,16 @@ private:
 
   // void __clear(size_t capacity);
   // ndarray& __assign_range(const value_type* __f, const value_type* __l);
+
+  template <typename Op>
+  ndarray& apply_scalar_op(Op&& op, const value_type& x) {
+    value_type* first = elem_.data();
+    value_type* last = elem_.data() + elem_.size();
+    for (value_type* p = first; p != last; ++p) {
+      op(*p, x);
+    }
+    return *this;
+  }
 
 private:
   detail::mdarray<ElementType, Extents, LayoutPolicy,
@@ -1829,15 +1839,15 @@ ndarray<Tp, Ex, Lp>::operator!() const {
   return nc_val_expr<Op>(Op(std::logical_not<Tp>(), *this));
 }
 
-template <class Tp, class Ex, class Lp>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator*=(const value_type &x) {
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *p = first; p != last; ++p)
-    *p *= x;
-  return *this;
-}
+// template <class Tp, class Ex, class Lp>
+// inline ndarray<Tp, Ex, Lp> &
+// ndarray<Tp, Ex, Lp>::operator*=(const value_type &x) {
+//   value_type *first = elem_.data();
+//   value_type *last = elem_.data() + elem_.size();
+//   for (value_type *p = first; p != last; ++p)
+//     *p *= x;
+//   return *this;
+// }
 
 template <class Tp, class Ex, class Lp>
 inline ndarray<Tp, Ex, Lp> &
