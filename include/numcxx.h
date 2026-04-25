@@ -714,17 +714,35 @@ public:
 
 public:
   // clang-format off
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator*=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator/=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator%=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator+=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator-=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator^=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator&=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator|=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator<<=(const Expr& v) const;
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> void operator>>=(const Expr& v) const;
+  // unary operators:
+  nc_val_expr<nc_unary_op<nc_unary_plus   <ElementType>, const slice_view &>> operator+() const;
+  nc_val_expr<nc_unary_op<std::negate     <ElementType>, const slice_view &>> operator-() const;
+  nc_val_expr<nc_unary_op<nc_bit_not      <ElementType>, const slice_view &>> operator~() const;
+  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const slice_view &>> operator!() const;
+
+  // computed assignment:
+  slice_view &operator*=(const value_type &x);
+  slice_view &operator/=(const value_type &x);
+  slice_view &operator%=(const value_type &x);
+  slice_view &operator+=(const value_type &x);
+  slice_view &operator-=(const value_type &x);
+  slice_view &operator^=(const value_type &x);
+  slice_view &operator&=(const value_type &x);
+  slice_view &operator|=(const value_type &x);
+  slice_view &operator<<=(const value_type &x);
+  slice_view &operator>>=(const value_type &x);
+
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator*=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator/=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator%=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator+=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator-=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator^=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator&=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator|=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator<<=(const Expr& v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator>>=(const Expr& v);
   // clang-format on
 
 private:
