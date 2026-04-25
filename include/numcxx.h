@@ -532,16 +532,16 @@ public:
   ndarray &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
   ndarray &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
 
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator*=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator/=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator%=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator+=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator-=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator^=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator|=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator&=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator<<=(const Expr &v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator>>=(const Expr &v);
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator+=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a += b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator-=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a -= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator*=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a *= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator/=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a /= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator%=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a %= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator&=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a &= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator|=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a |= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator^=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator<<=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator>>=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
   // clang-format on
 
   // member functions:
@@ -590,6 +590,22 @@ private:
     value_type *last = elem_.data() + elem_.size();
     for (value_type *p = first; p != last; ++p) {
       op(*p, x);
+    }
+    return *this;
+  }
+
+  template <class Op, class Expr>
+  ndarray &apply_expr_op(Op &&op, const Expr &expr) {
+    // Preconditions you are intentionally NOT enforcing yet:
+    //  - expr.size() == size()
+    //  - aliasing rules (to be decided later)
+
+    size_type i = 0;
+    value_type *first = elem_.data();
+    value_type *last = elem_.data() + elem_.size();
+
+    for (value_type *p = first; p != last; ++p, ++i) {
+      op(*p, expr[i]);
     }
     return *this;
   }
@@ -1837,116 +1853,6 @@ inline nc_val_expr<
 ndarray<Tp, Ex, Lp>::operator!() const {
   using Op = nc_unary_op<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp> &>;
   return nc_val_expr<Op>(Op(std::logical_not<Tp>(), *this));
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator*=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t *= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator/=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t /= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator%=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t %= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator+=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t += v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator-=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t -= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator^=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t ^= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator|=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t |= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator&=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t &= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator<<=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t <<= v[i];
-  return *this;
-}
-
-template <class Tp, class Ex, class Lp>
-template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>>
-inline ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator>>=(const Expr &v) {
-  size_t i = 0;
-  value_type *first = elem_.data();
-  value_type *last = elem_.data() + elem_.size();
-  for (value_type *t = first; t != last; ++t, ++i)
-    *t >>= v[i];
-  return *this;
 }
 
 template <class Tp, class Ex, class Lp>
