@@ -585,10 +585,10 @@ private:
   // ndarray& __assign_range(const value_type* __f, const value_type* __l);
 
   template <typename Op>
-  ndarray& apply_scalar_op(Op&& op, const value_type& x) {
-    value_type* first = elem_.data();
-    value_type* last = elem_.data() + elem_.size();
-    for (value_type* p = first; p != last; ++p) {
+  ndarray &apply_scalar_op(Op &&op, const value_type &x) {
+    value_type *first = elem_.data();
+    value_type *last = elem_.data() + elem_.size();
+    for (value_type *p = first; p != last; ++p) {
       op(*p, x);
     }
     return *this;
