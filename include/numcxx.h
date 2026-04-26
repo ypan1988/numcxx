@@ -507,10 +507,10 @@ public:
 
   // clang-format off
   // unary operators:
-  nc_val_expr<nc_unary_op<nc_unary_plus   <ElementType>, const ndarray &>> operator+() const;
-  nc_val_expr<nc_unary_op<std::negate     <ElementType>, const ndarray &>> operator-() const;
-  nc_val_expr<nc_unary_op<nc_bit_not      <ElementType>, const ndarray &>> operator~() const;
-  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>> operator!() const;
+  nc_val_expr<nc_unary_op<nc_unary_plus   <ElementType>, const ndarray &>> operator+() const { return make_unary_expr<nc_unary_plus>   (); }
+  nc_val_expr<nc_unary_op<std::negate     <ElementType>, const ndarray &>> operator-() const { return make_unary_expr<std::negate>     (); }
+  nc_val_expr<nc_unary_op<nc_bit_not      <ElementType>, const ndarray &>> operator~() const { return make_unary_expr<nc_bit_not>      (); }
+  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>> operator!() const { return make_unary_expr<std::logical_not>(); }
 
   // computed assignment:
   ndarray &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -577,6 +577,11 @@ private:
 
   // void __clear(size_t capacity);
   // ndarray& __assign_range(const value_type* __f, const value_type* __l);
+
+  template <template <typename> class Op> auto make_unary_expr() const {
+    using NewExpr = nc_unary_op<Op<value_type>, const ndarray &>;
+    return nc_val_expr<NewExpr>(NewExpr(Op<value_type>(), *this));
+  }
 
   template <typename Op>
   ndarray &apply_scalar_op(Op &&op, const value_type &x) {
@@ -1680,35 +1685,6 @@ public:
 // Lp>&& __vs) {
 //     return indirect_array<value_type>(std::move(__vs), *this);
 // }
-
-template <class Tp, class Ex, class Lp>
-inline nc_val_expr<nc_unary_op<nc_unary_plus<Tp>, const ndarray<Tp, Ex, Lp> &>>
-ndarray<Tp, Ex, Lp>::operator+() const {
-  using Op = nc_unary_op<nc_unary_plus<Tp>, const ndarray<Tp, Ex, Lp> &>;
-  return nc_val_expr<Op>(Op(nc_unary_plus<Tp>(), *this));
-}
-
-template <class Tp, class Ex, class Lp>
-inline nc_val_expr<nc_unary_op<std::negate<Tp>, const ndarray<Tp, Ex, Lp> &>>
-ndarray<Tp, Ex, Lp>::operator-() const {
-  using Op = nc_unary_op<std::negate<Tp>, const ndarray<Tp, Ex, Lp> &>;
-  return nc_val_expr<Op>(Op(std::negate<Tp>(), *this));
-}
-
-template <class Tp, class Ex, class Lp>
-inline nc_val_expr<nc_unary_op<nc_bit_not<Tp>, const ndarray<Tp, Ex, Lp> &>>
-ndarray<Tp, Ex, Lp>::operator~() const {
-  using Op = nc_unary_op<nc_bit_not<Tp>, const ndarray<Tp, Ex, Lp> &>;
-  return nc_val_expr<Op>(Op(nc_bit_not<Tp>(), *this));
-}
-
-template <class Tp, class Ex, class Lp>
-inline nc_val_expr<
-    nc_unary_op<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp> &>>
-ndarray<Tp, Ex, Lp>::operator!() const {
-  using Op = nc_unary_op<std::logical_not<Tp>, const ndarray<Tp, Ex, Lp> &>;
-  return nc_val_expr<Op>(Op(std::logical_not<Tp>(), *this));
-}
 
 template <class Tp, class Ex, class Lp>
 inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
