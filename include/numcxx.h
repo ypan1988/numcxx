@@ -1355,45 +1355,44 @@ public:
   result_type operator[](size_t i) const { return expr_[i]; }
 
   // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
-  //     typedef __slice_expr<ValExpr> _NewExpr;
-  //     return nc_val_expr< _NewExpr >(_NewExpr(s, expr_));
+  //     typedef __slice_expr<ValExpr> NewExpr;
+  //     return nc_val_expr< NewExpr >(NewExpr(s, expr_));
   // }
 
   // template <class Ex, class Lp>
   // nc_val_expr<__mask_expr<ValExpr> > operator[](const ndarray<bool, Ex, Lp>&
   // __vb) const {
-  //     typedef __mask_expr<ValExpr> _NewExpr;
-  //     return nc_val_expr< _NewExpr >(_NewExpr(__vb, expr_));
+  //     typedef __mask_expr<ValExpr> NewExpr;
+  //     return nc_val_expr< NewExpr >(NewExpr(__vb, expr_));
   // }
 
   // template <class Ex, class Lp>
   // nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_t, Ex,
   // Lp>& __vs) const {
-  //     typedef __indirect_expr<ValExpr> _NewExpr;
-  //     return nc_val_expr< _NewExpr >(_NewExpr(__vs, expr_));
+  //     typedef __indirect_expr<ValExpr> NewExpr;
+  //     return nc_val_expr< NewExpr >(NewExpr(__vs, expr_));
   // }
 
   nc_val_expr<nc_unary_op<nc_unary_plus<value_type>, ValExpr>>
   operator+() const {
-    typedef nc_unary_op<nc_unary_plus<value_type>, ValExpr> _NewExpr;
-    return nc_val_expr<_NewExpr>(_NewExpr(nc_unary_plus<value_type>(), expr_));
+    typedef nc_unary_op<nc_unary_plus<value_type>, ValExpr> NewExpr;
+    return nc_val_expr<NewExpr>(NewExpr(nc_unary_plus<value_type>(), expr_));
   }
 
   nc_val_expr<nc_unary_op<std::negate<value_type>, ValExpr>> operator-() const {
-    typedef nc_unary_op<std::negate<value_type>, ValExpr> _NewExpr;
-    return nc_val_expr<_NewExpr>(_NewExpr(std::negate<value_type>(), expr_));
+    typedef nc_unary_op<std::negate<value_type>, ValExpr> NewExpr;
+    return nc_val_expr<NewExpr>(NewExpr(std::negate<value_type>(), expr_));
   }
 
   nc_val_expr<nc_unary_op<nc_bit_not<value_type>, ValExpr>> operator~() const {
-    typedef nc_unary_op<nc_bit_not<value_type>, ValExpr> _NewExpr;
-    return nc_val_expr<_NewExpr>(_NewExpr(nc_bit_not<value_type>(), expr_));
+    typedef nc_unary_op<nc_bit_not<value_type>, ValExpr> NewExpr;
+    return nc_val_expr<NewExpr>(NewExpr(nc_bit_not<value_type>(), expr_));
   }
 
   nc_val_expr<nc_unary_op<std::logical_not<value_type>, ValExpr>>
   operator!() const {
-    typedef nc_unary_op<std::logical_not<value_type>, ValExpr> _NewExpr;
-    return nc_val_expr<_NewExpr>(
-        _NewExpr(std::logical_not<value_type>(), expr_));
+    typedef nc_unary_op<std::logical_not<value_type>, ValExpr> NewExpr;
+    return nc_val_expr<NewExpr>(NewExpr(std::logical_not<value_type>(), expr_));
   }
 
   // template<class Ex, class Lp>
@@ -1445,16 +1444,16 @@ public:
                           ValExpr>>
   apply(value_type __f(value_type)) const {
     typedef nc_apply_expr<value_type, value_type (*)(value_type)> Op;
-    typedef nc_unary_op<Op, ValExpr> _NewExpr;
-    return nc_val_expr<_NewExpr>(_NewExpr(Op(__f), expr_));
+    typedef nc_unary_op<Op, ValExpr> NewExpr;
+    return nc_val_expr<NewExpr>(NewExpr(Op(__f), expr_));
   }
 
   nc_val_expr<nc_unary_op<
       nc_apply_expr<value_type, value_type (*)(const value_type &)>, ValExpr>>
   apply(value_type __f(const value_type &)) const {
     typedef nc_apply_expr<value_type, value_type (*)(const value_type &)> Op;
-    typedef nc_unary_op<Op, ValExpr> _NewExpr;
-    return nc_val_expr<_NewExpr>(_NewExpr(Op(__f), expr_));
+    typedef nc_unary_op<Op, ValExpr> NewExpr;
+    return nc_val_expr<NewExpr>(NewExpr(Op(__f), expr_));
   }
 };
 
