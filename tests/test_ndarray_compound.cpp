@@ -84,7 +84,7 @@ TEST(NdarrayExprCompoundAssign, DivAssign) {
     std::iota(A.data(), A.data() + A.size(), 2);
     std::iota(B.data(), B.data() + B.size(), 1);
     A /= B;
-    double expected[] = {2,2,2,2,2,2};
+    double expected[] = {2.0/1.0, 3.0/2.0, 4.0/3.0, 5.0/4.0, 6.0/5.0, 7.0/6.0};
     for (size_t i = 0; i < A.size(); ++i) {
         EXPECT_DOUBLE_EQ(A.data()[i], expected[i]);
     }
