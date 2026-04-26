@@ -702,9 +702,18 @@ public:
   using const_reference = const element_type &;
 
 public:
-  explicit slice_view(mdspan_type span) : span_(span) {}
-
   // clang-format off
+  // construct/destroy:
+  slice_view() = delete;
+  slice_view(const slice_view &) = default;
+  slice_view(slice_view &&) noexcept = default;
+  explicit slice_view(mdspan_type span) : span_(span) {}
+  ~slice_view() = default;
+
+  // assignment:
+  slice_view &operator=(const slice_view &) = default;
+  slice_view &operator=(slice_view &&) noexcept = default;
+
   // element access
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
   template <typename... Args> decltype(auto) operator()(Args &&...args);
@@ -871,16 +880,8 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
 //
 //     const slice_array& operator=(const slice_array& sa) const;
 //
-//     void operator=(const value_type& x) const;
-//
 //     template <class Ex, class Lp>
 //     void operator=(const ndarray<value_type, Ex, Lp>& __va) const;
-//
-//     // Behaves like nc_val_expr::operator[], which returns by value.
-//     value_type __get(size_t i) const {
-//         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < size_, "slice_array.__get()
-//         index out of bounds"); return vp_[i * stride_];
-//     }
 //
 // private:
 //     template <class Ex, class Lp>
@@ -904,14 +905,6 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
 // }
 //
 // template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void slice_array<Tp>::operator=(const Expr& v) const {
-//     value_type* t = vp_;
-//     for (size_t i = 0; i < size_; ++i, t += stride_)
-//         *t = v[i];
-// }
-//
-// template <class Tp>
 // template <class Ex, class Lp>
 // inline void slice_array<Tp>::operator=(const ndarray<value_type, Ex, Lp>&
 // __va) const {
@@ -920,12 +913,6 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
 //         *t = __va[i];
 // }
 //
-// template <class Tp>
-// inline void slice_array<Tp>::operator=(const value_type& x) const {
-//     value_type* t = vp_;
-//     for (size_t n = size_; n; --n, t += stride_)
-//         *t = x;
-// }
 
 // mask_array
 
