@@ -445,7 +445,6 @@ public:
   // assignment:
   constexpr ndarray &operator=(const ndarray &v) = default;
   constexpr ndarray &operator=(ndarray &&v) noexcept = default;
-  //template <class ValExpr> ndarray &operator=(const nc_val_expr<ValExpr> &v);
 
   // element access
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
@@ -1686,20 +1685,6 @@ public:
 //     for (_Ip i = ia.oned_.begin_, e = ia.oned_.end_; i != e; ++i, ++t)
 //         *t = s[*i];
 //     return *this;
-// }
-
-// TO REMOVE
-// template <class Tp, class Ex, class Lp>
-// template <class ValExpr>
-// inline ndarray<Tp, Ex, Lp> &
-// ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<ValExpr> &v) {
-//   size_t n = v.size();
-//   if (size() != n)
-//     ; // resize(n);
-//   value_type *t = elem_.data();
-//   for (size_t i = 0; i != n; ++t, ++i)
-//     *t = value_type(v[i]);
-//   return *this;
 // }
 
 // template <class Tp, class Ex, class Lp>
