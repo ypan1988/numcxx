@@ -580,27 +580,15 @@ private:
 
   template <typename Op>
   ndarray &apply_scalar_op(Op &&op, const value_type &x) {
-    value_type *first = elem_.data();
-    value_type *last = elem_.data() + elem_.size();
-    for (value_type *p = first; p != last; ++p) {
-      op(*p, x);
-    }
+    for (size_type i = 0; i < size(); ++i)
+      op((*this)[i], x);
     return *this;
   }
 
   template <class Op, class Expr>
   ndarray &apply_expr_op(Op &&op, const Expr &expr) {
-    // Preconditions you are intentionally NOT enforcing yet:
-    //  - expr.size() == size()
-    //  - aliasing rules (to be decided later)
-
-    size_type i = 0;
-    value_type *first = elem_.data();
-    value_type *last = elem_.data() + elem_.size();
-
-    for (value_type *p = first; p != last; ++p, ++i) {
-      op(*p, expr[i]);
-    }
+    for (size_type i = 0; i < size(); ++i)
+      op((*this)[i], expr[i]);
     return *this;
   }
 
@@ -778,17 +766,15 @@ private:
 
   template <typename Op>
   slice_view &apply_scalar_op(Op &&op, const value_type &x) {
-    for (size_t i = 0; i < size(); ++i) {
+    for (size_type i = 0; i < size(); ++i)
       op((*this)[i], x);
-    }
     return *this;
   }
 
   template <class Op, class Expr>
   slice_view &apply_expr_op(Op &&op, const Expr &expr) {
-    for (size_t i = 0; i < size(); ++i) {
+    for (size_type i = 0; i < size(); ++i)
       op((*this)[i], expr[i]);
-    }
     return *this;
   }
 
