@@ -863,57 +863,6 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   return detail::access_slice(span_, std::forward<Args>(args)...);
 }
 
-// slice_array
-
-// template <class Tp>
-// class slice_array {
-// public:
-//     typedef Tp value_type;
-//
-// private:
-//     value_type* vp_;
-//     size_t size_;
-//     size_t stride_;
-//
-// public:
-//     slice_array(slice_array const&) = default;
-//
-//     const slice_array& operator=(const slice_array& sa) const;
-//
-//     template <class Ex, class Lp>
-//     void operator=(const ndarray<value_type, Ex, Lp>& __va) const;
-//
-// private:
-//     template <class Ex, class Lp>
-//     slice_array(const slice& __sl, const ndarray<value_type, Ex, Lp>& v)
-//         : vp_(const_cast<value_type*>(v.begin_ + __sl.start())),
-//         size_(__sl.size()), stride_(__sl.stride()) {
-//     }
-//
-//     template <class, class, class>
-//     friend class ndarray;
-// };
-//
-// template <class Tp>
-// inline const slice_array<Tp>& slice_array<Tp>::operator=(const slice_array&
-// sa) const {
-//     value_type* t = vp_;
-//     const value_type* s = sa.vp_;
-//     for (size_t n = size_; n; --n, t += stride_, s += sa.stride_)
-//         *t = *s;
-//     return *this;
-// }
-//
-// template <class Tp>
-// template <class Ex, class Lp>
-// inline void slice_array<Tp>::operator=(const ndarray<value_type, Ex, Lp>&
-// __va) const {
-//     value_type* t = vp_;
-//     for (size_t i = 0; i < __va.size(); ++i, t += stride_)
-//         *t = __va[i];
-// }
-//
-
 // mask_array
 
 // template <class Tp>
