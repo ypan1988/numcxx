@@ -467,22 +467,15 @@ public:
          constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
   //clang-format on
 
-  // ndarray() : begin_(nullptr), end_(nullptr) {}
   // inline explicit ndarray(size_t n);
   // ndarray(const value_type& x, size_t n);
   // ndarray(const value_type* p, size_t n);
-  // ndarray(const ndarray& v);
-  // ndarray(ndarray&& v) noexcept;
   // ndarray(std::initializer_list<value_type> __il);
   // ndarray(const slice_array<value_type>& sa);
   // ndarray(const mask_array<value_type>& ma);
   // ndarray(const indirect_array<value_type>& ia);
-  // inline ~ndarray();
 
-  // ndarray& operator=(const ndarray& v);
-  // ndarray& operator=(ndarray&& v) noexcept;
   // ndarray& operator=(std::initializer_list<value_type>);
-  // ndarray& operator=(const value_type& x);
   // ndarray& operator=(const slice_array<value_type>& sa);
   // ndarray& operator=(const mask_array<value_type>& ma);
   // ndarray& operator=(const indirect_array<value_type>& ia);
@@ -1526,24 +1519,6 @@ public:
 // }
 
 // template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp>::ndarray(const ndarray& v) : begin_(nullptr),
-// end_(nullptr) {
-//     if (v.size()) {
-//         begin_ = end_ = allocator<value_type>().allocate(v.size());
-//         auto __guard = std::__make_exception_guard([&] { __clear(v.size());
-//         }); for (value_type* p = v.begin_; p != v.end_; ++end_, ++p)
-//             ::new ((void*)end_) value_type(*p);
-//         __guard.__complete();
-//     }
-// }
-
-// template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp>::ndarray(ndarray&& v) noexcept : begin_(v.begin_),
-// end_(v.end_) {
-//     v.begin_ = v.end_ = nullptr;
-// }
-
-// template <class Tp, class Ex, class Lp>
 // ndarray<Tp, Ex, Lp>::ndarray(std::initializer_list<value_type> __il) :
 // begin_(nullptr), end_(nullptr) {
 //     const size_t n = __il.size();
@@ -1604,11 +1579,6 @@ public:
 // }
 
 // template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp>::~ndarray() {
-//     __clear(size());
-// }
-
-// template <class Tp, class Ex, class Lp>
 // ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::__assign_range(const value_type*
 // __f, const value_type* __l) {
 //     size_t n = __l - __f;
@@ -1625,34 +1595,9 @@ public:
 // }
 
 // template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const ndarray& v) {
-//     if (this != std::addressof(v))
-//         return __assign_range(v.begin_, v.end_);
-//     return *this;
-// }
-
-// template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(ndarray&& v)
-// noexcept {
-//     __clear(size());
-//     begin_ = v.begin_;
-//     end_ = v.end_;
-//     v.begin_ = nullptr;
-//     v.end_ = nullptr;
-//     return *this;
-// }
-
-// template <class Tp, class Ex, class Lp>
 // inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex,
 // Lp>::operator=(std::initializer_list<value_type> __il) {
 //     return __assign_range(__il.begin(), __il.end());
-// }
-
-// template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::operator=(const value_type&
-// x) {
-//     std::fill(begin_, end_, x);
-//     return *this;
 // }
 
 // template <class Tp, class Ex, class Lp>
