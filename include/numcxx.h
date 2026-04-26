@@ -445,7 +445,7 @@ public:
   // assignment:
   constexpr ndarray &operator=(const ndarray &v) = default;
   constexpr ndarray &operator=(ndarray &&v) noexcept = default;
-  template <class ValExpr> ndarray &operator=(const nc_val_expr<ValExpr> &v);
+  //template <class ValExpr> ndarray &operator=(const nc_val_expr<ValExpr> &v);
 
   // element access
   template <typename... Args> decltype(auto) operator()(Args &&...args) const;
@@ -521,25 +521,27 @@ public:
   nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>> operator!() const;
 
   // computed assignment:
-  ndarray &operator+=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b; }, x); }
-  ndarray &operator-=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b; }, x); }
-  ndarray &operator*=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b; }, x); }
-  ndarray &operator/=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b; }, x); }
-  ndarray &operator%=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b; }, x); }
-  ndarray &operator&=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b; }, x); }
-  ndarray &operator|=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b; }, x); }
-  ndarray &operator^=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b; }, x); }
+  ndarray &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
+  ndarray &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
+  ndarray &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
+  ndarray &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
+  ndarray &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
+  ndarray &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
+  ndarray &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
+  ndarray &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
+  ndarray &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
   ndarray &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
   ndarray &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
 
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator+=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a += b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator-=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a -= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator*=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a *= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator/=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a /= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator%=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a %= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator&=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a &= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator|=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a |= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator^=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator=  (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator+= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator-= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator*= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator/= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator%= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator&= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator|= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator^= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator<<=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator>>=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
   // clang-format on
@@ -747,26 +749,27 @@ public:
   nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const slice_view &>> operator!() const;
 
   // computed assignment:
-  slice_view &operator+=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b; }, x); }
-  slice_view &operator-=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b; }, x); }
-  slice_view &operator*=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b; }, x); }
-  slice_view &operator/=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b; }, x); }
-  slice_view &operator%=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b; }, x); }
-  slice_view &operator&=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b; }, x); }
-  slice_view &operator|=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b; }, x); }
-  slice_view &operator^=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b; }, x); }
+  slice_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
+  slice_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
+  slice_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
+  slice_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
+  slice_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
+  slice_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
+  slice_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
+  slice_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
+  slice_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
   slice_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
   slice_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
 
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator=(const Expr& v);
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator+=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator-=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator*=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator/=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator%=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator&=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator|=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b; }, v); }
-  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator^=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator=  (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator+= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator-= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator*= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator/= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator%= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator&= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator|= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
   // clang-format on
@@ -1685,18 +1688,19 @@ public:
 //     return *this;
 // }
 
-template <class Tp, class Ex, class Lp>
-template <class ValExpr>
-inline ndarray<Tp, Ex, Lp> &
-ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<ValExpr> &v) {
-  size_t n = v.size();
-  if (size() != n)
-    ; // resize(n);
-  value_type *t = elem_.data();
-  for (size_t i = 0; i != n; ++t, ++i)
-    *t = value_type(v[i]);
-  return *this;
-}
+// TO REMOVE
+// template <class Tp, class Ex, class Lp>
+// template <class ValExpr>
+// inline ndarray<Tp, Ex, Lp> &
+// ndarray<Tp, Ex, Lp>::operator=(const nc_val_expr<ValExpr> &v) {
+//   size_t n = v.size();
+//   if (size() != n)
+//     ; // resize(n);
+//   value_type *t = elem_.data();
+//   for (size_t i = 0; i != n; ++t, ++i)
+//     *t = value_type(v[i]);
+//   return *this;
+// }
 
 // template <class Tp, class Ex, class Lp>
 // inline nc_val_expr<__slice_expr<const ndarray<Tp, Ex, Lp>&> > ndarray<Tp, Ex,
