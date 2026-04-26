@@ -41,3 +41,51 @@ TEST(NdarrayScalarCompoundAssign, DivAssign) {
         EXPECT_DOUBLE_EQ(A.data()[i], expected[i]);
     }
 }
+
+TEST(NdarrayExprCompoundAssign, AddAssign) {
+    numcxx::dmat A(2, 3);
+    numcxx::dmat B(2, 3);
+    std::iota(A.data(), A.data() + A.size(), 1);
+    std::iota(B.data(), B.data() + B.size(), 1);
+    A += B;
+    double expected[] = {2,4,6,8,10,12};
+    for (size_t i = 0; i < A.size(); ++i) {
+        EXPECT_DOUBLE_EQ(A.data()[i], expected[i]);
+    }
+}
+
+TEST(NdarrayExprCompoundAssign, SubAssign) {
+    numcxx::dmat A(2, 3);
+    numcxx::dmat B(2, 3);
+    std::iota(A.data(), A.data() + A.size(), 5);
+    std::iota(B.data(), B.data() + B.size(), 1);
+    A -= B;
+    double expected[] = {4,4,4,4,4,4};
+    for (size_t i = 0; i < A.size(); ++i) {
+        EXPECT_DOUBLE_EQ(A.data()[i], expected[i]);
+    }
+}
+
+TEST(NdarrayExprCompoundAssign, MulAssign) {
+    numcxx::dmat A(2, 3);
+    numcxx::dmat B(2, 3);
+    std::iota(A.data(), A.data() + A.size(), 1);
+    std::iota(B.data(), B.data() + B.size(), 1);
+    A *= B;
+    double expected[] = {1,4,9,16,25,36};
+    for (size_t i = 0; i < A.size(); ++i) {
+        EXPECT_DOUBLE_EQ(A.data()[i], expected[i]);
+    }
+}
+
+TEST(NdarrayExprCompoundAssign, DivAssign) {
+    numcxx::dmat A(2, 3);
+    numcxx::dmat B(2, 3);
+    std::iota(A.data(), A.data() + A.size(), 2);
+    std::iota(B.data(), B.data() + B.size(), 1);
+    A /= B;
+    double expected[] = {2,2,2,2,2,2};
+    for (size_t i = 0; i < A.size(); ++i) {
+        EXPECT_DOUBLE_EQ(A.data()[i], expected[i]);
+    }
+}
