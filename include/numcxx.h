@@ -850,6 +850,49 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   return detail::access_slice(span_, std::forward<Args>(args)...);
 }
 
+namespace detail {
+
+template <class Tp> class mask_accessor {
+public:
+  using element_type = Tp;
+  using reference = element_type &;
+  using data_handle_type = element_type *;
+  using offset_policy = mask_accessor;
+
+  mask_accessor() = default;
+  explicit mask_accessor(const std::vector<size_type> &indices)
+      : indices_(indices) {}
+
+  const reference access(const data_handle_type p,
+                         const size_type i) const noexcept {
+    NUMCXX_ASSERT(i < indices_.size(),
+                  "mask_accessor::access: index out of bounds");
+    return p[indices_[i]];
+  }
+
+  const data_handle_type offset(const data_handle_type p,
+                                const size_type i) const noexcept {
+    NUMCXX_ASSERT(i < indices_.size(),
+                  "mask_accessor::offset: index out of bounds");
+    return p + indices_[i];
+  }
+
+  friend bool operator==(const mask_accessor &a,
+                         const mask_accessor &b) noexcept {
+    return a.indices_ == b.indices_;
+  }
+
+  friend bool operator!=(const mask_accessor &a,
+                         const mask_accessor &b) noexcept {
+    return !(a == b);
+  }
+
+private:
+  std::vector<size_type> indices_;
+};
+
+} // namespace detail
+
 // mask_array
 
 // template <class Tp>
