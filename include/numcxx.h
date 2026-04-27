@@ -552,31 +552,18 @@ public:
   // void resize(size_t n, value_type x = value_type());
 
 private:
-  template <class, class, class> friend class ndarray;
-  template <class, class, class> friend class slice_view;
-  // friend class mask_array;
-  // template <class>
-  // friend class __mask_expr;
-  // template <class>
-  // friend class indirect_array;
-  // template <class>
-  // friend class __indirect_expr;
-  template <class> friend class nc_val_expr;
+  // clang-format off
+  template <class, class, class> friend class       ndarray;
+  template <class, class, class> friend class    slice_view;
+  template <class>               friend class     mask_view;
+  template <class>               friend class indirect_view;
+  template <class>               friend class   nc_val_expr;
 
-  // template <class Up, class Ex, class Lp>
-  // friend Up* begin(ndarray<Up, Ex, Lp>& v);
-
-  // template <class Up, class Ex, class Lp>
-  // friend const Up* begin(const ndarray<Up, Ex, Lp>& v);
-
-  // template <class Up, class Ex, class Lp>
-  // friend Up* end(ndarray<Up, Ex, Lp>& v);
-
-  // template <class Up, class Ex, class Lp>
-  // friend const Up* end(const ndarray<Up, Ex, Lp>& v);
-
-  // void __clear(size_t capacity);
-  // ndarray& __assign_range(const value_type* __f, const value_type* __l);
+  template <class Up, class Ex, class Lp> friend const Up* begin(const ndarray<Up, Ex, Lp> &v);
+  template <class Up, class Ex, class Lp> friend       Up* begin(      ndarray<Up, Ex, Lp> &v);
+  template <class Up, class Ex, class Lp> friend const Up* end  (const ndarray<Up, Ex, Lp> &v);
+  template <class Up, class Ex, class Lp> friend       Up* end  (      ndarray<Up, Ex, Lp> &v);
+  // clang-format on
 
   template <template <typename> class Op> auto make_unary_expr() const {
     using NewExpr = nc_unary_op<Op<value_type>, const ndarray &>;
@@ -1510,22 +1497,6 @@ public:
 // }
 
 // template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex, Lp>::__assign_range(const value_type*
-// __f, const value_type* __l) {
-//     size_t n = __l - __f;
-//     if (size() != n) {
-//         __clear(size());
-//         begin_ = allocator<value_type>().allocate(n);
-//         end_ = begin_ + n;
-//         std::uninitialized_copy(__f, __l, begin_);
-//     }
-//     else {
-//         std::copy(__f, __l, begin_);
-//     }
-//     return *this;
-// }
-
-// template <class Tp, class Ex, class Lp>
 // inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex,
 // Lp>::operator=(std::initializer_list<value_type> __il) {
 //     return __assign_range(__il.begin(), __il.end());
@@ -1734,16 +1705,6 @@ inline Tp ndarray<Tp, Ex, Lp>::max() const {
 //             ::new ((void*)r.end_) value_type(__f(*p));
 //     }
 //     return r;
-// }
-//
-// template <class Tp, class Ex, class Lp>
-// inline void ndarray<Tp, Ex, Lp>::__clear(size_t capacity) {
-//     if (begin_ != nullptr) {
-//         while (end_ != begin_)
-//             (--end_)->~value_type();
-//         std::allocator<value_type>().deallocate(begin_, capacity);
-//         begin_ = end_ = nullptr;
-//     }
 // }
 //
 // template <class Tp, class Ex, class Lp>
