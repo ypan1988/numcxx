@@ -890,6 +890,15 @@ private:
 
 } // namespace detail
 
+template <class Tp> class mask_view {
+public:
+  using mask_span_type = detail::mdspan<Tp, dextents<1>, detail::layout_right,
+                                        detail::mask_accessor<Tp>>;
+
+private:
+  mask_span_type span_;
+};
+
 // mask_array
 
 // template <class Tp>
