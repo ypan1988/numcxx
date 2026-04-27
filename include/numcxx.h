@@ -863,17 +863,14 @@ public:
   explicit mask_accessor(const std::vector<size_type> &indices)
       : indices_(indices) {}
 
-  const reference access(const data_handle_type p,
-                         const size_type i) const noexcept {
+  reference access(const data_handle_type p, const size_type i) const noexcept {
     NUMCXX_ASSERT(i < indices_.size(),
                   "mask_accessor::access: index out of bounds");
     return p[indices_[i]];
   }
 
-  const data_handle_type offset(const data_handle_type p,
-                                const size_type i) const noexcept {
-    NUMCXX_ASSERT(i < indices_.size(),
-                  "mask_accessor::offset: index out of bounds");
+  data_handle_type offset(const data_handle_type p,
+                          const size_type i) const noexcept {
     return p + indices_[i];
   }
 
