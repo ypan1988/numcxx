@@ -892,6 +892,14 @@ private:
 
 template <class Tp> class mask_view {
 public:
+  using element_type = ElementType;
+  using value_type = std::remove_cv_t<element_type>;
+
+  using pointer = element_type *;
+  using reference = element_type &;
+  using const_pointer = const element_type *;
+  using const_reference = const element_type &;
+
   using mdspan_type = detail::mdspan<Tp, dextents<1>, detail::layout_right,
                                      detail::mask_accessor<Tp>>;
 
