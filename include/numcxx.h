@@ -903,6 +903,13 @@ public:
   using mdspan_type = detail::mdspan<Tp, dextents<1>, detail::layout_right,
                                      detail::mask_accessor<Tp>>;
 
+  // construct/destroy:
+  mask_view() = delete;
+  mask_view(const slice_view &) = default;
+  mask_view(slice_view &&) noexcept = default;
+  //TODO
+  ~mask_view() = default;
+
 private:
   mdspan_type span_;
 };
