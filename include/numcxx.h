@@ -905,13 +905,11 @@ public:
       detail::mdspan<element_type, extents_type, detail::layout_right,
                      detail::mask_accessor<element_type>>;
 
-  // clang-format off
   // construct/destroy:
   mask_view() = delete;
   mask_view(const mask_view &) = default;
   mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
-  // clang-format on
 
 private:
   template <typename BoolExpr>
