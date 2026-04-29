@@ -890,7 +890,7 @@ private:
 
 } // namespace detail
 
-template <class Tp> class mask_view {
+template <class ElementType> class mask_view {
 public:
   using element_type = ElementType;
   using value_type = std::remove_cv_t<element_type>;
@@ -900,17 +900,37 @@ public:
   using const_pointer = const element_type *;
   using const_reference = const element_type &;
 
-  using mdspan_type = detail::mdspan<Tp, dextents<1>, detail::layout_right,
-                                     detail::mask_accessor<Tp>>;
+  using extents_type = dextents<1>;
+  using mdspan_type =
+      detail::mdspan<element_type, extents_type, detail::layout_right,
+                     detail::mask_accessor<element_type>>;
 
+  // clang-format off
   // construct/destroy:
   mask_view() = delete;
-  mask_view(const slice_view &) = default;
-  mask_view(slice_view &&) noexcept = default;
-  //TODO
+  mask_view(const mask_view &) = default;
+  mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
+  // clang-format on
 
 private:
+  template <typename BoolExpr>
+  explicit mask_view(element_type *data, const BoolExpr &expr) {
+    std::vector<size_type> indices;
+    indices.reserve(expr.size());
+    for (size_type i = 0; i < expr.size(); ++i) {
+      if (expr[i])
+        indices.push_back(i);
+    }
+    size_type count = indices.size();
+
+    extents_type ext(count);
+    auto acc = detail::mask_accessor<element_type>(data, std::move(indices));
+    span_ = mdspan_type(data, ext, acc);
+  }
+
+  template <class, class, class> friend class ndarray;
+
   mdspan_type span_;
 };
 
