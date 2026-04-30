@@ -912,19 +912,20 @@ public:
   ~mask_view() = default;
 
 private:
-  template <typename BoolExpr>
-  explicit mask_view(element_type *data, const BoolExpr &expr) {
+  template <typename MdSpan, typename BoolExpr>
+  explicit mask_view(const MdSpan &data_span, const BoolExpr &expr) {
     std::vector<size_type> indices;
     indices.reserve(expr.size());
     for (size_type i = 0; i < expr.size(); ++i) {
       if (expr[i])
         indices.push_back(i);
     }
-    size_type count = indices.size();
 
-    extents_type ext(count);
-    auto acc = detail::mask_accessor<element_type>(data, std::move(indices));
-    span_ = mdspan_type(data, ext, acc);
+    auto data_handle = data_span.data_handle();
+    extents_type ext(indices.size());
+    auto acc =
+        detail::mask_accessor<element_type>(data_handle, std::move(indices));
+    span_ = mdspan_type(data_handle, ext, acc);
   }
 
   template <class, class, class> friend class ndarray;
