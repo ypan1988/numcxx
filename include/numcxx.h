@@ -914,18 +914,19 @@ public:
 private:
   template <typename MdSpan, typename BoolExpr>
   explicit mask_view(const MdSpan &data_span, const BoolExpr &expr) {
-    std::vector<size_type> indices;
-    indices.reserve(expr.size());
+    std::vector<size_type> offsets;
+    offsets.reserve(expr.size());
+
+    const auto &mapping = data_span.mapping();
     for (size_type i = 0; i < expr.size(); ++i) {
-      if (expr[i])
-        indices.push_back(i);
+      if (static_cast<bool>(expr[i]))
+        offsets.push_back(mapping(i));
     }
 
-    auto data_handle = data_span.data_handle();
-    extents_type ext(indices.size());
-    auto acc =
-        detail::index_accessor<element_type>(data_handle, std::move(indices));
-    span_ = mdspan_type(data_handle, ext, acc);
+    auto base = data_span.data_handle();
+    extents_type ext(offsets.size());
+    auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
+    span_ = mdspan_type(base, ext, acc);
   }
 
   template <class, class, class> friend class ndarray;
