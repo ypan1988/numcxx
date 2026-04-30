@@ -852,20 +852,20 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
 
 namespace detail {
 
-template <class Tp> class mask_accessor {
+template <class Tp> class index_accessor {
 public:
   using element_type = Tp;
   using reference = element_type &;
   using data_handle_type = element_type *;
-  using offset_policy = mask_accessor;
+  using offset_policy = index_accessor;
 
-  mask_accessor() = default;
-  explicit mask_accessor(const std::vector<size_type> &indices)
+  index_accessor() = default;
+  explicit index_accessor(const std::vector<size_type> &indices)
       : indices_(indices) {}
 
   reference access(const data_handle_type p, const size_type i) const noexcept {
     NUMCXX_ASSERT(i < indices_.size(),
-                  "mask_accessor::access: index out of bounds");
+                  "index_accessor::access: index out of bounds");
     return p[indices_[i]];
   }
 
@@ -874,13 +874,13 @@ public:
     return p + indices_[i];
   }
 
-  friend bool operator==(const mask_accessor &a,
-                         const mask_accessor &b) noexcept {
+  friend bool operator==(const index_accessor &a,
+                         const index_accessor &b) noexcept {
     return a.indices_ == b.indices_;
   }
 
-  friend bool operator!=(const mask_accessor &a,
-                         const mask_accessor &b) noexcept {
+  friend bool operator!=(const index_accessor &a,
+                         const index_accessor &b) noexcept {
     return !(a == b);
   }
 
@@ -903,7 +903,7 @@ public:
   using extents_type = dextents<1>;
   using mdspan_type =
       detail::mdspan<element_type, extents_type, detail::layout_right,
-                     detail::mask_accessor<element_type>>;
+                     detail::index_accessor<element_type>>;
 
   // construct/destroy:
   mask_view() = delete;
@@ -924,7 +924,7 @@ private:
     auto data_handle = data_span.data_handle();
     extents_type ext(indices.size());
     auto acc =
-        detail::mask_accessor<element_type>(data_handle, std::move(indices));
+        detail::index_accessor<element_type>(data_handle, std::move(indices));
     span_ = mdspan_type(data_handle, ext, acc);
   }
 
