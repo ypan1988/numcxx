@@ -71,8 +71,8 @@ using index_type = int        ; // TODO: replace int with std::ptrdiff_t
 
 template <size_type       Rank> using dextents = detail::dextents<size_type, Rank>;
 template <size_type... Extents> using  extents = detail::extents <size_type, Extents...>;
-//clang-format on
-}
+// clang-format on
+} // namespace numcxx
 
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
@@ -465,7 +465,7 @@ public:
          constexpr const extents_type&                 extents() const noexcept { return elem_.extents(); }
          constexpr      const_pointer                     data() const noexcept { return elem_.data()   ; }
          constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
-  //clang-format on
+  // clang-format on
 
   // inline explicit ndarray(size_t n);
   // ndarray(const value_type& x, size_t n);
@@ -481,6 +481,14 @@ public:
   // ndarray& operator=(const indirect_array<value_type>& ia);
 
   // subset operations:
+  template <typename BoolExpr>
+  auto operator[](BoolExpr &&expr) const -> std::enable_if_t<
+      std::is_same_v<typename std::decay_t<BoolExpr>::value_type, bool>,
+      mask_view<value_type>> {
+    return mask_view<value_type>(elem_.to_mdspan(),
+                                 std::forward<BoolExpr>(expr));
+  }
+
   //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s)
   // const;
   //[[nodiscard]] slice_array<value_type> operator[](slice s);
