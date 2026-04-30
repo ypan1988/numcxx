@@ -367,6 +367,14 @@ template <class ElementType, class Extents>
 using mdarray_container_t =
     typename mdarray_container_selector<ElementType, Extents>::type;
 
+template <typename T, typename = void>
+struct is_boolean_expr : std::false_type {};
+
+template <typename T>
+struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(
+                              std::declval<const T &>()[std::size_t{}]))>>
+    : std::true_type {};
+
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
   index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
@@ -482,12 +490,9 @@ public:
 
   // subset operations:
   template <typename BoolExpr>
-  auto operator[](BoolExpr &&expr) const -> std::enable_if_t<
-      std::is_same_v<typename std::decay_t<BoolExpr>::value_type, bool>,
-      mask_view<value_type>> {
-    return mask_view<value_type>(elem_.to_mdspan(),
-                                 std::forward<BoolExpr>(expr));
-  }
+  std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value,
+                   mask_view<element_type>>
+  operator[](BoolExpr &&expr) const;
 
   //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s)
   // const;
@@ -955,6 +960,16 @@ private:
 
   mdspan_type span_;
 };
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename BoolExpr>
+std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value,
+                 mask_view<typename ndarray<Tp, Ex, Lp>::element_type>>
+ndarray<Tp, Ex, Lp>::operator[](BoolExpr &&expr) const {
+  NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
+  return mask_view<element_type>(elem_.to_mdspan(),
+                                 std::forward<BoolExpr>(expr));
+}
 
 // mask_array
 
