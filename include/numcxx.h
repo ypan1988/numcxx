@@ -929,6 +929,19 @@ public:
   auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
   auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
   auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+
+  // computed assignment:
+  mask_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
+  mask_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
+  mask_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
+  mask_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
+  mask_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
+  mask_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
+  mask_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
+  mask_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
+  mask_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
+  mask_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
+  mask_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
   // clang-format on
 
 private:
@@ -947,6 +960,13 @@ private:
     extents_type ext(offsets.size());
     auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
+  }
+
+  template <typename Op>
+  mask_view &apply_scalar_op(Op &&op, const value_type &x) {
+    for (size_type i = 0; i < size(); ++i)
+      op((*this)[i], x);
+    return *this;
   }
 
   template <class, class, class> friend class ndarray;
