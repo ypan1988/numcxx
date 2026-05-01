@@ -925,10 +925,10 @@ public:
 public:
   // clang-format off
   // unary operators:
-  nc_val_expr<nc_unary_op<nc_unary_plus   <ElementType>, const mask_view &>> operator+() const { return make_unary_expr<nc_unary_plus>   (); }
-  nc_val_expr<nc_unary_op<std::negate     <ElementType>, const mask_view &>> operator-() const { return make_unary_expr<std::negate>     (); }
-  nc_val_expr<nc_unary_op<nc_bit_not      <ElementType>, const mask_view &>> operator~() const { return make_unary_expr<nc_bit_not>      (); }
-  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const mask_view &>> operator!() const { return make_unary_expr<std::logical_not>(); }
+  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
+  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
+  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
+  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
   // clang-format on
 
 private:
@@ -947,11 +947,6 @@ private:
     extents_type ext(offsets.size());
     auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
-  }
-
-  template <template <typename> class Op> auto make_unary_expr() const {
-    using NewExpr = nc_unary_op<Op<value_type>, const mask_view &>;
-    return nc_val_expr<NewExpr>(NewExpr(Op<value_type>(), *this));
   }
 
   template <class, class, class> friend class ndarray;
