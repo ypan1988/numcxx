@@ -1012,38 +1012,6 @@ ndarray<Tp, Ex, Lp>::operator[](BoolExpr &&expr) const {
                                  std::forward<BoolExpr>(expr));
 }
 
-// template <class ValExpr>
-// class __mask_expr {
-//     typedef std::remove_reference_t<ValExpr> _RmExpr;
-//
-// public:
-//     typedef typename _RmExpr::value_type value_type;
-//     typedef value_type result_type;
-//
-// private:
-//     ValExpr expr_;
-//     ndarray<size_t, detail::dextents<std::size_t, 1>, detail::layout_right>
-//     oned_;
-//
-//     __mask_expr(const ndarray<bool, detail::dextents<std::size_t, 1>,
-//     detail::layout_right>& __vb, const _RmExpr& e)
-//         : expr_(e), oned_(static_cast<size_t>(count(__vb.begin_, __vb.end_,
-//         true))) { size_t j = 0; for (size_t i = 0; i < __vb.size(); ++i)
-//             if (__vb[i])
-//                 oned_[j++] = i;
-//     }
-//
-// public:
-//     result_type operator[](size_t i) const { return expr_[oned_[i]]; }
-//
-//     size_t size() const { return oned_.size(); }
-//
-//     template <class>
-//     friend class nc_val_expr;
-//     template <class, class, class>
-//     friend class ndarray;
-// };
-
 // indirect_array
 
 // template <class Tp>
