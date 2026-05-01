@@ -1284,27 +1284,12 @@ public:
   //     return nc_val_expr< NewExpr >(NewExpr(__vs, expr_));
   // }
 
-  nc_val_expr<nc_unary_op<nc_unary_plus<value_type>, ValExpr>>
-  operator+() const {
-    typedef nc_unary_op<nc_unary_plus<value_type>, ValExpr> NewExpr;
-    return nc_val_expr<NewExpr>(NewExpr(nc_unary_plus<value_type>(), expr_));
-  }
-
-  nc_val_expr<nc_unary_op<std::negate<value_type>, ValExpr>> operator-() const {
-    typedef nc_unary_op<std::negate<value_type>, ValExpr> NewExpr;
-    return nc_val_expr<NewExpr>(NewExpr(std::negate<value_type>(), expr_));
-  }
-
-  nc_val_expr<nc_unary_op<nc_bit_not<value_type>, ValExpr>> operator~() const {
-    typedef nc_unary_op<nc_bit_not<value_type>, ValExpr> NewExpr;
-    return nc_val_expr<NewExpr>(NewExpr(nc_bit_not<value_type>(), expr_));
-  }
-
-  nc_val_expr<nc_unary_op<std::logical_not<value_type>, ValExpr>>
-  operator!() const {
-    typedef nc_unary_op<std::logical_not<value_type>, ValExpr> NewExpr;
-    return nc_val_expr<NewExpr>(NewExpr(std::logical_not<value_type>(), expr_));
-  }
+  // clang-format off
+  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
+  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
+  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
+  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+  // clang-format on
 
   // template<class Ex, class Lp>
   // operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
