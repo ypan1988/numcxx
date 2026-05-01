@@ -923,6 +923,12 @@ public:
   mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
 
+  // clang-format off
+  // element access
+  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
+  // clang-format on
+
   constexpr size_type size() const noexcept { return span_.size(); }
 
 public:
