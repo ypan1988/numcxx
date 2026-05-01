@@ -740,10 +740,10 @@ public:
 public:
   // clang-format off
   // unary operators:
-  nc_val_expr<nc_unary_op<nc_unary_plus   <ElementType>, const slice_view &>> operator+() const { return make_unary_expr<nc_unary_plus>   (); }
-  nc_val_expr<nc_unary_op<std::negate     <ElementType>, const slice_view &>> operator-() const { return make_unary_expr<std::negate>     (); }
-  nc_val_expr<nc_unary_op<nc_bit_not      <ElementType>, const slice_view &>> operator~() const { return make_unary_expr<nc_bit_not>      (); }
-  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const slice_view &>> operator!() const { return make_unary_expr<std::logical_not>(); }
+  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
+  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
+  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
+  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
 
   // computed assignment:
   slice_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -779,11 +779,6 @@ private:
       remaining /= extent(r);
     }
     return offset;
-  }
-
-  template <template <typename> class Op> auto make_unary_expr() const {
-    using NewExpr = nc_unary_op<Op<value_type>, const slice_view &>;
-    return nc_val_expr<NewExpr>(NewExpr(Op<value_type>(), *this));
   }
 
   template <typename Op>
