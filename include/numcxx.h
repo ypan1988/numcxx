@@ -923,6 +923,8 @@ public:
   mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
 
+  constexpr size_type size() const noexcept { return span_.size(); }
+
 public:
   // clang-format off
   // unary operators:
