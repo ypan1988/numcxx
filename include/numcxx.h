@@ -375,6 +375,14 @@ struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(
                               std::declval<const T &>()[std::size_t{}]))>>
     : std::true_type {};
 
+template <template <typename> class Op, typename Expr>
+auto make_unary_expr(const Expr &expr) {
+  using value_type = typename Expr::value_type;
+  using NewExpr = nc_unary_op<Op<value_type>, const Expr &>;
+
+  return nc_val_expr<NewExpr>(NewExpr(Op<value_type>(), expr));
+}
+
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
   index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
@@ -520,10 +528,10 @@ public:
 
   // clang-format off
   // unary operators:
-  nc_val_expr<nc_unary_op<nc_unary_plus   <ElementType>, const ndarray &>> operator+() const { return make_unary_expr<nc_unary_plus>   (); }
-  nc_val_expr<nc_unary_op<std::negate     <ElementType>, const ndarray &>> operator-() const { return make_unary_expr<std::negate>     (); }
-  nc_val_expr<nc_unary_op<nc_bit_not      <ElementType>, const ndarray &>> operator~() const { return make_unary_expr<nc_bit_not>      (); }
-  nc_val_expr<nc_unary_op<std::logical_not<ElementType>, const ndarray &>> operator!() const { return make_unary_expr<std::logical_not>(); }
+  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
+  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
+  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
+  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
 
   // computed assignment:
   ndarray &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -577,11 +585,6 @@ private:
   template <class Up, class Ex, class Lp> friend const Up* end  (const ndarray<Up, Ex, Lp> &v);
   template <class Up, class Ex, class Lp> friend       Up* end  (      ndarray<Up, Ex, Lp> &v);
   // clang-format on
-
-  template <template <typename> class Op> auto make_unary_expr() const {
-    using NewExpr = nc_unary_op<Op<value_type>, const ndarray &>;
-    return nc_val_expr<NewExpr>(NewExpr(Op<value_type>(), *this));
-  }
 
   template <typename Op>
   ndarray &apply_scalar_op(Op &&op, const value_type &x) {
