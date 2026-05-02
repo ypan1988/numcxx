@@ -1012,219 +1012,91 @@ ndarray<Tp, Ex, Lp>::operator[](BoolExpr &&expr) const {
                                  std::forward<BoolExpr>(expr));
 }
 
-// indirect_array
+// [numcxx.indirect_view]
+template <class ElementType> class indirect_view {
+public:
+  using element_type = ElementType;
+  using value_type = std::remove_cv_t<element_type>;
 
-// template <class Tp>
-// class indirect_array {
-// public:
-//     typedef Tp value_type;
-//
-// private:
-//     value_type* vp_;
-//     ndarray<size_t, detail::dextents<std::size_t, 1>, detail::layout_right>
-//     oned_;
-//
-// public:
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator*=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator/=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator%=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator+=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator-=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator^=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator&=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator|=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator<<=(const Expr& v) const;
-//
-//     template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int>
-//     = 0> void operator>>=(const Expr& v) const;
-//
-//     indirect_array(const indirect_array&) = default;
-//
-//     const indirect_array& operator=(const indirect_array& ia) const;
-//
-//     void operator=(const value_type& x) const;
-//
-//     // Behaves like nc_val_expr::operator[], which returns by value.
-//     value_type __get(size_t i) const {
-//         _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(i < oned_.size(),
-//         "indirect_array.__get() index out of bounds"); return vp_[oned_[i]];
-//     }
-//
-// private:
-//     template <class Ex1, class Lp1, class Ex2, class Lp2>
-//     indirect_array(const ndarray<size_t, Ex1, Lp1>& ia, const
-//     ndarray<value_type, Ex2, Lp2>& v)
-//         : vp_(const_cast<value_type*>(v.begin_)), oned_(ia) {
-//     }
-//
-//     template <class Ex1, class Lp1, class Ex2, class Lp2>
-//     indirect_array(ndarray<size_t, Ex1, Lp1>&& ia, const ndarray<value_type,
-//     Ex2, Lp2>& v)
-//         : vp_(const_cast<value_type*>(v.begin_)), oned_(std::move(ia)) {
-//     }
-//
-//     template <class, class, class>
-//     friend class ndarray;
-// };
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] = v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator*=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] *= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator/=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] /= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator%=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] %= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator+=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] += v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator-=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] -= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator^=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] ^= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator&=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] &= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator|=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] |= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator<<=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] <<= v[i];
-// }
-//
-// template <class Tp>
-// template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> >
-// inline void indirect_array<Tp>::operator>>=(const Expr& v) const {
-//     size_t n = oned_.size();
-//     for (size_t i = 0; i < n; ++i)
-//         vp_[oned_[i]] >>= v[i];
-// }
-//
-// template <class Tp>
-// inline const indirect_array<Tp>& indirect_array<Tp>::operator=(const
-// indirect_array& ia) const {
-//     typedef const size_t* _Ip;
-//     const value_type* s = ia.vp_;
-//     for (_Ip i = oned_.begin_, e = oned_.end_, j = ia.oned_.begin_; i != e;
-//     ++i, ++j)
-//         vp_[*i] = s[*j];
-//     return *this;
-// }
-//
-// template <class Tp>
-// inline void indirect_array<Tp>::operator=(const value_type& x) const {
-//     typedef const size_t* _Ip;
-//     for (_Ip i = oned_.begin_, e = oned_.end_; i != e; ++i)
-//         vp_[*i] = x;
-// }
-//
-// template <class ValExpr>
-// class __indirect_expr {
-//     typedef std::remove_reference_t<ValExpr> RmExpr;
-//
-// public:
-//     typedef typename RmExpr::value_type value_type;
-//     typedef value_type result_type;
-//
-// private:
-//     ValExpr expr_;
-//     ndarray<size_t, detail::dextents<std::size_t, 1>, detail::layout_right>
-//     oned_;
-//
-//     template <class Ex, class Lp>
-//     __indirect_expr(const ndarray<size_t, Ex, Lp>& ia, const RmExpr& e) :
-//     expr_(e), oned_(ia) {}
-//
-//     template <class Ex, class Lp>
-//     __indirect_expr(ndarray<size_t, Ex, Lp>&& ia, const RmExpr& e)
-//         : expr_(e), oned_(std::move(ia)) {
-//     }
-//
-// public:
-//     result_type operator[](size_t i) const { return expr_[oned_[i]]; }
-//
-//     size_t size() const { return oned_.size(); }
-//
-//     template <class>
-//     friend class nc_val_expr;
-//     template <class, class, class>
-//     friend class ndarray;
-// };
+  using pointer = element_type *;
+  using reference = element_type &;
+  using const_pointer = const element_type *;
+  using const_reference = const element_type &;
+
+  using extents_type = dextents<1>;
+  using mdspan_type =
+      detail::mdspan<element_type, extents_type, detail::layout_right,
+                     detail::index_accessor<element_type>>;
+
+  // construct/destroy:
+  indirect_view() = delete;
+  indirect_view(const indirect_view &) = default;
+  indirect_view(indirect_view &&) noexcept = default;
+  ~indirect_view() = default;
+
+  // clang-format off
+  // element access
+  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
+  // clang-format on
+
+  constexpr size_type size() const noexcept { return span_.size(); }
+
+public:
+  // clang-format off
+  // unary operators:
+  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
+  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
+  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
+  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+
+  // computed assignment:
+  indirect_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
+  indirect_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
+  indirect_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
+  indirect_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
+  indirect_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
+  indirect_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
+  indirect_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
+  indirect_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
+  indirect_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
+  indirect_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
+  indirect_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
+
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator=  (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator+= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator-= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator*= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator/= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator%= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator&= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator|= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
+  template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+  // clang-format on
+
+private:
+  // TODO: constructor
+
+  template <typename Op>
+  indirect_view &apply_scalar_op(Op &&op, const value_type &x) {
+    for (size_type i = 0; i < size(); ++i)
+      op((*this)[i], x);
+    return *this;
+  }
+
+  template <class Op, class Expr>
+  indirect_view &apply_expr_op(Op &&op, const Expr &expr) {
+    for (size_type i = 0; i < size(); ++i)
+      op((*this)[i], expr[i]);
+    return *this;
+  }
+
+  template <class, class, class> friend class ndarray;
+
+  mdspan_type span_;
+};
 
 template <class ValExpr> class nc_val_expr {
   typedef std::remove_reference_t<ValExpr> RmExpr;
