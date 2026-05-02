@@ -1344,36 +1344,6 @@ public:
 // ndarray
 
 // template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp>::ndarray(size_t n) : begin_(nullptr),
-// end_(nullptr) {
-//     if (n) {
-//         begin_ = end_ = allocator<value_type>().allocate(n);
-//         auto __guard = std::__make_exception_guard([&] { __clear(n); });
-//         for (size_t __n_left = n; __n_left; --__n_left, ++end_)
-//             ::new ((void*)end_) value_type();
-//         __guard.__complete();
-//     }
-// }
-//
-// template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp>::ndarray(const value_type& x, size_t n) :
-// begin_(nullptr), end_(nullptr) {
-//     resize(n, x);
-// }
-
-// template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp>::ndarray(const value_type* p, size_t n) :
-// begin_(nullptr), end_(nullptr) {
-//     if (n) {
-//         begin_ = end_ = allocator<value_type>().allocate(n);
-//         auto __guard = std::__make_exception_guard([&] { __clear(n); });
-//         for (size_t __n_left = n; __n_left; ++end_, ++p, --__n_left)
-//             ::new ((void*)end_) value_type(*p);
-//         __guard.__complete();
-//     }
-// }
-
-// template <class Tp, class Ex, class Lp>
 // ndarray<Tp, Ex, Lp>::ndarray(std::initializer_list<value_type> __il) :
 // begin_(nullptr), end_(nullptr) {
 //     const size_t n = __il.size();
