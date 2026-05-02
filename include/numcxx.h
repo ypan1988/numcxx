@@ -1664,6 +1664,15 @@ inline void swap(ndarray<Tp, Ex, Lp> &x, ndarray<Tp, Ex, Lp> &y) noexcept {
 // clang-format off
 
 namespace detail {
+
+template <class Op, class Expr>
+inline auto make_unary_op(const Expr& x) {
+  using value_type = typename Expr::value_type;
+  using OpType = nc_unary_op<Op, Expr>;
+  OpType node(Op{}, x);
+  return nc_val_expr<OpType>(node);
+}
+
 template <class Op, class Expr1, class Expr2>
 inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
   using value_type = typename Expr1::value_type;
@@ -1723,15 +1732,10 @@ inline auto make_scalar_expr(const typename Expr::value_type &x, const Expr &y) 
     return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
   }
 
-#define NUMCXX_MAKE_UNARY_OP(FN, FUNCTOR)                                      \
-  template <class Expr,                                                        \
-            std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>            \
-  [[nodiscard]] inline nc_val_expr<                                            \
-      nc_unary_op<FUNCTOR<typename Expr::value_type>, Expr>>                   \
-  FN(const Expr &x) {                                                          \
-    typedef typename Expr::value_type value_type;                              \
-    typedef nc_unary_op<FUNCTOR<value_type>, Expr> Op;                         \
-    return nc_val_expr<Op>(Op(FUNCTOR<value_type>(), x));                      \
+#define NUMCXX_MAKE_UNARY_FN(FN, FUNCTOR)                                      \
+  template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
+  [[nodiscard]] inline auto FN(const E& x) {                                   \
+    return detail::make_unary_op<FUNCTOR<typename E::value_type>>(x);          \
   }
 // clang-format on
 
@@ -1759,30 +1763,30 @@ NUMCXX_MAKE_BINARY_OP(>, std::greater)
 NUMCXX_MAKE_BINARY_OP(>=, std::greater_equal)
 
 // absolute function
-NUMCXX_MAKE_UNARY_OP(abs, nc_abs_expr)
+NUMCXX_MAKE_UNARY_FN(abs, nc_abs_expr)
 
 // exponential functions
-NUMCXX_MAKE_UNARY_OP(exp, nc_exp_expr)
-NUMCXX_MAKE_UNARY_OP(log, nc_log_expr)
-NUMCXX_MAKE_UNARY_OP(log10, nc_log10_expr)
+NUMCXX_MAKE_UNARY_FN(exp, nc_exp_expr)
+NUMCXX_MAKE_UNARY_FN(log, nc_log_expr)
+NUMCXX_MAKE_UNARY_FN(log10, nc_log10_expr)
 
 // power function
 NUMCXX_MAKE_BINARY_FN(pow, nc_pow_expr)
-NUMCXX_MAKE_UNARY_OP(sqrt, nc_sqrt_expr)
+NUMCXX_MAKE_UNARY_FN(sqrt, nc_sqrt_expr)
 
 // trigonometric functions
-NUMCXX_MAKE_UNARY_OP(sin, nc_sin_expr)
-NUMCXX_MAKE_UNARY_OP(cos, nc_cos_expr)
-NUMCXX_MAKE_UNARY_OP(tan, nc_tan_expr)
-NUMCXX_MAKE_UNARY_OP(asin, nc_asin_expr)
-NUMCXX_MAKE_UNARY_OP(acos, nc_acos_expr)
-NUMCXX_MAKE_UNARY_OP(atan, nc_atan_expr)
+NUMCXX_MAKE_UNARY_FN(sin, nc_sin_expr)
+NUMCXX_MAKE_UNARY_FN(cos, nc_cos_expr)
+NUMCXX_MAKE_UNARY_FN(tan, nc_tan_expr)
+NUMCXX_MAKE_UNARY_FN(asin, nc_asin_expr)
+NUMCXX_MAKE_UNARY_FN(acos, nc_acos_expr)
+NUMCXX_MAKE_UNARY_FN(atan, nc_atan_expr)
 NUMCXX_MAKE_BINARY_FN(atan2, nc_atan2_expr)
 
 // hyperbolic functions
-NUMCXX_MAKE_UNARY_OP(sinh, nc_sinh_expr)
-NUMCXX_MAKE_UNARY_OP(cosh, nc_cosh_expr)
-NUMCXX_MAKE_UNARY_OP(tanh, nc_tanh_expr)
+NUMCXX_MAKE_UNARY_FN(sinh, nc_sinh_expr)
+NUMCXX_MAKE_UNARY_FN(cosh, nc_cosh_expr)
+NUMCXX_MAKE_UNARY_FN(tanh, nc_tanh_expr)
 
 template <class Tp, class Ex, class Lp>
 [[nodiscard]] inline Tp *begin(ndarray<Tp, Ex, Lp> &v) {
