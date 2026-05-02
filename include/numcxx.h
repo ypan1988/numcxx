@@ -1662,51 +1662,49 @@ inline void swap(ndarray<Tp, Ex, Lp> &x, ndarray<Tp, Ex, Lp> &y) noexcept {
 }
 
 // clang-format off
+
+namespace detail {
+template <class Op, class Expr1, class Expr2>
+inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
+  using value_type = typename Expr1::value_type;
+  using OpType = nc_binary_op<Op, Expr1, Expr2>;
+  OpType node(Op(), x, y);
+  return nc_val_expr<OpType>(node);
+}
+
+template <class Op, class Expr>
+inline auto make_expr_scalar(const Expr &x, const typename Expr::value_type &y) {
+  using value_type = typename Expr::value_type;
+  using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<value_type>>;
+  OpType node(Op(), x, nc_scalar_expr<value_type>(y, x.size()));
+  return nc_val_expr<OpType>(node);
+}
+
+template <class Op, class Expr>
+inline auto make_scalar_expr(const typename Expr::value_type &x, const Expr &y) {
+  using value_type = typename Expr::value_type;
+  using OpType = nc_binary_op<Op, nc_scalar_expr<value_type>, Expr>;
+  OpType node(Op(), nc_scalar_expr<value_type>(x, y.size()), y);
+  return nc_val_expr<OpType>(node);
+}
+} // namespace detail
+
 #define NUMCXX_MAKE_BINARY_OP(OP, FUNCTOR)                                     \
-  template <class Expr1, class Expr2,                                          \
-            std::enable_if_t<nc_is_val_expr<Expr1>::value &&                   \
-                             nc_is_val_expr<Expr2>::value, int> = 0>           \
-  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr1::value_type>,         \
-                                  Expr1,                                       \
-                                  Expr2>>                                      \
-  operator OP(const Expr1 & x, const Expr2 & y) {                              \
-    typedef typename Expr1::value_type value_type;                             \
-    typedef          nc_binary_op<FUNCTOR<value_type>,                         \
-                                  Expr1,                                       \
-                                  Expr2> Op;                                   \
-    return nc_val_expr<Op>    (Op(FUNCTOR<value_type>(),                       \
-                                  x,                                           \
-                                  y));                                         \
+  template <class E1, class E2,                                                \
+      std::enable_if_t<nc_is_val_expr<E1>::value && nc_is_val_expr<E2>::value, \
+                       int> = 0>                                               \
+  inline auto operator OP(const E1 &x, const E2 &y) {                          \
+    return detail::make_expr_expr<FUNCTOR<typename E1::value_type>>(x, y);     \
   }                                                                            \
                                                                                \
-  template <class Expr,                                                        \
-            std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>            \
-  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr::value_type>,          \
-                                  Expr,                                        \
-                                  nc_scalar_expr<typename Expr::value_type>>>  \
-  operator OP(const Expr & x, const typename Expr::value_type & y) {           \
-    typedef typename Expr::value_type value_type;                              \
-    typedef          nc_binary_op<FUNCTOR<value_type>,                         \
-                                  Expr,                                        \
-                                  nc_scalar_expr<value_type>> Op;              \
-    return nc_val_expr<Op>    (Op(FUNCTOR<value_type>(),                       \
-                                  x,                                           \
-                                  nc_scalar_expr<value_type>(y, x.size())));   \
+  template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
+  inline auto operator OP(const E &x, const typename E::value_type &y) {       \
+    return detail::make_expr_scalar<FUNCTOR<typename E::value_type>>(x, y);    \
   }                                                                            \
                                                                                \
-  template <class Expr,                                                        \
-            std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0>            \
-  inline nc_val_expr<nc_binary_op<FUNCTOR<typename Expr::value_type>,          \
-                                  nc_scalar_expr<typename Expr::value_type>,   \
-                                  Expr>>                                       \
-  operator OP(const typename Expr::value_type & x, const Expr & y) {           \
-    typedef typename Expr::value_type value_type;                              \
-    typedef          nc_binary_op<FUNCTOR<value_type>,                         \
-                                  nc_scalar_expr<value_type>,                  \
-                                  Expr> Op;                                    \
-    return nc_val_expr<Op>    (Op(FUNCTOR<value_type>(),                       \
-                                  nc_scalar_expr<value_type>(x, y.size()),     \
-                                  y));                                         \
+  template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
+  inline auto operator OP(const typename E::value_type &x, const E &y) {       \
+    return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
   }
 
 #define NUMCXX_MAKE_BINARY_FN(FN, FUNCTOR)                                     \
