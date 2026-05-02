@@ -1677,7 +1677,7 @@ template <class Op, class Expr1, class Expr2>
 inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
   using value_type = typename Expr1::value_type;
   using OpType = nc_binary_op<Op, Expr1, Expr2>;
-  OpType node(Op(), x, y);
+  OpType node(Op{}, x, y);
   return nc_val_expr<OpType>(node);
 }
 
@@ -1685,7 +1685,7 @@ template <class Op, class Expr>
 inline auto make_expr_scalar(const Expr &x, const typename Expr::value_type &y) {
   using value_type = typename Expr::value_type;
   using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<value_type>>;
-  OpType node(Op(), x, nc_scalar_expr<value_type>(y, x.size()));
+  OpType node(Op{}, x, nc_scalar_expr<value_type>(y, x.size()));
   return nc_val_expr<OpType>(node);
 }
 
@@ -1693,7 +1693,7 @@ template <class Op, class Expr>
 inline auto make_scalar_expr(const typename Expr::value_type &x, const Expr &y) {
   using value_type = typename Expr::value_type;
   using OpType = nc_binary_op<Op, nc_scalar_expr<value_type>, Expr>;
-  OpType node(Op(), nc_scalar_expr<value_type>(x, y.size()), y);
+  OpType node(Op{}, nc_scalar_expr<value_type>(x, y.size()), y);
   return nc_val_expr<OpType>(node);
 }
 } // namespace detail
