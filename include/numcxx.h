@@ -1668,18 +1668,22 @@ inline auto make_scalar_expr(const typename Expr::value_type &x, const Expr &y) 
 }
 } // namespace detail
 
+#define NUMCXX_MAKE_UNARY_FN(FN, FUNCTOR)                                      \
+  template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
+  [[nodiscard]] inline auto FN(const E& x) {                                   \
+    return detail::make_unary_op<FUNCTOR<typename E::value_type>>(x);          \
+  }
+
 #define NUMCXX_MAKE_BINARY_OP(OP, FUNCTOR)                                     \
   template <                  class E1,                    class E2,           \
     std::enable_if_t<nc_is_val_expr<E1>::value && nc_is_val_expr<E2>::value, int> = 0> \
   inline auto operator OP(const E1 &x, const E2 &y) {                          \
     return detail::make_expr_expr<FUNCTOR<typename E1::value_type>>(x, y);     \
   }                                                                            \
-                                                                               \
   template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
   inline auto operator OP(const E &x, const typename E::value_type &y) {       \
     return detail::make_expr_scalar<FUNCTOR<typename E::value_type>>(x, y);    \
   }                                                                            \
-                                                                               \
   template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
   inline auto operator OP(const typename E::value_type &x, const E &y) {       \
     return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
@@ -1691,21 +1695,13 @@ inline auto make_scalar_expr(const typename Expr::value_type &x, const Expr &y) 
   inline auto FN(const E1 &x, const E2 &y) {                                   \
     return detail::make_expr_expr<FUNCTOR<typename E1::value_type>>(x, y);     \
   }                                                                            \
-                                                                               \
   template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
   inline auto FN(const E &x, const typename E::value_type &y) {                \
     return detail::make_expr_scalar<FUNCTOR<typename E::value_type>>(x, y);    \
   }                                                                            \
-                                                                               \
   template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
   inline auto FN(const typename E::value_type &x, const E &y) {                \
     return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
-  }
-
-#define NUMCXX_MAKE_UNARY_FN(FN, FUNCTOR)                                      \
-  template <class E, std::enable_if_t<nc_is_val_expr<E>::value, int> = 0>      \
-  [[nodiscard]] inline auto FN(const E& x) {                                   \
-    return detail::make_unary_op<FUNCTOR<typename E::value_type>>(x);          \
   }
 // clang-format on
 
