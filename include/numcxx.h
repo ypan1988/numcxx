@@ -240,10 +240,10 @@ template <class Tp> struct nc_pow_expr   { typedef Tp result_type; Tp operator()
 // clang-format on
 
 template <class ValExpr> class nc_shift_expr {
-  typedef std::remove_reference_t<ValExpr> _RmExpr;
+  typedef std::remove_reference_t<ValExpr> RmExpr;
 
 public:
-  typedef typename _RmExpr::value_type value_type;
+  typedef typename RmExpr::value_type value_type;
   typedef value_type result_type;
 
 private:
@@ -255,7 +255,7 @@ private:
   static const ptrdiff_t _Np =
       static_cast<ptrdiff_t>(sizeof(ptrdiff_t) * __CHAR_BIT__ - 1);
 
-  nc_shift_expr(int n, const _RmExpr &e) : expr_(e), size_(e.size()), __n_(n) {
+  nc_shift_expr(int n, const RmExpr &e) : expr_(e), size_(e.size()), __n_(n) {
     ptrdiff_t __neg_n = static_cast<ptrdiff_t>(__n_ >> _Np);
     __sn_ = __neg_n | static_cast<ptrdiff_t>(static_cast<size_t>(-__n_) >> _Np);
     __ul_ = ((size_ - __n_) & ~__neg_n) | ((__n_ + 1) & __neg_n);
@@ -274,10 +274,10 @@ public:
 };
 
 template <class ValExpr> class nc_cshift_expr {
-  typedef std::remove_reference_t<ValExpr> _RmExpr;
+  typedef std::remove_reference_t<ValExpr> RmExpr;
 
 public:
-  typedef typename _RmExpr::value_type value_type;
+  typedef typename RmExpr::value_type value_type;
   typedef value_type result_type;
 
 private:
@@ -287,7 +287,7 @@ private:
   size_t o1_;
   size_t o2_;
 
-  nc_cshift_expr(int n, const _RmExpr &e) : expr_(e), size_(e.size()) {
+  nc_cshift_expr(int n, const RmExpr &e) : expr_(e), size_(e.size()) {
     n %= static_cast<int>(size_);
     if (n >= 0) {
       m_ = size_ - n;
@@ -1195,10 +1195,10 @@ ndarray<Tp, Ex, Lp>::operator[](BoolExpr &&expr) const {
 //
 // template <class ValExpr>
 // class __indirect_expr {
-//     typedef std::remove_reference_t<ValExpr> _RmExpr;
+//     typedef std::remove_reference_t<ValExpr> RmExpr;
 //
 // public:
-//     typedef typename _RmExpr::value_type value_type;
+//     typedef typename RmExpr::value_type value_type;
 //     typedef value_type result_type;
 //
 // private:
@@ -1207,11 +1207,11 @@ ndarray<Tp, Ex, Lp>::operator[](BoolExpr &&expr) const {
 //     oned_;
 //
 //     template <class Ex, class Lp>
-//     __indirect_expr(const ndarray<size_t, Ex, Lp>& ia, const _RmExpr& e) :
+//     __indirect_expr(const ndarray<size_t, Ex, Lp>& ia, const RmExpr& e) :
 //     expr_(e), oned_(ia) {}
 //
 //     template <class Ex, class Lp>
-//     __indirect_expr(ndarray<size_t, Ex, Lp>&& ia, const _RmExpr& e)
+//     __indirect_expr(ndarray<size_t, Ex, Lp>&& ia, const RmExpr& e)
 //         : expr_(e), oned_(std::move(ia)) {
 //     }
 //
@@ -1227,15 +1227,15 @@ ndarray<Tp, Ex, Lp>::operator[](BoolExpr &&expr) const {
 // };
 
 template <class ValExpr> class nc_val_expr {
-  typedef std::remove_reference_t<ValExpr> _RmExpr;
+  typedef std::remove_reference_t<ValExpr> RmExpr;
 
   ValExpr expr_;
 
 public:
-  typedef typename _RmExpr::value_type value_type;
-  typedef typename _RmExpr::result_type result_type;
+  typedef typename RmExpr::value_type value_type;
+  typedef typename RmExpr::result_type result_type;
 
-  explicit nc_val_expr(const _RmExpr &e) : expr_(e) {}
+  explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
   result_type operator[](size_t i) const { return expr_[i]; }
 
