@@ -1113,7 +1113,14 @@ public:
   // clang-format on
 
 private:
-  // TODO: constructor
+  template <typename MdSpan>
+  explicit indirect_view(const MdSpan &data_span,
+                         const std::vector<size_type> &offsets) {
+    auto base = data_span.data_handle();
+    extents_type ext(offsets.size());
+    auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
+    span_ = mdspan_type(base, ext, acc);
+  }
 
   template <typename Op>
   indirect_view &apply_scalar_op(Op &&op, const value_type &x) {
