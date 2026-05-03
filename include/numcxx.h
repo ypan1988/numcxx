@@ -1125,7 +1125,7 @@ public:
 private:
   template <typename MdSpan>
   explicit indirect_view(const MdSpan &data_span,
-                         const std::vector<size_type> &offsets) {
+                         std::vector<size_type> offsets) {
     auto base = data_span.data_handle();
     extents_type ext(offsets.size());
     auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
