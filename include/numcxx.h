@@ -532,45 +532,46 @@ public:
   // ndarray& operator=(const mask_array<value_type>& ma);
   // ndarray& operator=(const indirect_array<value_type>& ia);
 
-  // subset operations:
   // clang-format off
-  template <typename BoolExpr>
-  std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
-  operator[](BoolExpr &&expr) const;
 
-  indirect_view<element_type>
+  // subset operations (mask_view):
+  template <typename BoolExpr>
+  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  operator[](BoolExpr &&expr) const {
+    NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
+    return mask_view<element_type>(elem_.to_mdspan(), std::forward<BoolExpr>(expr));
+  }
+  template <typename BoolExpr>
+  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  operator[](BoolExpr &&expr) {
+    NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
+    return mask_view<element_type>(elem_.to_mdspan(), std::forward<BoolExpr>(expr));
+  }
+
+  // subset operations (indirect_view):
+  [[nodiscard]] indirect_view<element_type>
   operator[](std::initializer_list<size_type> offsets) const {
     return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets));
   }
-  indirect_view<element_type>
+  [[nodiscard]] indirect_view<element_type>
+  operator[](std::initializer_list<size_type> offsets) {
+    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets));
+  }
+
+  [[nodiscard]] indirect_view<element_type>
   operator[](const ndarray<size_type, dextents<1>> &offsets) const {
     return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
+  [[nodiscard]] indirect_view<element_type>
+  operator[](const ndarray<size_type, dextents<1>> &offsets) {
+    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+  }
+
   // clang-format on
 
   //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s)
   // const;
   //[[nodiscard]] slice_array<value_type> operator[](slice s);
-  //[[nodiscard]]
-  // nc_val_expr<__mask_expr<const ndarray&> > operator[](const ndarray<bool,
-  // Extents, LayoutPolicy>& __vb) const;
-  //[[nodiscard]] mask_array<value_type> operator[](const ndarray<bool, Extents,
-  // LayoutPolicy>& __vb);
-  //[[nodiscard]]
-  //    nc_val_expr<__mask_expr<const ndarray&> > operator[](ndarray<bool,
-  //    Extents, LayoutPolicy>&& __vb) const;
-  //[[nodiscard]] mask_array<value_type> operator[](ndarray<bool, Extents,
-  // LayoutPolicy>&& __vb);
-  //[[nodiscard]]
-  // nc_val_expr<__indirect_expr<const ndarray&> > operator[](const
-  // ndarray<size_t, Extents, LayoutPolicy>& __vs) const;
-  //[[nodiscard]] indirect_array<value_type> operator[](const ndarray<size_t,
-  // Extents, LayoutPolicy>& __vs);
-  //[[nodiscard]]
-  //    nc_val_expr<__indirect_expr<const ndarray&> > operator[](ndarray<size_t,
-  //    Extents, LayoutPolicy>&& __vs) const;
-  //[[nodiscard]] indirect_array<value_type> operator[](ndarray<size_t, Extents,
-  // LayoutPolicy>&& __vs);
 
   // clang-format off
   // unary operators:
@@ -1047,16 +1048,6 @@ private:
 
   mdspan_type span_;
 };
-
-template <typename Tp, typename Ex, typename Lp>
-template <typename BoolExpr>
-std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value,
-                 mask_view<typename ndarray<Tp, Ex, Lp>::element_type>>
-ndarray<Tp, Ex, Lp>::operator[](BoolExpr &&expr) const {
-  NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-  return mask_view<element_type>(elem_.to_mdspan(),
-                                 std::forward<BoolExpr>(expr));
-}
 
 // [numcxx.indirect_view]
 template <class ElementType> class indirect_view {
