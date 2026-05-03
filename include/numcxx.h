@@ -533,10 +533,20 @@ public:
   // ndarray& operator=(const indirect_array<value_type>& ia);
 
   // subset operations:
+  // clang-format off
   template <typename BoolExpr>
-  std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value,
-                   mask_view<element_type>>
+  std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
   operator[](BoolExpr &&expr) const;
+
+  indirect_view<element_type>
+  operator[](std::initializer_list<size_type> offsets) const {
+    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets));
+  }
+  indirect_view<element_type>
+  operator[](const ndarray<size_type, dextents<1>> &offsets) const {
+    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+  }
+  // clang-format on
 
   //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s)
   // const;
