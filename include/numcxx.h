@@ -534,14 +534,14 @@ public:
   operator()(Args &&...args) const {
     static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
     static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
-    return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
+    return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
   }
   template <typename... Args>
   [[nodiscard]] decltype(auto)
   operator()(Args &&...args) {
     static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
     static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
-    return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
+    return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
   }
 
   // subset operations (mask_view):
@@ -549,32 +549,32 @@ public:
   [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
   operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return mask_view<element_type>(elem_.to_mdspan(), std::forward<BoolExpr>(expr));
+    return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
   template <typename BoolExpr>
   [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
   operator[](BoolExpr &&expr) {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return mask_view<element_type>(elem_.to_mdspan(), std::forward<BoolExpr>(expr));
+    return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
 
   // subset operations (indirect_view):
   [[nodiscard]] indirect_view<element_type>
   operator[](std::initializer_list<size_type> offsets) const {
-    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets));
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
   }
   [[nodiscard]] indirect_view<element_type>
   operator[](std::initializer_list<size_type> offsets) {
-    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets));
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
   }
 
   [[nodiscard]] indirect_view<element_type>
   operator[](const ndarray<size_type, dextents<1>> &offsets) const {
-    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
   [[nodiscard]] indirect_view<element_type>
   operator[](const ndarray<size_type, dextents<1>> &offsets) {
-    return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
 
   // unary operators:
