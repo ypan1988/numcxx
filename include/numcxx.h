@@ -508,28 +508,6 @@ public:
   constexpr ndarray(ndarray &&v) noexcept = default;
   template <class... SizeTypes> explicit constexpr ndarray(SizeTypes... dyn_exts) : elem_(Extents(dyn_exts...)) {}
   ~ndarray() = default;
-
-  // assignment:
-  constexpr ndarray &operator=(const ndarray &v) = default;
-  constexpr ndarray &operator=(ndarray &&v) noexcept = default;
-
-  // element access (flattened)
-  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
-  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
-
-  // observers
-  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
-  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
-         constexpr          size_type        extent(size_type r) const noexcept { return elem_.extent(r); }
-         constexpr          size_type                     size() const noexcept { return elem_.size()   ; }
-         constexpr               bool                    empty() const noexcept { return elem_.empty()  ; }
-         constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
-         constexpr const extents_type&                 extents() const noexcept { return elem_.extents(); }
-         constexpr      const_pointer                     data() const noexcept { return elem_.data()   ; }
-         constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
-  // clang-format on
-
   // inline explicit ndarray(size_t n);
   // ndarray(const value_type& x, size_t n);
   // ndarray(const value_type* p, size_t n);
@@ -538,24 +516,30 @@ public:
   // ndarray(const mask_array<value_type>& ma);
   // ndarray(const indirect_array<value_type>& ia);
 
+  // assignment:
+  constexpr ndarray &operator=(const ndarray &v) = default;
+  constexpr ndarray &operator=(ndarray &&v) noexcept = default;
   // ndarray& operator=(std::initializer_list<value_type>);
   // ndarray& operator=(const slice_array<value_type>& sa);
   // ndarray& operator=(const mask_array<value_type>& ma);
   // ndarray& operator=(const indirect_array<value_type>& ia);
 
-  // clang-format off
+  // element access (flattened)
+  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
+  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
+
   // subset operations (slice_view):
   template <typename... Args>
   [[nodiscard]] decltype(auto)
   operator()(Args &&...args) const {
-    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments mush match array rank");
+    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
     static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
     return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
   }
   template <typename... Args>
   [[nodiscard]] decltype(auto)
   operator()(Args &&...args) {
-    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments mush match array rank");
+    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
     static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
     return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
   }
@@ -593,14 +577,7 @@ public:
     return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
 
-  // clang-format on
-
-  //[[nodiscard]] nc_val_expr<__slice_expr<const ndarray&> > operator[](slice s)
-  // const;
-  //[[nodiscard]] slice_array<value_type> operator[](slice s);
-
-  // clang-format off
-  // unary operators:
+    // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
   auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
   auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
@@ -630,6 +607,18 @@ public:
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator^= (const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator<<=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> ndarray &operator>>=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+
+  // observers
+  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
+  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr          size_type        extent(size_type r) const noexcept { return elem_.extent(r); }
+         constexpr          size_type                     size() const noexcept { return elem_.size()   ; }
+         constexpr               bool                    empty() const noexcept { return elem_.empty()  ; }
+         constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
+         constexpr const extents_type&                 extents() const noexcept { return elem_.extents(); }
+         constexpr      const_pointer                     data() const noexcept { return elem_.data()   ; }
+         constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
   // clang-format on
 
   // member functions:
@@ -876,7 +865,7 @@ template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
 decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments mush match array rank");
+                "Number of arguments must match array rank");
   static_assert(are_all_slice_or_integral_v<Args...>,
                 "Each argument must be slice or an integral type");
 
@@ -887,7 +876,7 @@ template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
 decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments mush match array rank");
+                "Number of arguments must match array rank");
   static_assert(are_all_slice_or_integral_v<Args...>,
                 "Each argument must be slice or an integral type");
 
