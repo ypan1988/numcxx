@@ -779,13 +779,21 @@ public:
   slice_view &operator=(const slice_view &) = default;
   slice_view &operator=(slice_view &&) noexcept = default;
 
-  // element access
-  template <typename... Args> decltype(auto) operator()(Args &&...args) const;
-  template <typename... Args> decltype(auto) operator()(Args &&...args);
-
   // element access (flattened)
   [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
   [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
+
+  // subset operations (slice_view)
+  template <typename... Args> decltype(auto) operator()(Args &&...args) const {
+    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
+    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
+    return detail::access_slice(span_, std::forward<Args>(args)...);
+  }
+  template <typename... Args> decltype(auto) operator()(Args &&...args) {
+    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
+    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
+    return detail::access_slice(span_, std::forward<Args>(args)...);
+  }
 
   // observers
   static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
@@ -860,28 +868,6 @@ private:
 private:
   mdspan_type span_;
 };
-
-template <typename Tp, typename Ex, typename Lp>
-template <typename... Args>
-decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments must match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
-
-  return detail::access_slice(span_, std::forward<Args>(args)...);
-}
-
-template <typename Tp, typename Ex, typename Lp>
-template <typename... Args>
-decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments must match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
-
-  return detail::access_slice(span_, std::forward<Args>(args)...);
-}
 
 namespace detail {
 
