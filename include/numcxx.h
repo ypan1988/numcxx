@@ -795,20 +795,6 @@ public:
     return detail::access_slice(span_, std::forward<Args>(args)...);
   }
 
-  // observers
-  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
-  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
-         constexpr          size_type        extent(size_type r) const noexcept { return span_.extent(r)    ; }
-         constexpr          size_type                     size() const noexcept { return span_.size()       ; }
-         constexpr               bool                    empty() const noexcept { return span_.empty()      ; }
-         constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
-         constexpr const extents_type&                 extents() const noexcept { return span_.extents()    ; }
-         constexpr               auto              data_handle() const noexcept { return span_.data_handle(); }
-  // clang-format on
-
-public:
-  // clang-format off
   // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
   auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
@@ -839,6 +825,17 @@ public:
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> slice_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+
+  // observers
+  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
+  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr          size_type        extent(size_type r) const noexcept { return span_.extent(r)    ; }
+         constexpr          size_type                     size() const noexcept { return span_.size()       ; }
+         constexpr               bool                    empty() const noexcept { return span_.empty()      ; }
+         constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
+         constexpr const extents_type&                 extents() const noexcept { return span_.extents()    ; }
+         constexpr               auto              data_handle() const noexcept { return span_.data_handle(); }
   // clang-format on
 
 private:
