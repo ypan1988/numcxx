@@ -577,7 +577,7 @@ public:
     return indirect_view<element_type>(elem_.to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
 
-    // unary operators:
+  // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
   auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
   auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
