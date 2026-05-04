@@ -800,6 +800,39 @@ public:
     return detail::access_slice(span_, std::forward<Args>(args)...);
   }
 
+  // subset operations (mask_view):
+  template <typename BoolExpr>
+  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  operator[](BoolExpr &&expr) const {
+    NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
+    return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
+  }
+  template <typename BoolExpr>
+  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  operator[](BoolExpr &&expr) {
+    NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
+    return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
+  }
+
+  // subset operations (indirect_view):
+  [[nodiscard]] indirect_view<element_type>
+  operator[](std::initializer_list<size_type> offsets) const {
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
+  }
+  [[nodiscard]] indirect_view<element_type>
+  operator[](std::initializer_list<size_type> offsets) {
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
+  }
+
+  [[nodiscard]] indirect_view<element_type>
+  operator[](const ndarray<size_type, dextents<1>> &offsets) const {
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+  }
+  [[nodiscard]] indirect_view<element_type>
+  operator[](const ndarray<size_type, dextents<1>> &offsets) {
+    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+  }
+
   // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
   auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
