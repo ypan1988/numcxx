@@ -932,12 +932,7 @@ public:
   // element access
   [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
-  // clang-format on
 
-  constexpr size_type size() const noexcept { return span_.size(); }
-
-public:
-  // clang-format off
   // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
   auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
@@ -968,6 +963,8 @@ public:
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> mask_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> mask_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> mask_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+
+  constexpr size_type size() const noexcept { return span_.size(); }
   // clang-format on
 
 private:
@@ -1033,12 +1030,7 @@ public:
   // element access
   [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
-  // clang-format on
 
-  constexpr size_type size() const noexcept { return span_.size(); }
-
-public:
-  // clang-format off
   // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
   auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
@@ -1069,6 +1061,8 @@ public:
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+
+  constexpr size_type size() const noexcept { return span_.size(); }
   // clang-format on
 
 private:
