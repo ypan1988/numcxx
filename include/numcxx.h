@@ -480,28 +480,26 @@ template <class ElementType, class Extents,
           class LayoutPolicy = detail::layout_right>
 class ndarray {
 public:
+  // clang-format off
   using element_type = ElementType;
-  using value_type = std::remove_cv_t<element_type>;
+  using   value_type = std::remove_cv_t<element_type>;
 
   using extents_type = Extents;
-  using index_type = typename extents_type::index_type;
-  using size_type = typename extents_type::size_type;
-  using rank_type = typename extents_type::rank_type;
+  using   index_type = typename extents_type::index_type;
+  using    size_type = typename extents_type::size_type;
+  using    rank_type = typename extents_type::rank_type;
 
-  using layout_type = LayoutPolicy;
+  using  layout_type = LayoutPolicy;
   using mapping_type = typename layout_type::template mapping<extents_type>;
 
-  using mdspan_type = detail::mdspan<element_type, extents_type, layout_type>;
-  using const_mdspan_type =
-      detail::mdspan<const element_type, extents_type, layout_type>;
+  using const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type>;
+  using       mdspan_type = detail::mdspan<      element_type, extents_type, layout_type>;
 
-  using pointer = element_type *;
-  using reference = element_type &;
-  using const_pointer = const element_type *;
-  using const_reference = const element_type &;
+  using const_reference = typename const_mdspan_type::reference;
+  using       reference = typename       mdspan_type::reference;
+  using const_pointer   =          const         element_type *;
+  using       pointer   =                        element_type *;
 
-public:
-  // clang-format off
   // construct/destroy:
   constexpr ndarray() = default;
   constexpr ndarray(const ndarray &v) = default;
@@ -751,28 +749,26 @@ template <class ElementType, class Extents,
           class LayoutPolicy = detail::layout_right>
 class slice_view {
 public:
+  // clang-format off
   using element_type = ElementType;
-  using value_type = std::remove_cv_t<element_type>;
+  using   value_type = std::remove_cv_t<element_type>;
 
   using extents_type = Extents;
-  using index_type = typename extents_type::index_type;
-  using size_type = typename extents_type::size_type;
-  using rank_type = typename extents_type::rank_type;
+  using   index_type = typename extents_type::index_type;
+  using    size_type = typename extents_type::size_type;
+  using    rank_type = typename extents_type::rank_type;
 
-  using layout_type = LayoutPolicy;
+  using  layout_type = LayoutPolicy;
   using mapping_type = typename layout_type::template mapping<extents_type>;
 
-  using mdspan_type = detail::mdspan<element_type, extents_type, layout_type>;
-  using const_mdspan_type =
-      detail::mdspan<const element_type, extents_type, layout_type>;
+  using const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type>;
+  using       mdspan_type = detail::mdspan<      element_type, extents_type, layout_type>;
 
-  using pointer = element_type *;
-  using reference = element_type &;
-  using const_pointer = const element_type *;
-  using const_reference = const element_type &;
+  using        const_reference = typename const_mdspan_type::reference;
+  using              reference = typename       mdspan_type::reference;
+  using const_data_handle_type = typename const_mdspan_type::data_handle_type;
+  using       data_handle_type = typename       mdspan_type::data_handle_type;
 
-public:
-  // clang-format off
   // construct/destroy:
   slice_view() = delete;
   slice_view(const slice_view &) = default;
@@ -951,23 +947,26 @@ private:
 // [numcxx.mask_view]
 template <class ElementType> class mask_view {
 public:
+  // clang-format off
   using element_type = ElementType;
-  using value_type = std::remove_cv_t<element_type>;
+  using   value_type = std::remove_cv_t<element_type>;
 
   using extents_type = dextents<1>;
-  using layout_type = detail::layout_right;
-  using accessor_type = detail::index_accessor<element_type>;
+  using   index_type = typename extents_type::index_type;
+  using    size_type = typename extents_type::size_type;
+  using    rank_type = typename extents_type::rank_type;
+
+  using         layout_type = detail::layout_right;
   using const_accessor_type = detail::index_accessor<const element_type>;
+  using       accessor_type = detail::index_accessor<      element_type>;
 
-  using mdspan_type =
-      detail::mdspan<element_type, extents_type, layout_type, accessor_type>;
-  using const_mdspan_type = detail::mdspan<const element_type, extents_type,
-                                           layout_type, const_accessor_type>;
+  using   const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type, const_accessor_type>;
+  using         mdspan_type = detail::mdspan<      element_type, extents_type, layout_type,       accessor_type>;
 
-  using pointer = typename mdspan_type::pointer;
-  using reference = typename mdspan_type::reference;
-  using const_pointer = typename const_mdspan_type::pointer;
-  using const_reference = typename const_mdspan_type::const_reference;
+  using        const_reference = typename const_mdspan_type::reference;
+  using              reference = typename       mdspan_type::reference;
+  using const_data_handle_type = typename const_mdspan_type::data_handle_type;
+  using       data_handle_type = typename       mdspan_type::data_handle_type;
 
   // construct/destroy:
   mask_view() = delete;
@@ -975,7 +974,6 @@ public:
   mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
 
-  // clang-format off
   // element access
   [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
@@ -1054,18 +1052,26 @@ private:
 // [numcxx.indirect_view]
 template <class ElementType> class indirect_view {
 public:
+  // clang-format off
   using element_type = ElementType;
-  using value_type = std::remove_cv_t<element_type>;
-
-  using pointer = element_type *;
-  using reference = element_type &;
-  using const_pointer = const element_type *;
-  using const_reference = const element_type &;
+  using   value_type = std::remove_cv_t<element_type>;
 
   using extents_type = dextents<1>;
-  using mdspan_type =
-      detail::mdspan<element_type, extents_type, detail::layout_right,
-                     detail::index_accessor<element_type>>;
+  using   index_type = typename extents_type::index_type;
+  using    size_type = typename extents_type::size_type;
+  using    rank_type = typename extents_type::rank_type;
+
+  using         layout_type = detail::layout_right;
+  using const_accessor_type = detail::index_accessor<const element_type>;
+  using       accessor_type = detail::index_accessor<      element_type>;
+
+  using   const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type, const_accessor_type>;
+  using         mdspan_type = detail::mdspan<      element_type, extents_type, layout_type,       accessor_type>;
+
+  using        const_reference = typename const_mdspan_type::reference;
+  using              reference = typename       mdspan_type::reference;
+  using const_data_handle_type = typename const_mdspan_type::data_handle_type;
+  using       data_handle_type = typename       mdspan_type::data_handle_type;
 
   // construct/destroy:
   indirect_view() = delete;
@@ -1073,7 +1079,6 @@ public:
   indirect_view(indirect_view &&) noexcept = default;
   ~indirect_view() = default;
 
-  // clang-format off
   // element access
   [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
