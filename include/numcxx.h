@@ -425,6 +425,21 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 } // namespace detail
 
 namespace detail {
+template <typename MdSpan, typename... Args>
+decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
+  auto sub_mdspan = detail::slice_utils::make_submdspan(
+      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
+      std::forward<Args>(args)...);
+  using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
+
+  if constexpr (sub_mdspan_type::rank() == 0)
+    // all dimensions were indexed with integral indices.
+    return sub_mdspan();
+  else
+    return slice_view<typename sub_mdspan_type::element_type,
+                      typename sub_mdspan_type::extents_type,
+                      typename sub_mdspan_type::layout_type>(sub_mdspan);
+}
 
 template <class Op, class Expr> inline auto make_unary_op(const Expr &x) {
   using value_type = typename Expr::value_type;
@@ -498,10 +513,6 @@ public:
   constexpr ndarray &operator=(const ndarray &v) = default;
   constexpr ndarray &operator=(ndarray &&v) noexcept = default;
 
-  // element access
-  template <typename... Args> decltype(auto) operator()(Args &&...args) const;
-  template <typename... Args> decltype(auto) operator()(Args &&...args);
-
   // element access (flattened)
   [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
   [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
@@ -533,6 +544,21 @@ public:
   // ndarray& operator=(const indirect_array<value_type>& ia);
 
   // clang-format off
+  // subset operations (slice_view):
+  template <typename... Args>
+  [[nodiscard]] decltype(auto)
+  operator()(Args &&...args) const {
+    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments mush match array rank");
+    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
+    return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
+  }
+  template <typename... Args>
+  [[nodiscard]] decltype(auto)
+  operator()(Args &&...args) {
+    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments mush match array rank");
+    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
+    return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
+  }
 
   // subset operations (mask_view):
   template <typename BoolExpr>
@@ -845,46 +871,6 @@ private:
 private:
   mdspan_type span_;
 };
-
-namespace detail {
-template <typename MdSpan, typename... Args>
-decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
-  auto sub_mdspan = detail::slice_utils::make_submdspan(
-      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
-      std::forward<Args>(args)...);
-  using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
-
-  if constexpr (sub_mdspan_type::rank() == 0)
-    // all dimensions were indexed with integral indices.
-    return sub_mdspan();
-  else
-    return slice_view<typename sub_mdspan_type::element_type,
-                      typename sub_mdspan_type::extents_type,
-                      typename sub_mdspan_type::layout_type>(sub_mdspan);
-}
-} // namespace detail
-
-template <typename Tp, typename Ex, typename Lp>
-template <typename... Args>
-decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments mush match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
-
-  return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
-}
-
-template <typename Tp, typename Ex, typename Lp>
-template <typename... Args>
-decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments mush match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
-
-  return detail::access_slice(elem_.to_mdspan(), std::forward<Args>(args)...);
-}
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
