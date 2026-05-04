@@ -619,6 +619,11 @@ public:
          constexpr const extents_type&                 extents() const noexcept { return elem_.extents(); }
          constexpr      const_pointer                     data() const noexcept { return elem_.data()   ; }
          constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
+
+  // mdspan interoperability
+         constexpr  const_mdspan_type                to_mdspan() const noexcept { return elem_.to_mdspan(); }
+         constexpr        mdspan_type                to_mdspan()       noexcept { return elem_.to_mdspan(); }
+
   // clang-format on
 
   // member functions:
