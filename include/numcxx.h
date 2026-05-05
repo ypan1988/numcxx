@@ -1691,8 +1691,8 @@ namespace linalg {}
 // [numcxx.aliases] type aliases
 //
 // clang-format off
-template <typename T> using vec  = numcxx::ndarray<T, dextents<1>>;
-template <typename T> using mat  = numcxx::ndarray<T, dextents<2>>;
+template <typename T> using  vec = numcxx::ndarray<T, dextents<1>>;
+template <typename T> using  mat = numcxx::ndarray<T, dextents<2>>;
 template <typename T> using cube = numcxx::ndarray<T, dextents<3>>;
 
 // int
