@@ -103,10 +103,10 @@ template <size_type... Extents> using  extents = detail::extents <size_type, Ext
 
 namespace numcxx {
 // clang-format off
-                                        class slice;
-template <class Tp, class Ex, class Lp> class ndarray;
-template <class Tp, class Ex, class Lp> class slice_view;
-template <class Tp>                     class mask_view;
+                                        class         slice;
+template <class Tp, class Ex, class Lp> class       ndarray;
+template <class Tp, class Ex, class Lp> class    slice_view;
+template <class Tp>                     class     mask_view;
 template <class Tp>                     class indirect_view;
 
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
@@ -187,26 +187,6 @@ public:
   size_t size() const { return s_; }
 };
 
-template <class Tp> struct nc_unary_plus {
-  typedef Tp result_type;
-  Tp operator()(const Tp &x) const { return +x; }
-};
-
-template <class Tp> struct nc_bit_not {
-  typedef Tp result_type;
-  Tp operator()(const Tp &x) const { return ~x; }
-};
-
-template <class Tp> struct nc_bit_shift_left {
-  typedef Tp result_type;
-  Tp operator()(const Tp &x, const Tp &y) const { return x << y; }
-};
-
-template <class Tp> struct nc_bit_shift_right {
-  typedef Tp result_type;
-  Tp operator()(const Tp &x, const Tp &y) const { return x >> y; }
-};
-
 template <class Tp, class Fp> struct nc_apply_expr {
 private:
   Fp __f_;
@@ -220,6 +200,11 @@ public:
 };
 
 // clang-format off
+template <class Tp> struct nc_unary_plus      { typedef Tp result_type; Tp operator()(const Tp &x             ) const { return +x    ; } };
+template <class Tp> struct nc_bit_not         { typedef Tp result_type; Tp operator()(const Tp &x             ) const { return ~x    ; } };
+template <class Tp> struct nc_bit_shift_left  { typedef Tp result_type; Tp operator()(const Tp &x, const Tp &y) const { return x << y; } };
+template <class Tp> struct nc_bit_shift_right { typedef Tp result_type; Tp operator()(const Tp &x, const Tp &y) const { return x >> y; } };
+
 template <class Tp> struct nc_abs_expr   { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::abs  (x); } };
 template <class Tp> struct nc_acos_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::acos (x); } };
 template <class Tp> struct nc_asin_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::asin (x); } };
