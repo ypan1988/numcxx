@@ -239,79 +239,6 @@ template <class Tp> struct nc_atan2_expr { typedef Tp result_type; Tp operator()
 template <class Tp> struct nc_pow_expr   { typedef Tp result_type; Tp operator()(const Tp& x, const Tp& y) const { return std::pow  (x, y); } };
 // clang-format on
 
-template <class ValExpr> class nc_shift_expr {
-  typedef std::remove_reference_t<ValExpr> RmExpr;
-
-public:
-  typedef typename RmExpr::value_type value_type;
-  typedef value_type result_type;
-
-private:
-  ValExpr expr_;
-  size_t size_;
-  ptrdiff_t __ul_;
-  ptrdiff_t __sn_;
-  ptrdiff_t __n_;
-  static const ptrdiff_t _Np =
-      static_cast<ptrdiff_t>(sizeof(ptrdiff_t) * __CHAR_BIT__ - 1);
-
-  nc_shift_expr(int n, const RmExpr &e) : expr_(e), size_(e.size()), __n_(n) {
-    ptrdiff_t __neg_n = static_cast<ptrdiff_t>(__n_ >> _Np);
-    __sn_ = __neg_n | static_cast<ptrdiff_t>(static_cast<size_t>(-__n_) >> _Np);
-    __ul_ = ((size_ - __n_) & ~__neg_n) | ((__n_ + 1) & __neg_n);
-  }
-
-public:
-  result_type operator[](size_t j) const {
-    ptrdiff_t i = static_cast<ptrdiff_t>(j);
-    ptrdiff_t __m = (__sn_ * i - __ul_) >> _Np;
-    return (expr_[(i + __n_) & __m] & __m) | (value_type() & ~__m);
-  }
-
-  size_t size() const { return size_; }
-
-  template <class> friend class nc_val_expr;
-};
-
-template <class ValExpr> class nc_cshift_expr {
-  typedef std::remove_reference_t<ValExpr> RmExpr;
-
-public:
-  typedef typename RmExpr::value_type value_type;
-  typedef value_type result_type;
-
-private:
-  ValExpr expr_;
-  size_t size_;
-  size_t m_;
-  size_t o1_;
-  size_t o2_;
-
-  nc_cshift_expr(int n, const RmExpr &e) : expr_(e), size_(e.size()) {
-    n %= static_cast<int>(size_);
-    if (n >= 0) {
-      m_ = size_ - n;
-      o1_ = n;
-      o2_ = n - size_;
-    } else {
-      m_ = -n;
-      o1_ = n + size_;
-      o2_ = n;
-    }
-  }
-
-public:
-  result_type operator[](size_t i) const {
-    if (i < m_)
-      return expr_[i + o1_];
-    return expr_[i + o2_];
-  }
-
-  size_t size() const { return size_; }
-
-  template <class> friend class nc_val_expr;
-};
-
 template <typename T>
 struct is_slice_or_integral
     : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> ||
@@ -631,8 +558,6 @@ public:
     return empty() ? value_type{} : *std::max_element(data(), data() + size());
   }
 
-  //[[nodiscard]] ndarray shift(int i) const;
-  //[[nodiscard]] ndarray cshift(int i) const;
   //[[nodiscard]] ndarray apply(value_type __f(value_type)) const;
   //[[nodiscard]] ndarray apply(value_type __f(const value_type&)) const;
   // void resize(size_t n, value_type x = value_type());
@@ -1220,16 +1145,6 @@ public:
     return r;
   }
 
-  nc_val_expr<nc_shift_expr<ValExpr>> shift(int i) const {
-    return nc_val_expr<nc_shift_expr<ValExpr>>(
-        nc_shift_expr<ValExpr>(i, expr_));
-  }
-
-  nc_val_expr<nc_cshift_expr<ValExpr>> cshift(int i) const {
-    return nc_val_expr<nc_cshift_expr<ValExpr>>(
-        nc_cshift_expr<ValExpr>(i, expr_));
-  }
-
   nc_val_expr<nc_unary_op<nc_apply_expr<value_type, value_type (*)(value_type)>,
                           ValExpr>>
   apply(value_type __f(value_type)) const {
@@ -1289,53 +1204,6 @@ inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
   std::swap(elem_, v.elem_);
 }
 
-// template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::shift(int i) const {
-//     ndarray<value_type> r;
-//     size_t n = size();
-//     if (n) {
-//         r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-//         const value_type* __sb;
-//         value_type* __tb;
-//         value_type* __te;
-//         if (i >= 0) {
-//             i = std::min(i, static_cast<int>(n));
-//             __sb = begin_ + i;
-//             __tb = r.begin_;
-//             __te = r.begin_ + (n - i);
-//         }
-//         else {
-//             i = std::min(-i, static_cast<int>(n));
-//             __sb = begin_;
-//             __tb = r.begin_ + i;
-//             __te = r.begin_ + n;
-//         }
-//         for (; r.end_ != __tb; ++r.end_)
-//             ::new ((void*)r.end_) value_type();
-//         for (; r.end_ != __te; ++r.end_, ++__sb)
-//             ::new ((void*)r.end_) value_type(*__sb);
-//         for (__te = r.begin_ + n; r.end_ != __te; ++r.end_)
-//             ::new ((void*)r.end_) value_type();
-//     }
-//     return r;
-// }
-
-// template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::cshift(int i) const {
-//     ndarray<value_type> r;
-//     size_t n = size();
-//     if (n) {
-//         r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-//         i %= static_cast<int>(n);
-//         const value_type* __m = i >= 0 ? begin_ + i : end_ + i;
-//         for (const value_type* s = __m; s != end_; ++r.end_, ++s)
-//             ::new ((void*)r.end_) value_type(*s);
-//         for (const value_type* s = begin_; s != __m; ++r.end_, ++s)
-//             ::new ((void*)r.end_) value_type(*s);
-//     }
-//     return r;
-// }
-//
 // template <class Tp, class Ex, class Lp>
 // ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(value_type))
 // const {
