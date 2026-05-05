@@ -621,9 +621,15 @@ public:
   // member functions:
   void swap(ndarray &v) noexcept;
 
-  [[nodiscard]] element_type sum() const;
-  [[nodiscard]] element_type min() const;
-  [[nodiscard]] element_type max() const;
+  [[nodiscard]] value_type sum() const {
+    return std::accumulate(data(), data() + size(), value_type{});
+  }
+  [[nodiscard]] value_type min() const {
+    return empty() ? value_type{} : *std::min_element(data(), data() + size());
+  }
+  [[nodiscard]] value_type max() const {
+    return empty() ? value_type{} : *std::max_element(data(), data() + size());
+  }
 
   //[[nodiscard]] ndarray shift(int i) const;
   //[[nodiscard]] ndarray cshift(int i) const;
@@ -1281,37 +1287,6 @@ public:
 template <class Tp, class Ex, class Lp>
 inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
   std::swap(elem_, v.elem_);
-}
-
-template <class Tp, class Ex, class Lp>
-inline Tp ndarray<Tp, Ex, Lp>::sum() const {
-  const_pointer first = elem_.data();
-  const_pointer last = elem_.data() + elem_.size();
-  if (first == last)
-    return Tp{};
-  const_pointer p = first;
-  Tp r = *p;
-  for (++p; p != last; ++p)
-    r += *p;
-  return r;
-}
-
-template <class Tp, class Ex, class Lp>
-inline Tp ndarray<Tp, Ex, Lp>::min() const {
-  const_pointer first = elem_.data();
-  const_pointer last = elem_.data() + elem_.size();
-  if (first == last)
-    return Tp{};
-  return *std::min_element(first, last);
-}
-
-template <class Tp, class Ex, class Lp>
-inline Tp ndarray<Tp, Ex, Lp>::max() const {
-  const_pointer first = elem_.data();
-  const_pointer last = elem_.data() + elem_.size();
-  if (first == last)
-    return Tp{};
-  return *std::max_element(first, last);
 }
 
 // template <class Tp, class Ex, class Lp>
