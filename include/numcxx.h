@@ -1440,47 +1440,45 @@ inline void swap(ndarray<Tp, Ex, Lp> &x, ndarray<Tp, Ex, Lp> &y) noexcept {
   inline auto FN(const typename E::value_type &x, const E &y) {                \
     return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
   }
-// clang-format on
 
-// applies binary operators to each element of two ndarrays, or a ndarray and a
-// value
-NUMCXX_MAKE_BINARY_OP(+, std::plus)
-NUMCXX_MAKE_BINARY_OP(-, std::minus)
-NUMCXX_MAKE_BINARY_OP(*, std::multiplies)
-NUMCXX_MAKE_BINARY_OP(/, std::divides)
-NUMCXX_MAKE_BINARY_OP(%, std::modulus)
-NUMCXX_MAKE_BINARY_OP(&, std::bit_and)
-NUMCXX_MAKE_BINARY_OP(|, std::bit_or)
-NUMCXX_MAKE_BINARY_OP(^, std::bit_xor)
-NUMCXX_MAKE_BINARY_OP(<<, nc_bit_shift_left)
+// applies binary operators to each element of two ndarrays, or a ndarray and a value
+NUMCXX_MAKE_BINARY_OP( +, std::plus         )
+NUMCXX_MAKE_BINARY_OP( -, std::minus        )
+NUMCXX_MAKE_BINARY_OP( *, std::multiplies   )
+NUMCXX_MAKE_BINARY_OP( /, std::divides      )
+NUMCXX_MAKE_BINARY_OP( %, std::modulus      )
+NUMCXX_MAKE_BINARY_OP( &, std::bit_and      )
+NUMCXX_MAKE_BINARY_OP( |, std::bit_or       )
+NUMCXX_MAKE_BINARY_OP( ^, std::bit_xor      )
+NUMCXX_MAKE_BINARY_OP(<<, nc_bit_shift_left )
 NUMCXX_MAKE_BINARY_OP(>>, nc_bit_shift_right)
-NUMCXX_MAKE_BINARY_OP(&&, std::logical_and)
-NUMCXX_MAKE_BINARY_OP(||, std::logical_or)
+NUMCXX_MAKE_BINARY_OP(&&, std::logical_and  )
+NUMCXX_MAKE_BINARY_OP(||, std::logical_or   )
 
 // compares two ndarrays or a ndarray with a value
-NUMCXX_MAKE_BINARY_OP(==, std::equal_to)
-NUMCXX_MAKE_BINARY_OP(!=, std::not_equal_to)
-NUMCXX_MAKE_BINARY_OP(<, std::less)
-NUMCXX_MAKE_BINARY_OP(<=, std::less_equal)
-NUMCXX_MAKE_BINARY_OP(>, std::greater)
+NUMCXX_MAKE_BINARY_OP(==, std::equal_to     )
+NUMCXX_MAKE_BINARY_OP(!=, std::not_equal_to )
+NUMCXX_MAKE_BINARY_OP( <, std::less         )
+NUMCXX_MAKE_BINARY_OP(<=, std::less_equal   )
+NUMCXX_MAKE_BINARY_OP( >, std::greater      )
 NUMCXX_MAKE_BINARY_OP(>=, std::greater_equal)
 
 // absolute function
-NUMCXX_MAKE_UNARY_FN(abs, nc_abs_expr)
+NUMCXX_MAKE_UNARY_FN( abs, nc_abs_expr )
 
 // exponential functions
-NUMCXX_MAKE_UNARY_FN(exp, nc_exp_expr)
-NUMCXX_MAKE_UNARY_FN(log, nc_log_expr)
-NUMCXX_MAKE_UNARY_FN(log10, nc_log10_expr)
+NUMCXX_MAKE_UNARY_FN( exp, nc_exp_expr )
+NUMCXX_MAKE_UNARY_FN( log, nc_log_expr )
+NUMCXX_MAKE_UNARY_FN(log10,nc_log10_expr)
 
 // power function
-NUMCXX_MAKE_BINARY_FN(pow, nc_pow_expr)
+NUMCXX_MAKE_BINARY_FN(pow, nc_pow_expr )
 NUMCXX_MAKE_UNARY_FN(sqrt, nc_sqrt_expr)
 
 // trigonometric functions
-NUMCXX_MAKE_UNARY_FN(sin, nc_sin_expr)
-NUMCXX_MAKE_UNARY_FN(cos, nc_cos_expr)
-NUMCXX_MAKE_UNARY_FN(tan, nc_tan_expr)
+NUMCXX_MAKE_UNARY_FN( sin, nc_sin_expr )
+NUMCXX_MAKE_UNARY_FN( cos, nc_cos_expr )
+NUMCXX_MAKE_UNARY_FN( tan, nc_tan_expr )
 NUMCXX_MAKE_UNARY_FN(asin, nc_asin_expr)
 NUMCXX_MAKE_UNARY_FN(acos, nc_acos_expr)
 NUMCXX_MAKE_UNARY_FN(atan, nc_atan_expr)
@@ -1491,25 +1489,11 @@ NUMCXX_MAKE_UNARY_FN(sinh, nc_sinh_expr)
 NUMCXX_MAKE_UNARY_FN(cosh, nc_cosh_expr)
 NUMCXX_MAKE_UNARY_FN(tanh, nc_tanh_expr)
 
-template <class Tp, class Ex, class Lp>
-[[nodiscard]] inline Tp *begin(ndarray<Tp, Ex, Lp> &v) {
-  return v.data();
-}
-
-template <class Tp, class Ex, class Lp>
-[[nodiscard]] inline const Tp *begin(const ndarray<Tp, Ex, Lp> &v) {
-  return v.data();
-}
-
-template <class Tp, class Ex, class Lp>
-[[nodiscard]] inline Tp *end(ndarray<Tp, Ex, Lp> &v) {
-  return v.data() + v.size();
-}
-
-template <class Tp, class Ex, class Lp>
-[[nodiscard]] inline const Tp *end(const ndarray<Tp, Ex, Lp> &v) {
-  return v.data() + v.size();
-}
+template <class Tp, class Ex, class Lp> [[nodiscard]] inline const Tp *begin(const ndarray<Tp, Ex, Lp> &v) { return v.data()           ; }
+template <class Tp, class Ex, class Lp> [[nodiscard]] inline       Tp *begin(      ndarray<Tp, Ex, Lp> &v) { return v.data()           ; }
+template <class Tp, class Ex, class Lp> [[nodiscard]] inline const Tp *end  (const ndarray<Tp, Ex, Lp> &v) { return v.data() + v.size(); }
+template <class Tp, class Ex, class Lp> [[nodiscard]] inline       Tp *end  (      ndarray<Tp, Ex, Lp> &v) { return v.data() + v.size(); }
+// clang-format on
 
 namespace detail {
 template <size_t Rank>
