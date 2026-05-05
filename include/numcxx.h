@@ -509,21 +509,12 @@ public:
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
   ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
   ~ndarray() = default;
-  // inline explicit ndarray(size_t n);
-  // ndarray(const value_type& x, size_t n);
-  // ndarray(const value_type* p, size_t n);
   // ndarray(std::initializer_list<value_type> __il);
-  // ndarray(const slice_array<value_type>& sa);
-  // ndarray(const mask_array<value_type>& ma);
-  // ndarray(const indirect_array<value_type>& ia);
 
   // assignment:
   constexpr ndarray &operator=(const ndarray &v) = default;
   constexpr ndarray &operator=(ndarray &&v) noexcept = default;
   // ndarray& operator=(std::initializer_list<value_type>);
-  // ndarray& operator=(const slice_array<value_type>& sa);
-  // ndarray& operator=(const mask_array<value_type>& ma);
-  // ndarray& operator=(const indirect_array<value_type>& ia);
 
   // element access (flattened)
   [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
