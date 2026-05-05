@@ -172,19 +172,15 @@ template <class Op, class A0, class A1> struct nc_binary_op {
 
 template <class Tp> class nc_scalar_expr {
 public:
-  typedef Tp value_type;
-  typedef const Tp &result_type;
+  using value_type = std::remove_cv_t<Tp>;
+
+  explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
+  const value_type &operator[](size_type) const { return t_; }
+  size_type size() const { return s_; }
 
 private:
   const value_type &t_;
-  size_t s_;
-
-public:
-  explicit nc_scalar_expr(const value_type &t, size_t s) : t_(t), s_(s) {}
-
-  result_type operator[](size_t) const { return t_; }
-
-  size_t size() const { return s_; }
+  size_type s_;
 };
 
 template <class Tp, class Fp> struct nc_apply_expr {
