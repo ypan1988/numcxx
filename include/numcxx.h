@@ -149,9 +149,9 @@ template <class Op, class A0> struct nc_unary_op {
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
-  result_type operator[](size_t i) const { return op_(a0_[i]); }
+  result_type operator[](size_type i) const { return op_(a0_[i]); }
 
-  size_t size() const { return a0_.size(); }
+  size_type size() const { return a0_.size(); }
 };
 
 template <class Op, class A0, class A1> struct nc_binary_op {
@@ -165,9 +165,9 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  result_type operator[](size_t i) const { return op_(a0_[i], a1_[i]); }
+  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
 
-  size_t size() const { return a0_.size(); }
+  size_type size() const { return a0_.size(); }
 };
 
 template <class Tp> class nc_scalar_expr {
@@ -268,7 +268,7 @@ struct is_boolean_expr : std::false_type {};
 
 template <typename T>
 struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(
-                              std::declval<const T &>()[std::size_t{}]))>>
+                              std::declval<const T &>()[size_type{}]))>>
     : std::true_type {};
 
 template <template <typename> class Op, typename Expr>
@@ -309,9 +309,9 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
       offset, extent, stride};
 }
 
-template <typename MdSpan, typename... Args, size_t... Is>
+template <typename MdSpan, typename... Args, size_type... Is>
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
-  std::array<size_t, sizeof...(Args)> dims = {src.extent(Is)...};
+  std::array<size_type, sizeof...(Args)> dims = {src.extent(Is)...};
   return detail::submdspan(std::forward<MdSpan>(src),
                            to_submdspan_arg(args, dims[Is])...);
 }
@@ -413,8 +413,8 @@ public:
   // ndarray& operator=(std::initializer_list<value_type>);
 
   // element access (flattened)
-  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
-  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
+  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
+  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
 
   // subset operations (slice_view):
   template <typename... Args>
@@ -527,7 +527,7 @@ public:
     return empty() ? value_type{} : *std::max_element(data(), data() + size());
   }
 
-  // void resize(size_t n, value_type x = value_type());
+  // void resize(size_type n, value_type x = value_type());
 
 private:
   // clang-format off
@@ -563,10 +563,10 @@ private:
       elem_;
 };
 
-// template <class Tp, size_t _Size>
-// ndarray(const Tp(&)[_Size], size_t) -> ndarray<Tp>;
+// template <class Tp, size_type _Size>
+// ndarray(const Tp(&)[_Size], size_type) -> ndarray<Tp>;
 
-// extern template void ndarray<size_t>::resize(size_t, size_t);
+// extern template void ndarray<size_type>::resize(size_type, size_type);
 
 template <class Op, class Tp, class Ex, class Lp>
 struct nc_unary_op<Op, ndarray<Tp, Ex, Lp>> {
@@ -578,9 +578,9 @@ struct nc_unary_op<Op, ndarray<Tp, Ex, Lp>> {
 
   nc_unary_op(const Op &op, const ndarray<Tp, Ex, Lp> &a0) : op_(op), a0_(a0) {}
 
-  result_type operator[](size_t i) const { return op_(a0_[i]); }
+  result_type operator[](size_type i) const { return op_(a0_[i]); }
 
-  size_t size() const { return a0_.size(); }
+  size_type size() const { return a0_.size(); }
 };
 
 template <class Op, class Tp, class Ex, class Lp, class A1>
@@ -595,9 +595,9 @@ struct nc_binary_op<Op, ndarray<Tp, Ex, Lp>, A1> {
   nc_binary_op(const Op &op, const ndarray<Tp, Ex, Lp> &a0, const A1 &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  result_type operator[](size_t i) const { return op_(a0_[i], a1_[i]); }
+  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
 
-  size_t size() const { return a0_.size(); }
+  size_type size() const { return a0_.size(); }
 };
 
 template <class Op, class A0, class Tp, class Ex, class Lp>
@@ -612,9 +612,9 @@ struct nc_binary_op<Op, A0, ndarray<Tp, Ex, Lp>> {
   nc_binary_op(const Op &op, const A0 &a0, const ndarray<Tp, Ex, Lp> &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  result_type operator[](size_t i) const { return op_(a0_[i], a1_[i]); }
+  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
 
-  size_t size() const { return a0_.size(); }
+  size_type size() const { return a0_.size(); }
 };
 
 template <class Op, class Tp1, class Ex1, class Lp1, class Tp2, class Ex2,
@@ -631,9 +631,9 @@ struct nc_binary_op<Op, ndarray<Tp1, Ex1, Lp1>, ndarray<Tp2, Ex2, Lp2>> {
                const ndarray<Tp2, Ex2, Lp2> &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  result_type operator[](size_t i) const { return op_(a0_[i], a1_[i]); }
+  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
 
-  size_t size() const { return a0_.size(); }
+  size_type size() const { return a0_.size(); }
 };
 
 // [numcxx.slice_view]
@@ -673,8 +673,8 @@ public:
   slice_view &operator=(slice_view &&) noexcept = default;
 
   // element access (flattened)
-  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
-  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
+  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
+  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
 
   // subset operations (slice_view)
   template <typename... Args> decltype(auto) operator()(Args &&...args) const {
@@ -867,8 +867,8 @@ public:
   ~mask_view() = default;
 
   // element access
-  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
-  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
 
   // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
@@ -972,8 +972,8 @@ public:
   ~indirect_view() = default;
 
   // element access
-  [[nodiscard]] const value_type &operator[](size_t i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
-  [[nodiscard]]       value_type &operator[](size_t i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
+  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
 
   // unary operators:
   auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
@@ -1049,7 +1049,7 @@ public:
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  result_type operator[](size_t i) const { return expr_[i]; }
+  result_type operator[](size_type i) const { return expr_[i]; }
 
   // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
   //     typedef __slice_expr<ValExpr> NewExpr;
@@ -1064,7 +1064,7 @@ public:
   // }
 
   // template <class Ex, class Lp>
-  // nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_t, Ex,
+  // nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_type, Ex,
   // Lp>& __vs) const {
   //     typedef __indirect_expr<ValExpr> NewExpr;
   //     return nc_val_expr< NewExpr >(NewExpr(__vs, expr_));
@@ -1080,20 +1080,20 @@ public:
   // template<class Ex, class Lp>
   // operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
 
-  size_t size() const { return expr_.size(); }
+  size_type size() const { return expr_.size(); }
 
   result_type sum() const {
-    size_t n = expr_.size();
+    size_type n = expr_.size();
     result_type r = n ? expr_[0] : result_type();
-    for (size_t i = 1; i < n; ++i)
+    for (size_type i = 1; i < n; ++i)
       r += expr_[i];
     return r;
   }
 
   result_type min() const {
-    size_t n = size();
+    size_type n = size();
     result_type r = n ? (*this)[0] : result_type();
-    for (size_t i = 1; i < n; ++i) {
+    for (size_type i = 1; i < n; ++i) {
       result_type x = expr_[i];
       if (x < r)
         r = x;
@@ -1102,9 +1102,9 @@ public:
   }
 
   result_type max() const {
-    size_t n = size();
+    size_type n = size();
     result_type r = n ? (*this)[0] : result_type();
-    for (size_t i = 1; i < n; ++i) {
+    for (size_type i = 1; i < n; ++i) {
       result_type x = expr_[i];
       if (r < x)
         r = x;
@@ -1118,10 +1118,10 @@ public:
 // nc_val_expr<ValExpr>::operator ndarray<nc_val_expr::result_type, Ex, Lp>()
 // const {
 //     ndarray<result_type> r;
-//     size_t n = expr_.size();
+//     size_type n = expr_.size();
 //     if (n) {
 //         r.begin_ = r.end_ = allocator<result_type>().allocate(n);
-//         for (size_t i = 0; i != n; ++r.end_, ++i)
+//         for (size_type i = 0; i != n; ++r.end_, ++i)
 //             ::new ((void*)r.end_) result_type(expr_[i]);
 //     }
 //     return r;
@@ -1132,11 +1132,11 @@ public:
 // template <class Tp, class Ex, class Lp>
 // ndarray<Tp, Ex, Lp>::ndarray(std::initializer_list<value_type> __il) :
 // begin_(nullptr), end_(nullptr) {
-//     const size_t n = __il.size();
+//     const size_type n = __il.size();
 //     if (n) {
 //         begin_ = end_ = allocator<value_type>().allocate(n);
 //         auto __guard = std::__make_exception_guard([&] { __clear(n); });
-//         size_t __n_left = n;
+//         size_type __n_left = n;
 //         for (const value_type* p = __il.begin(); __n_left; ++end_, ++p,
 //         --__n_left)
 //             ::new ((void*)end_) value_type(*p);
@@ -1156,12 +1156,12 @@ inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
 }
 
 // template <class Tp, class Ex, class Lp>
-// void ndarray<Tp, Ex, Lp>::resize(size_t n, value_type x) {
+// void ndarray<Tp, Ex, Lp>::resize(size_type n, value_type x) {
 //     __clear(size());
 //     if (n) {
 //         begin_ = end_ = allocator<value_type>().allocate(n);
 //         auto __guard = std::__make_exception_guard([&] { __clear(n); });
-//         for (size_t __n_left = n; __n_left; --__n_left, ++end_)
+//         for (size_type __n_left = n; __n_left; --__n_left, ++end_)
 //             ::new ((void*)end_) value_type(x);
 //         __guard.__complete();
 //     }
@@ -1264,12 +1264,12 @@ template <class Tp, class Ex, class Lp> [[nodiscard]] inline       Tp *end  (   
 // clang-format on
 
 namespace detail {
-template <size_t Rank>
-auto make_extents(const std::initializer_list<size_t> &shape) {
+template <size_type Rank>
+auto make_extents(const std::initializer_list<size_type> &shape) {
   if (shape.size() != Rank) {
     NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
   }
-  std::array<size_t, Rank> dims;
+  std::array<size_type, Rank> dims;
   std::copy(shape.begin(), shape.end(), dims.begin());
   return extents(dims);
 }
@@ -1283,13 +1283,13 @@ ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
   static_assert(std::is_arithmetic_v<T>,
                 "arange requires an arithmetic value type");
 
-  const size_t n = std::ceil((stop - start) / step);
+  const size_type n = std::ceil((stop - start) / step);
 
   ndarray<T, dextents<1>> arr({n});
   T *p = arr.data();
 
   T value = start;
-  for (size_t i = 0; i < n; ++i) {
+  for (size_type i = 0; i < n; ++i) {
     p[i] = value;
     value += step;
   }
@@ -1311,8 +1311,8 @@ NdArrayType ones() {
 
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType ones(std::initializer_list<size_t> shape) {
-  constexpr size_t rank = NdArrayType::extents_type::rank();
+NdArrayType ones(std::initializer_list<size_type> shape) {
+  constexpr size_type rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(1));
   return arr;
@@ -1328,8 +1328,8 @@ NdArrayType zeros() {
 
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType zeros(std::initializer_list<size_t> shape) {
-  constexpr size_t rank = NdArrayType::extents_type::rank();
+NdArrayType zeros(std::initializer_list<size_type> shape) {
+  constexpr size_type rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(0));
   return arr;
@@ -1353,7 +1353,7 @@ using ::numcxx::detail::make_extents;
 template <typename NdArrayType, typename Distribution>
 void fill_random(NdArrayType &arr, Distribution &&dist) {
   auto &engine = get_engine();
-  for (size_t i = 0; i < arr.size(); ++i) {
+  for (size_type i = 0; i < arr.size(); ++i) {
     arr.data()[i] = dist(engine);
   }
 }
@@ -1370,8 +1370,8 @@ NdArrayType rand() {
 
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType rand(std::initializer_list<size_t> shape) {
-  constexpr size_t rank = NdArrayType::extents_type::rank();
+NdArrayType rand(std::initializer_list<size_type> shape) {
+  constexpr size_type rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
@@ -1388,8 +1388,8 @@ NdArrayType randn() {
 
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType randn(std::initializer_list<size_t> shape) {
-  constexpr size_t rank = NdArrayType::extents_type::rank();
+NdArrayType randn(std::initializer_list<size_type> shape) {
+  constexpr size_type rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
@@ -1407,8 +1407,8 @@ NdArrayType uniform(double low, double high) {
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
 NdArrayType uniform(double low, double high,
-                    std::initializer_list<size_t> shape) {
-  constexpr size_t rank = NdArrayType::extents_type::rank();
+                    std::initializer_list<size_type> shape) {
+  constexpr size_type rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
@@ -1425,8 +1425,8 @@ NdArrayType randint(int low, int high) {
 
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType randint(int low, int high, std::initializer_list<size_t> shape) {
-  constexpr size_t rank = NdArrayType::extents_type::rank();
+NdArrayType randint(int low, int high, std::initializer_list<size_type> shape) {
+  constexpr size_type rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
