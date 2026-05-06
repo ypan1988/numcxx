@@ -40,7 +40,11 @@
 #include <mdspan/mdspan.hpp>
 #endif
 
-namespace numcxx::detail {
+namespace numcxx {
+using  size_type = std::size_t;
+using index_type = std::ptrdiff_t;
+
+namespace detail {
 #if NUMCXX_USE_STD
 using std::dextents;
 using std::extents;
@@ -62,15 +66,13 @@ using Kokkos::strided_slice;
 using Kokkos::submdspan;
 using Kokkos::Experimental::mdarray;
 #endif
-} // namespace numcxx::detail
+} // namespace detail
 
-namespace numcxx {
 // clang-format off
-using  size_type = std::size_t;
-using index_type = std::ptrdiff_t; 
-
-template <size_type       Rank> using dextents = detail::dextents<size_type, Rank>;
-template <size_type... Extents> using  extents = detail::extents <size_type, Extents...>;
+template <size_type    Rank   > using dextents     = detail::dextents<size_type,       Rank>;
+template <size_type... Extents> using  extents     = detail::extents<size_type , Extents...>;
+                                using layout_left  = detail::layout_left ;
+                                using layout_right = detail::layout_right;
 // clang-format on
 } // namespace numcxx
 
