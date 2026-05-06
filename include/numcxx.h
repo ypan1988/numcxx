@@ -67,7 +67,7 @@ using Kokkos::Experimental::mdarray;
 namespace numcxx {
 // clang-format off
 using  size_type = std::size_t;
-using index_type = int        ; // TODO: replace int with std::ptrdiff_t
+using index_type = std::ptrdiff_t; 
 
 template <size_type       Rank> using dextents = detail::dextents<size_type, Rank>;
 template <size_type... Extents> using  extents = detail::extents <size_type, Extents...>;
