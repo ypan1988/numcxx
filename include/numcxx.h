@@ -183,18 +183,6 @@ private:
   size_type s_;
 };
 
-template <class Tp, class Fp> struct nc_apply_expr {
-private:
-  Fp __f_;
-
-public:
-  typedef Tp result_type;
-
-  explicit nc_apply_expr(Fp __f) : __f_(__f) {}
-
-  Tp operator()(const Tp &x) const { return __f_(x); }
-};
-
 // clang-format off
 template <class Tp> struct nc_unary_plus      { typedef Tp result_type; Tp operator()(const Tp &x             ) const { return +x    ; } };
 template <class Tp> struct nc_bit_not         { typedef Tp result_type; Tp operator()(const Tp &x             ) const { return ~x    ; } };
@@ -539,8 +527,6 @@ public:
     return empty() ? value_type{} : *std::max_element(data(), data() + size());
   }
 
-  //[[nodiscard]] ndarray apply(value_type __f(value_type)) const;
-  //[[nodiscard]] ndarray apply(value_type __f(const value_type&)) const;
   // void resize(size_t n, value_type x = value_type());
 
 private:
@@ -1125,22 +1111,6 @@ public:
     }
     return r;
   }
-
-  nc_val_expr<nc_unary_op<nc_apply_expr<value_type, value_type (*)(value_type)>,
-                          ValExpr>>
-  apply(value_type __f(value_type)) const {
-    typedef nc_apply_expr<value_type, value_type (*)(value_type)> Op;
-    typedef nc_unary_op<Op, ValExpr> NewExpr;
-    return nc_val_expr<NewExpr>(NewExpr(Op(__f), expr_));
-  }
-
-  nc_val_expr<nc_unary_op<
-      nc_apply_expr<value_type, value_type (*)(const value_type &)>, ValExpr>>
-  apply(value_type __f(const value_type &)) const {
-    typedef nc_apply_expr<value_type, value_type (*)(const value_type &)> Op;
-    typedef nc_unary_op<Op, ValExpr> NewExpr;
-    return nc_val_expr<NewExpr>(NewExpr(Op(__f), expr_));
-  }
 };
 
 // template <class ValExpr>
@@ -1185,32 +1155,6 @@ inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
   std::swap(elem_, v.elem_);
 }
 
-// template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(value_type))
-// const {
-//     ndarray<value_type> r;
-//     size_t n = size();
-//     if (n) {
-//         r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-//         for (const value_type* p = begin_; n; ++r.end_, ++p, --n)
-//             ::new ((void*)r.end_) value_type(__f(*p));
-//     }
-//     return r;
-// }
-//
-// template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp> ndarray<Tp, Ex, Lp>::apply(value_type __f(const
-// value_type&)) const {
-//     ndarray<value_type> r;
-//     size_t n = size();
-//     if (n) {
-//         r.begin_ = r.end_ = allocator<value_type>().allocate(n);
-//         for (const value_type* p = begin_; n; ++r.end_, ++p, --n)
-//             ::new ((void*)r.end_) value_type(__f(*p));
-//     }
-//     return r;
-// }
-//
 // template <class Tp, class Ex, class Lp>
 // void ndarray<Tp, Ex, Lp>::resize(size_t n, value_type x) {
 //     __clear(size());
