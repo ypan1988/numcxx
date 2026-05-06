@@ -41,7 +41,7 @@
 #endif
 
 namespace numcxx {
-using  size_type = std::size_t;
+using size_type = std::size_t;
 using index_type = std::ptrdiff_t;
 
 namespace detail {
