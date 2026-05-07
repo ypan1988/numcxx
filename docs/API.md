@@ -26,7 +26,7 @@
   ndarray<double, extents<3, 4>> m2;
   m1(0, 1) = 5.0;
   ```
-+ Vector, Matrix, Cube classes are type aliases that fix the `Extents` parameter of `ndarray`:
++ vector, matrix, cube classes are type aliases that fix the `Extents` / `LayoutPolicy` parameter of `ndarray`:
 
   |dimensions|dynamic extents|fixed extents|
   |----------|---------------|-------------|
@@ -34,25 +34,48 @@
   |2D|`mat<T> = numcxx::ndarray<T, dextents<2>>`|`mat_fixed<T, M, N> = ndarray<T, extents<M, N>>`| 
   |3D|`cube<T> = numcxx::ndarray<T, dextents<3>>`|`cube_fixed<T, M, N, K> = ndarray<T, extents<M, N, K>>`|
 
-### 1.1.1 `mat<T>`(dynamic) / `mat_fixed<T, M, N>`(static)
-+ Classes for dense matrices with `dynamic` and `static` dimensions. The elements are stored in row-major ordering (i.e., row by row) by default
-+ The root ndarray classes are `ndarray<T, dextents<size_t, 2>>`(dynamic) and `ndarray<T, extents<size_t, M, N>>`(static)
-+ For convenience, the following matrix typedefs are defined:
-	+ typedef for matrix (dynamic)
+### 1.1 `vec<T>` / `vec_fixed<T, N>`
++ Type alias for 1D `ndarray`.
++ For convenience, the following vector typedefs are defined:
 	``` cpp
+	// dynamic
+	dvec = vec<double>
+	fvec = vec<float>
+	ivec = vec<int>
+	uvec = vec<unsigned>
+
+	// static (N = 2, 3, 4)
+	dvec2 / dvec3 / dvec4 = vec_fixed<double, N>
+	fvec2 / fvec3 / fvec4 = vec_fixed<float, N>
+    ```
+### 1.2 `mat<T>` / `mat_fixed<T, M, N>`
++ Type alias for 2D `ndarray`.
++ For convenience, the following matrix typedefs are defined:
+	``` cpp
+	// dynamic
 	dmat = mat<double>
 	fmat = mat<float>
 	imat = mat<int>
-	umat = mat<unsigned int>
-+ typedef for matrix (static) (e.g., `dmat22 = mat_fixed<double, 2, 2>`)
+	umat = mat<unsigned>
 
-| type   | full type     |
-| -----  | ------------  |
-| `dmat22`/`dmat33`/`dmat44`/ |`mat_fixed<double, 2, 2>` / `mat_fixed<double, 3, 3>`/ `mat_fixed<double, 4, 4>`|
-| `fmat22`/`fmat33`/`fmat44`/ |`mat_fixed<float, 2, 2>` / `mat_fixed<float, 3, 3>` / `mat_fixed<float, 4, 4>`|
+	// static (N = 2, 3, 4)
+	dmat22 / dmat33 / dmat44 = mat_fixed<double, N, N>
+	fmat22 / fmat33 / fmat44 = mat_fixed<float, N, N>
+	```
+### 1.3 `cube<T>` / `cube_fixed<T, M, N, K>`
++ Type alias for 3D `ndarray`.
++ For convenience, the following cube typedefs are defined:
+	``` cpp
+	// dynamic
+	dcube = cube<double>
+	fcube = cube<float>
+	icube = cube<int>
+	ucube = cube<unsigned>
 
-### 1.1.2 `mat_fixed<T, M, N>`(static)
-
+	// static (N = 2, 3, 4)
+	dcube222 / dcube333 / dcube444 = cube_fixed<double, N, N, N>
+	fcube222 / fcube333 / fcube444 = cube_fixed<float, N, N, N>
+    ```
 
 <a id="member-functions-and-slicing"></a>
-## Member functions and Slicing
+## 2. Member functions and Slicing
