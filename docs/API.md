@@ -7,11 +7,26 @@
 ## 1. Vector, Matrix, Cube and NdArray Classes
 
 ### 1.0 `ndarray<T, Extents, LayoutPolicy>`
-+ template class represents a **generic, multidimensional array**.
-+ **`T`**: The type of the stored elements.
-+ **`Extents`**: Describes the rank (i.e., number of dimensions) and size of each dimension. Both dynamic (dextents) and compile-time (extents) extents are supported.
-+ **`LayoutPolicy`**: Specifies how multidimensional indices are mapped to linear storage. By default, layout_right (row-major ordering) is used.
-+ Vector, Matrix, Cube classes are **specializations of ndarray** distinguished by Extents:
++ `ndarray` is a template class represents a **generic, multidimensional array**.
+	+ **`T`**: the type (`double`, `float`, `int`, ...) of the stored elements.
+	+ **`Extents`**: describes the rank (i.e., number of dimensions) and size of each dimension. Both dynamic (`dextents<Rank>`) and compile-time (`extents<Dims...>`) extents are supported.
+	+ **`LayoutPolicy`**: Specifies how multidimensional indices are mapped to linear storage. Default is `layout_right` (row-major).
++ Constructors:
+  ``` cpp
+  ndarray(SizeTypes... dyn_exts)           // with dynamic extents (rank must match Extents::rank()).
+  ndarray(const ndarray &other)            // copy constructor.
+  ndarray(ndarray &&other)                 // move constructor.
+  ndarray(const slice_view<T, Ex, Lp> &sv) // from a slice view.
+  ndarray(const mask_view<T> &mv)          // from a mask view.
+  ndarray(const indirect_view<T> &iv)      // from an indirect view.
+  ```
++ Examples:
+  ``` cpp
+  ndarray<double, dextents<2>, layout_right> m1(3, 4);
+  ndarray<double, extents<3, 4>> m2;
+  m1(0, 1) = 5.0;
+  ```
++ Vector, Matrix, Cube classes are type aliases that fix the `Extents` parameter of `ndarray`:
 
   |dimensions|dynamic extents|fixed extents|
   |----------|---------------|-------------|
