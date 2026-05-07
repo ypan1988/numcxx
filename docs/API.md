@@ -10,7 +10,7 @@
 + `ndarray` is a template class represents a **generic, multidimensional array**.
 	+ **`T`**: the type (`double`, `float`, `int`, ...) of the stored elements.
 	+ **`Extents`**: describes the rank (i.e., number of dimensions) and size of each dimension. Both dynamic (`dextents<Rank>`) and compile-time (`extents<Dims...>`) extents are supported.
-	+ **`LayoutPolicy`**: Specifies how multidimensional indices are mapped to linear storage. Default is `layout_right` (row-major).
+	+ **`LayoutPolicy`**: Specifies how multidimensional indices are mapped to linear storage. Two options are available, namely `layout_right`(i.e., row-major ordering, the default) and `layout_left` (i.e., column-major ordering).
 + Constructors:
   ``` cpp
   ndarray(SizeTypes... dyn_exts)           // with dynamic extents (rank must match Extents::rank()).
