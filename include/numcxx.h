@@ -111,6 +111,14 @@ template <class Tp, class Ex, class Lp> class    slice_view;
 template <class Tp>                     class     mask_view;
 template <class Tp>                     class indirect_view;
 
+template <class ValExpr>                class  nc_val_expr                                                   ;
+template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
+template <class ValExpr>                struct nc_is_val_expr<nc_val_expr  <ValExpr   >> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr<mask_view    <Tp>        > : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp>        > : std::true_type  {};
+
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
@@ -172,16 +180,6 @@ inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
 template <typename... Args>
 inline constexpr bool are_all_slice_or_integral_v =
     (is_slice_or_integral_v<Args> && ...);
-
-// clang-format off
-template <class ValExpr>                class  nc_val_expr                                                   ;
-template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
-template <class ValExpr>                struct nc_is_val_expr<nc_val_expr  <ValExpr   >> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<mask_view    <Tp>        > : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp>        > : std::true_type  {};
-// clang-format on
 
 namespace detail {
 
