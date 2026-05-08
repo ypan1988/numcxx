@@ -47,6 +47,8 @@
 	// static (N = 2, 3, 4)
 	dvec2 / dvec3 / dvec4 = vec_fixed<double, N>
 	fvec2 / fvec3 / fvec4 = vec_fixed<float, N>
+	ivec2 / ivec3 / ivec4 = vec_fixed<int, N>
+	uvec2 / uvec3 / uvec4 = vec_fixed<unsigned, N>
     ```
 ### 1.2 `mat<T>` / `mat_fixed<T, M, N>`
 + Type alias for 2D `ndarray`.
@@ -61,6 +63,8 @@
 	// static (N = 2, 3, 4)
 	dmat22 / dmat33 / dmat44 = mat_fixed<double, N, N>
 	fmat22 / fmat33 / fmat44 = mat_fixed<float, N, N>
+	imat22 / imat33 / imat44 = mat_fixed<int, N, N>
+	umat22 / umat33 / umat44 = mat_fixed<unsigned, N, N>
 	```
 ### 1.3 `cube<T>` / `cube_fixed<T, M, N, K>`
 + Type alias for 3D `ndarray`.
@@ -75,6 +79,8 @@
 	// static (N = 2, 3, 4)
 	dcube222 / dcube333 / dcube444 = cube_fixed<double, N, N, N>
 	fcube222 / fcube333 / fcube444 = cube_fixed<float, N, N, N>
+	icube222 / icube333 / icube444 = cube_fixed<int, N, N, N>
+	ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
     ```
 
 <a id="member-functions-and-slicing"></a>
