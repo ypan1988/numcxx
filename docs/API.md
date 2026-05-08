@@ -38,13 +38,13 @@
 + Type alias for 1D `ndarray`.
 + For convenience, the following vector typedefs are defined:
 	``` cpp
-	// dynamic
+	// dynamic vectors
 	dvec = vec<double>
 	fvec = vec<float>
 	ivec = vec<int>
 	uvec = vec<unsigned>
 
-	// static (N = 2, 3, 4)
+	// static vectors: vec_fixed<T, N>, with N = 2, 3, 4
 	dvec2 / dvec3 / dvec4 = vec_fixed<double, N>
 	fvec2 / fvec3 / fvec4 = vec_fixed<float, N>
 	ivec2 / ivec3 / ivec4 = vec_fixed<int, N>
@@ -54,13 +54,13 @@
 + Type alias for 2D `ndarray`.
 + For convenience, the following matrix typedefs are defined:
 	``` cpp
-	// dynamic
+	// dynamic matrices
 	dmat = mat<double>
 	fmat = mat<float>
 	imat = mat<int>
 	umat = mat<unsigned>
 
-	// static (N = 2, 3, 4)
+	// static square matrices: mat_fixed<T, N, N>, with N = 2, 3, 4
 	dmat22 / dmat33 / dmat44 = mat_fixed<double, N, N>
 	fmat22 / fmat33 / fmat44 = mat_fixed<float, N, N>
 	imat22 / imat33 / imat44 = mat_fixed<int, N, N>
@@ -70,13 +70,13 @@
 + Type alias for 3D `ndarray`.
 + For convenience, the following cube typedefs are defined:
 	``` cpp
-	// dynamic
+	// dynamic cubes
 	dcube = cube<double>
 	fcube = cube<float>
 	icube = cube<int>
 	ucube = cube<unsigned>
 
-	// static (N = 2, 3, 4)
+	// static cubes: cube_fixed<T, N, N, N>, with N = 2, 3, 4
 	dcube222 / dcube333 / dcube444 = cube_fixed<double, N, N, N>
 	fcube222 / fcube333 / fcube444 = cube_fixed<float, N, N, N>
 	icube222 / icube333 / icube444 = cube_fixed<int, N, N, N>
