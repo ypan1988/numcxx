@@ -320,9 +320,6 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 
 } // namespace slice_utils
 
-} // namespace detail
-
-namespace detail {
 template <typename MdSpan, typename... Args>
 decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
   auto sub_mdspan = detail::slice_utils::make_submdspan(
@@ -339,38 +336,6 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
                       typename sub_mdspan_type::layout_type>(sub_mdspan);
 }
 
-template <class Op, class Expr> inline auto make_unary_op(const Expr &x) {
-  using value_type = typename Expr::value_type;
-  using OpType = nc_unary_op<Op, Expr>;
-  OpType node(Op{}, x);
-  return nc_val_expr<OpType>(node);
-}
-
-template <class Op, class Expr1, class Expr2>
-inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
-  using value_type = typename Expr1::value_type;
-  using OpType = nc_binary_op<Op, Expr1, Expr2>;
-  OpType node(Op{}, x, y);
-  return nc_val_expr<OpType>(node);
-}
-
-template <class Op, class Expr>
-inline auto make_expr_scalar(const Expr &x,
-                             const typename Expr::value_type &y) {
-  using value_type = typename Expr::value_type;
-  using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<value_type>>;
-  OpType node(Op{}, x, nc_scalar_expr<value_type>(y, x.size()));
-  return nc_val_expr<OpType>(node);
-}
-
-template <class Op, class Expr>
-inline auto make_scalar_expr(const typename Expr::value_type &x,
-                             const Expr &y) {
-  using value_type = typename Expr::value_type;
-  using OpType = nc_binary_op<Op, nc_scalar_expr<value_type>, Expr>;
-  OpType node(Op{}, nc_scalar_expr<value_type>(x, y.size()), y);
-  return nc_val_expr<OpType>(node);
-}
 } // namespace detail
 
 // [numcxx.ndarray]
@@ -1175,6 +1140,41 @@ template <class Tp, class Ex, class Lp>
 inline void swap(ndarray<Tp, Ex, Lp> &x, ndarray<Tp, Ex, Lp> &y) noexcept {
   x.swap(y);
 }
+
+namespace detail {
+template <class Op, class Expr> inline auto make_unary_op(const Expr &x) {
+  using value_type = typename Expr::value_type;
+  using OpType = nc_unary_op<Op, Expr>;
+  OpType node(Op{}, x);
+  return nc_val_expr<OpType>(node);
+}
+
+template <class Op, class Expr1, class Expr2>
+inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
+  using value_type = typename Expr1::value_type;
+  using OpType = nc_binary_op<Op, Expr1, Expr2>;
+  OpType node(Op{}, x, y);
+  return nc_val_expr<OpType>(node);
+}
+
+template <class Op, class Expr>
+inline auto make_expr_scalar(const Expr &x,
+                             const typename Expr::value_type &y) {
+  using value_type = typename Expr::value_type;
+  using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<value_type>>;
+  OpType node(Op{}, x, nc_scalar_expr<value_type>(y, x.size()));
+  return nc_val_expr<OpType>(node);
+}
+
+template <class Op, class Expr>
+inline auto make_scalar_expr(const typename Expr::value_type &x,
+                             const Expr &y) {
+  using value_type = typename Expr::value_type;
+  using OpType = nc_binary_op<Op, nc_scalar_expr<value_type>, Expr>;
+  OpType node(Op{}, nc_scalar_expr<value_type>(x, y.size()), y);
+  return nc_val_expr<OpType>(node);
+}
+} // namespace detail
 
 // clang-format off
 #define NUMCXX_MAKE_UNARY_FN(FN, FUNCTOR)                                      \
