@@ -129,7 +129,7 @@ public:
   slice(std::optional<index_type> start, std::optional<index_type> stop,
         index_type step = 1)
       : start_(start), stop_(stop), step_(step) {
-    assert(step != 0 && "slice step cannot be zero");
+    NUMCXX_ASSERT(step != 0, "slice step cannot be zero");
   }
 
   [[nodiscard]] std::optional<index_type> start() const { return start_; }
@@ -283,8 +283,8 @@ auto make_unary_expr(const Expr &expr) {
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
   index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
-  assert(res >= 0 && static_cast<size_type>(res) < dim_len &&
-         "Index out of bounds");
+  NUMCXX_ASSERT(res >= 0,
+                static_cast<size_type>(res) < dim_len && "Index out of bounds");
   return static_cast<size_type>(res);
 }
 
@@ -300,7 +300,8 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
   index_type stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
 
   index_type diff = stop - start;
-  assert(diff * step > 0 && "invalid slice");
+  NUMCXX_ASSERT((diff > 0 && step > 0) || (diff < 0 && step < 0),
+                "invalid slice");
 
   size_type offset = static_cast<size_type>(start);
   size_type extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
