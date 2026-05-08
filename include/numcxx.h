@@ -1193,7 +1193,6 @@ inline auto make_scalar_expr(const typename Expr::value_type &x,
     return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
   }
 
-  // clang-format off
   template <class Tp> struct nc_bit_shift_left  { typedef Tp result_type; Tp operator()(const Tp &x, const Tp &y) const { return x << y; } };
   template <class Tp> struct nc_bit_shift_right { typedef Tp result_type; Tp operator()(const Tp &x, const Tp &y) const { return x >> y; } };
 
@@ -1214,8 +1213,6 @@ inline auto make_scalar_expr(const typename Expr::value_type &x,
 
   template <class Tp> struct nc_atan2_expr { typedef Tp result_type; Tp operator()(const Tp& x, const Tp& y) const { return std::atan2(x, y); } };
   template <class Tp> struct nc_pow_expr   { typedef Tp result_type; Tp operator()(const Tp& x, const Tp& y) const { return std::pow  (x, y); } };
-  // clang-format on
-
 
 // applies binary operators to each element of two ndarrays, or a ndarray and a value
 NUMCXX_MAKE_BINARY_OP( +, std::plus         )
