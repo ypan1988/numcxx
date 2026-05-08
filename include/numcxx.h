@@ -1074,28 +1074,6 @@ public:
 // }
 
 // ndarray
-
-// template <class Tp, class Ex, class Lp>
-// ndarray<Tp, Ex, Lp>::ndarray(std::initializer_list<value_type> __il) :
-// begin_(nullptr), end_(nullptr) {
-//     const size_type n = __il.size();
-//     if (n) {
-//         begin_ = end_ = allocator<value_type>().allocate(n);
-//         auto __guard = std::__make_exception_guard([&] { __clear(n); });
-//         size_type __n_left = n;
-//         for (const value_type* p = __il.begin(); __n_left; ++end_, ++p,
-//         --__n_left)
-//             ::new ((void*)end_) value_type(*p);
-//         __guard.__complete();
-//     }
-// }
-
-// template <class Tp, class Ex, class Lp>
-// inline ndarray<Tp, Ex, Lp>& ndarray<Tp, Ex,
-// Lp>::operator=(std::initializer_list<value_type> __il) {
-//     return __assign_range(__il.begin(), __il.end());
-// }
-
 template <class Tp, class Ex, class Lp>
 inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
   std::swap(elem_, v.elem_);
