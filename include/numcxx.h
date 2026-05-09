@@ -221,13 +221,7 @@ struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(
                               std::declval<const T &>()[size_type{}]))>>
     : std::true_type {};
 
-template <template <typename> class Op, typename Expr>
-auto make_unary_expr(const Expr &expr) {
-  using value_type = typename Expr::value_type;
-  using NewExpr = nc_unary_op<Op<value_type>, const Expr &>;
-
-  return nc_val_expr<NewExpr>(NewExpr(Op<value_type>(), expr));
-}
+template <class Op, class Expr> auto make_unary_op(const Expr &);
 
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
@@ -382,10 +376,10 @@ public:
   }
 
   // unary operators:
-  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
-  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
-  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
-  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
+  auto operator-() const { return apply_unary_op<std::negate>     (); }
+  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>(); }
 
   // computed assignment:
   ndarray &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -458,6 +452,10 @@ private:
   template <class Up, class Ex, class Lp> friend const Up* end  (const ndarray<Up, Ex, Lp> &v);
   template <class Up, class Ex, class Lp> friend       Up* end  (      ndarray<Up, Ex, Lp> &v);
   // clang-format on
+
+  template <template <class> class Op> auto apply_unary_op() const {
+    return detail::make_unary_op<Op<value_type>>(*this);
+  }
 
   template <typename Op>
   ndarray &apply_scalar_op(Op &&op, const value_type &x) {
@@ -570,10 +568,10 @@ public:
   }
 
   // unary operators:
-  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
-  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
-  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
-  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
+  auto operator-() const { return apply_unary_op<std::negate>     (); }
+  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>(); }
 
   // computed assignment:
   slice_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -624,6 +622,10 @@ private:
       remaining /= extent(r);
     }
     return offset;
+  }
+
+  template <template <class> class Op> auto apply_unary_op() const {
+    return detail::make_unary_op<Op<value_type>>(*this);
   }
 
   template <typename Op>
@@ -719,10 +721,10 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
 
   // unary operators:
-  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
-  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
-  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
-  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
+  auto operator-() const { return apply_unary_op<std::negate>     (); }
+  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>(); }
 
   // computed assignment:
   mask_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -768,6 +770,10 @@ private:
     extents_type ext(offsets.size());
     auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
+  }
+
+  template <template <class> class Op> auto apply_unary_op() const {
+    return detail::make_unary_op<Op<value_type>>(*this);
   }
 
   template <typename Op>
@@ -824,10 +830,10 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
 
   // unary operators:
-  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
-  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
-  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
-  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
+  auto operator-() const { return apply_unary_op<std::negate>     (); }
+  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>(); }
 
   // computed assignment:
   indirect_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -865,6 +871,10 @@ private:
     extents_type ext(offsets.size());
     auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
+  }
+
+  template <template <class> class Op> auto apply_unary_op() const {
+    return detail::make_unary_op<Op<value_type>>(*this);
   }
 
   template <typename Op>
