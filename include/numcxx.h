@@ -897,6 +897,99 @@ private:
 };
 
 // [numcxx.expression_template]
+template <class ValExpr> class nc_val_expr {
+  typedef std::remove_reference_t<ValExpr> RmExpr;
+
+  ValExpr expr_;
+
+public:
+  typedef typename RmExpr::value_type value_type;
+  typedef typename RmExpr::result_type result_type;
+
+  explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
+
+  result_type operator[](size_type i) const { return expr_[i]; }
+
+  // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
+  //     typedef __slice_expr<ValExpr> NewExpr;
+  //     return nc_val_expr< NewExpr >(NewExpr(s, expr_));
+  // }
+
+  // template <class Ex, class Lp>
+  // nc_val_expr<__mask_expr<ValExpr> > operator[](const ndarray<bool, Ex, Lp>&
+  // __vb) const {
+  //     typedef __mask_expr<ValExpr> NewExpr;
+  //     return nc_val_expr< NewExpr >(NewExpr(__vb, expr_));
+  // }
+
+  // template <class Ex, class Lp>
+  // nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_type, Ex,
+  // Lp>& __vs) const {
+  //     typedef __indirect_expr<ValExpr> NewExpr;
+  //     return nc_val_expr< NewExpr >(NewExpr(__vs, expr_));
+  // }
+
+  // clang-format off
+  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
+  auto operator-() const { return apply_unary_op<std::negate>     (); }
+  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>(); }
+  // clang-format on
+
+  // template<class Ex, class Lp>
+  // operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
+
+  size_type size() const { return expr_.size(); }
+
+  result_type sum() const {
+    size_type n = expr_.size();
+    result_type r = n ? expr_[0] : result_type();
+    for (size_type i = 1; i < n; ++i)
+      r += expr_[i];
+    return r;
+  }
+
+  result_type min() const {
+    size_type n = size();
+    result_type r = n ? (*this)[0] : result_type();
+    for (size_type i = 1; i < n; ++i) {
+      result_type x = expr_[i];
+      if (x < r)
+        r = x;
+    }
+    return r;
+  }
+
+  result_type max() const {
+    size_type n = size();
+    result_type r = n ? (*this)[0] : result_type();
+    for (size_type i = 1; i < n; ++i) {
+      result_type x = expr_[i];
+      if (r < x)
+        r = x;
+    }
+    return r;
+  }
+
+  template <template <class> class Op> auto apply_unary_op() const {
+    return detail::make_unary_op<Op<value_type>>(*this);
+  }
+};
+
+// template <class ValExpr>
+// template <class Ex, class Lp>
+// nc_val_expr<ValExpr>::operator ndarray<nc_val_expr::result_type, Ex, Lp>()
+// const {
+//     ndarray<result_type> r;
+//     size_type n = expr_.size();
+//     if (n) {
+//         r.begin_ = r.end_ = allocator<result_type>().allocate(n);
+//         for (size_type i = 0; i != n; ++r.end_, ++i)
+//             ::new ((void*)r.end_) result_type(expr_[i]);
+//     }
+//     return r;
+// }
+
 template <class Op, class A0, class A1> struct nc_binary_op {
   typedef typename Op::result_type result_type;
   using value_type = std::decay_t<result_type>;
@@ -993,99 +1086,6 @@ struct nc_binary_op<Op, ndarray<Tp1, Ex1, Lp1>, ndarray<Tp2, Ex2, Lp2>> {
 
   size_type size() const { return a0_.size(); }
 };
-
-template <class ValExpr> class nc_val_expr {
-  typedef std::remove_reference_t<ValExpr> RmExpr;
-
-  ValExpr expr_;
-
-public:
-  typedef typename RmExpr::value_type value_type;
-  typedef typename RmExpr::result_type result_type;
-
-  explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
-
-  result_type operator[](size_type i) const { return expr_[i]; }
-
-  // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
-  //     typedef __slice_expr<ValExpr> NewExpr;
-  //     return nc_val_expr< NewExpr >(NewExpr(s, expr_));
-  // }
-
-  // template <class Ex, class Lp>
-  // nc_val_expr<__mask_expr<ValExpr> > operator[](const ndarray<bool, Ex, Lp>&
-  // __vb) const {
-  //     typedef __mask_expr<ValExpr> NewExpr;
-  //     return nc_val_expr< NewExpr >(NewExpr(__vb, expr_));
-  // }
-
-  // template <class Ex, class Lp>
-  // nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_type, Ex,
-  // Lp>& __vs) const {
-  //     typedef __indirect_expr<ValExpr> NewExpr;
-  //     return nc_val_expr< NewExpr >(NewExpr(__vs, expr_));
-  // }
-
-  // clang-format off
-  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
-  auto operator-() const { return apply_unary_op<std::negate>     (); }
-  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>(); }
-  // clang-format on
-
-  // template<class Ex, class Lp>
-  // operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
-
-  size_type size() const { return expr_.size(); }
-
-  result_type sum() const {
-    size_type n = expr_.size();
-    result_type r = n ? expr_[0] : result_type();
-    for (size_type i = 1; i < n; ++i)
-      r += expr_[i];
-    return r;
-  }
-
-  result_type min() const {
-    size_type n = size();
-    result_type r = n ? (*this)[0] : result_type();
-    for (size_type i = 1; i < n; ++i) {
-      result_type x = expr_[i];
-      if (x < r)
-        r = x;
-    }
-    return r;
-  }
-
-  result_type max() const {
-    size_type n = size();
-    result_type r = n ? (*this)[0] : result_type();
-    for (size_type i = 1; i < n; ++i) {
-      result_type x = expr_[i];
-      if (r < x)
-        r = x;
-    }
-    return r;
-  }
-
-  template <template <class> class Op> auto apply_unary_op() const {
-    return detail::make_unary_op<Op<value_type>>(*this);
-  }
-};
-
-// template <class ValExpr>
-// template <class Ex, class Lp>
-// nc_val_expr<ValExpr>::operator ndarray<nc_val_expr::result_type, Ex, Lp>()
-// const {
-//     ndarray<result_type> r;
-//     size_type n = expr_.size();
-//     if (n) {
-//         r.begin_ = r.end_ = allocator<result_type>().allocate(n);
-//         for (size_type i = 0; i != n; ++r.end_, ++i)
-//             ::new ((void*)r.end_) result_type(expr_[i]);
-//     }
-//     return r;
-// }
 
 // ndarray
 template <class Tp, class Ex, class Lp>
