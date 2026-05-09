@@ -1027,10 +1027,10 @@ public:
   // }
 
   // clang-format off
-  auto operator+() const { return detail::make_unary_expr<nc_unary_plus>   (*this); }
-  auto operator-() const { return detail::make_unary_expr<std::negate>     (*this); }
-  auto operator~() const { return detail::make_unary_expr<nc_bit_not>      (*this); }
-  auto operator!() const { return detail::make_unary_expr<std::logical_not>(*this); }
+  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
+  auto operator-() const { return apply_unary_op<std::negate>     (); }
+  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>(); }
   // clang-format on
 
   // template<class Ex, class Lp>
@@ -1066,6 +1066,10 @@ public:
         r = x;
     }
     return r;
+  }
+
+  template <template <class> class Op> auto apply_unary_op() const {
+    return detail::make_unary_op<Op<value_type>>(*this);
   }
 };
 
