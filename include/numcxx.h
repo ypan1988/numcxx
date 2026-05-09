@@ -746,6 +746,10 @@ public:
          constexpr          size_type                     size() const noexcept { return span_.size()   ; }
          constexpr               bool                    empty() const noexcept { return size() == 0    ; }
          constexpr const extents_type&                 extents() const noexcept { return span_.extents(); }
+
+  // mdspan interoperability
+         constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_          ; }
+         constexpr        mdspan_type                to_mdspan()       noexcept { return span_          ; }
   // clang-format on
 
 private:
@@ -862,6 +866,10 @@ public:
          constexpr          size_type                     size() const noexcept { return span_.size()   ; }
          constexpr               bool                    empty() const noexcept { return size() == 0    ; }
          constexpr const extents_type&                 extents() const noexcept { return span_.extents(); }
+
+  // mdspan interoperability
+         constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_          ; }
+         constexpr        mdspan_type                to_mdspan()       noexcept { return span_          ; }
   // clang-format on
 
 private:
