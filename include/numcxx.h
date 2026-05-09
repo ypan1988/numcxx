@@ -300,6 +300,7 @@ public:
   ndarray(const    slice_view<ElementType, Extents, LayoutPolicy> &sv) : elem_(sv.to_mdspan()) {}
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
   ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
+  // template <class Expr, std::enable_if_t<nc_is_val_expr<std::decay_t<Expr>>::value, int> = 0> explicit ndarray(const Expr& expr); // TODO
   ~ndarray() = default;
   // ndarray(std::initializer_list<value_type> __il);
 
@@ -737,7 +738,14 @@ public:
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> mask_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> mask_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
-  constexpr size_type size() const noexcept { return span_.size(); }
+  // observers
+  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
+  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr          size_type        extent(size_type r) const noexcept { return span_.extent(r); }
+         constexpr          size_type                     size() const noexcept { return span_.size()   ; }
+         constexpr               bool                    empty() const noexcept { return size() == 0    ; }
+         constexpr const extents_type&                 extents() const noexcept { return span_.extents(); }
   // clang-format on
 
 private:
@@ -846,7 +854,14 @@ public:
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
   template <class Expr, std::enable_if_t<nc_is_val_expr<Expr>::value, int> = 0> indirect_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
-  constexpr size_type size() const noexcept { return span_.size(); }
+  // observers
+  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
+  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr          size_type        extent(size_type r) const noexcept { return span_.extent(r); }
+         constexpr          size_type                     size() const noexcept { return span_.size()   ; }
+         constexpr               bool                    empty() const noexcept { return size() == 0    ; }
+         constexpr const extents_type&                 extents() const noexcept { return span_.extents(); }
   // clang-format on
 
 private:
