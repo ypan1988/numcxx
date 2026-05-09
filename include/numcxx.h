@@ -150,20 +150,6 @@ public:
   }
 };
 
-template <class Op, class A0> struct nc_unary_op {
-  typedef typename Op::result_type result_type;
-  using value_type = std::decay_t<result_type>;
-
-  Op op_;
-  A0 a0_;
-
-  nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
-
-  result_type operator[](size_type i) const { return op_(a0_[i]); }
-
-  size_type size() const { return a0_.size(); }
-};
-
 // clang-format off
 template <class Tp> struct nc_unary_plus { typedef Tp result_type; Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { typedef Tp result_type; Tp operator()(const Tp &x) const { return ~x; } };
@@ -990,6 +976,33 @@ public:
 //     return r;
 // }
 
+template <class Tp> class nc_scalar_expr {
+public:
+  using value_type = std::remove_cv_t<Tp>;
+
+  explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
+  const value_type &operator[](size_type) const { return t_; }
+  size_type size() const { return s_; }
+
+private:
+  const value_type &t_;
+  size_type s_;
+};
+
+template <class Op, class A0> struct nc_unary_op {
+  typedef typename Op::result_type result_type;
+  using value_type = std::decay_t<result_type>;
+
+  Op op_;
+  A0 a0_;
+
+  nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
+
+  result_type operator[](size_type i) const { return op_(a0_[i]); }
+
+  size_type size() const { return a0_.size(); }
+};
+
 template <class Op, class A0, class A1> struct nc_binary_op {
   typedef typename Op::result_type result_type;
   using value_type = std::decay_t<result_type>;
@@ -1004,19 +1017,6 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
 
   size_type size() const { return a0_.size(); }
-};
-
-template <class Tp> class nc_scalar_expr {
-public:
-  using value_type = std::remove_cv_t<Tp>;
-
-  explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
-  const value_type &operator[](size_type) const { return t_; }
-  size_type size() const { return s_; }
-
-private:
-  const value_type &t_;
-  size_type s_;
 };
 
 template <class Op, class Tp, class Ex, class Lp>
