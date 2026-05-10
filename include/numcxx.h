@@ -961,7 +961,7 @@ public:
   // clang-format on
 
   auto eval() const {
-    static_assert(nc_mdspan_like<ValExpr>::value,
+    static_assert(nc_mdspan_like_v<ValExpr>,
                   "Cannot eval() a scalar-only expression (no extents)");
     ndarray<value_type, decltype(expr_.extents()), layout_right> res(
         expr_.extents());
@@ -1036,7 +1036,7 @@ template <class Op, class A0> struct nc_unary_op {
   size_type size() const { return a0_.size(); }
 
   auto extents() const {
-    static_assert(nc_mdspan_like<A0>::value,
+    static_assert(nc_mdspan_like_v<A0>,
                   "Unary expression has no extents (operand is scalar)");
     return a0_.extents();
   }
@@ -1058,10 +1058,10 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   size_type size() const { return a0_.size(); }
 
   auto extents() const {
-    static_assert(nc_mdspan_like<nc_binary_op>::value,
+    static_assert(nc_mdspan_like_v<nc_binary_op>,
                   "Binary expression has no extents (scalar + scalar)");
 
-    if constexpr (nc_mdspan_like<A0>::value) {
+    if constexpr (nc_mdspan_like_v<A0>) {
       return a0_.extents();
     } else {
       return a1_.extents();
