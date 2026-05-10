@@ -928,17 +928,6 @@ public:
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  auto eval() const {
-    static_assert(nc_has_extents<Expr>::value,
-                  "Cannot eval() a scalar-only expression (no extents)");
-    ndarray<value_type, decltype(expr_.extents()), layout_right> res(
-        expr_.extents());
-    for (size_type i = 0; i < res.size(); ++i) {
-      res[i] = expr_[i];
-    }
-    return res;
-  }
-
   result_type operator[](size_type i) const { return expr_[i]; }
 
   // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
@@ -967,8 +956,16 @@ public:
   auto operator!() const { return apply_unary_op<std::logical_not>(); }
   // clang-format on
 
-  // template<class Ex, class Lp>
-  // operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
+  auto eval() const {
+    static_assert(nc_has_extents<Expr>::value,
+                  "Cannot eval() a scalar-only expression (no extents)");
+    ndarray<value_type, decltype(expr_.extents()), layout_right> res(
+        expr_.extents());
+    for (size_type i = 0; i < res.size(); ++i) {
+      res[i] = expr_[i];
+    }
+    return res;
+  }
 
   size_type size() const { return expr_.size(); }
   auto extents() const { return expr_.extents(); }
@@ -1007,20 +1004,6 @@ public:
     return detail::make_unary_op<Op<value_type>>(*this);
   }
 };
-
-// template <class ValExpr>
-// template <class Ex, class Lp>
-// nc_val_expr<ValExpr>::operator ndarray<nc_val_expr::result_type, Ex, Lp>()
-// const {
-//     ndarray<result_type> r;
-//     size_type n = expr_.size();
-//     if (n) {
-//         r.begin_ = r.end_ = allocator<result_type>().allocate(n);
-//         for (size_type i = 0; i != n; ++r.end_, ++i)
-//             ::new ((void*)r.end_) result_type(expr_[i]);
-//     }
-//     return r;
-// }
 
 template <class Tp> class nc_scalar_expr {
 public:
