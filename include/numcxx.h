@@ -960,6 +960,7 @@ public:
   // operator ndarray<nc_val_expr::result_type, Ex, Lp>() const;
 
   size_type size() const { return expr_.size(); }
+  auto extents() const { return expr_.extents(); }
 
   result_type sum() const {
     size_type n = expr_.size();
