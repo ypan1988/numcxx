@@ -122,6 +122,7 @@ template <class Tp, class Ex, class Lp> struct nc_is_val_expr<slice_view   <Tp, 
 template <class Tp>                     struct nc_is_val_expr<mask_view    <Tp>        > : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp>        > : std::true_type  {};
 
+// mdspan-like types are ultimately backed by mdarray/mdspan and provide extents and layout semantics.
 template <class Tp>                     struct nc_mdspan_like                            : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_mdspan_like<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp, class Ex, class Lp> struct nc_mdspan_like<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
