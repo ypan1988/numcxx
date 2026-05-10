@@ -115,26 +115,21 @@ template <class ValExpr>                class  nc_val_expr ;
 template <class Op, class A0>           struct nc_unary_op ;
 template <class Op, class A0, class A1> struct nc_binary_op;
 
-template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
-template <class ValExpr>                struct nc_is_val_expr<nc_val_expr  <ValExpr   >> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<mask_view    <Tp>        > : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp>        > : std::true_type  {};
+template <class ValExpr>                struct nc_is_val_expr                             : std::false_type {};
+template <class ValExpr>                struct nc_is_val_expr <nc_val_expr  <ValExpr   >> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr <ndarray      <Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr <slice_view   <Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr <mask_view    <Tp>        > : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr <indirect_view<Tp>        > : std::true_type  {};
 
-template <class Tp>                     struct nc_has_extents                            : std::false_type {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_has_extents<mask_view    <Tp>        > : std::true_type  {};
-template <class Tp>                     struct nc_has_extents<indirect_view<Tp>        > : std::true_type  {};
-template <class Op, class A0>           struct nc_has_extents<nc_unary_op  <Op, A0>    > : nc_has_extents<std::decay_t<A0>> {};
-template <class Op, class A0, class A1> struct nc_has_extents<nc_binary_op <Op, A0, A1>> : std::bool_constant<nc_has_extents<std::decay_t<A0>>::value  ||
-                                                                                                              nc_has_extents<std::decay_t<A1>>::value> {};
-template <class Ex, class = void>       struct nc_expr_layout;
-template <class Tp, class Ex, class Lp> struct nc_expr_layout<ndarray      <Tp, Ex, Lp>> { using type = Lp; };
-template <class Tp, class Ex, class Lp> struct nc_expr_layout<slice_view   <Tp, Ex, Lp>> { using type = Lp; };
-template <class Op, class A0>           struct nc_expr_layout<nc_unary_op  <Op, A0>    > { using type = typename nc_expr_layout<std::decay_t<A0>>::type; };
-template <class Op, class A0, class A1> struct nc_expr_layout<nc_binary_op <Op, A0, A1>> { using type = typename nc_expr_layout<std::decay_t<A0>>::type; };
+template <class Tp>                     struct nc_has_val_expr                            : std::false_type {};
+template <class Tp, class Ex, class Lp> struct nc_has_val_expr<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_has_val_expr<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_has_val_expr<mask_view    <Tp>        > : std::true_type  {};
+template <class Tp>                     struct nc_has_val_expr<indirect_view<Tp>        > : std::true_type  {};
+template <class Op, class A0>           struct nc_has_val_expr<nc_unary_op  <Op, A0>    > : nc_has_val_expr<std::decay_t<A0>> {};
+template <class Op, class A0, class A1> struct nc_has_val_expr<nc_binary_op <Op, A0, A1>> : std::bool_constant<nc_has_val_expr<std::decay_t<A0>>::value  ||
+                                                                                                               nc_has_val_expr<std::decay_t<A1>>::value> {};
 
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
@@ -963,7 +958,7 @@ public:
   // clang-format on
 
   auto eval() const {
-    static_assert(nc_has_extents<ValExpr>::value,
+    static_assert(nc_has_val_expr<ValExpr>::value,
                   "Cannot eval() a scalar-only expression (no extents)");
     ndarray<value_type, decltype(expr_.extents()), layout_right> res(
         expr_.extents());
@@ -1038,7 +1033,7 @@ template <class Op, class A0> struct nc_unary_op {
   size_type size() const { return a0_.size(); }
 
   auto extents() const {
-    static_assert(nc_has_extents<A0>::value,
+    static_assert(nc_has_val_expr<A0>::value,
                   "Unary expression has no extents (operand is scalar)");
     return a0_.extents();
   }
@@ -1060,10 +1055,10 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   size_type size() const { return a0_.size(); }
 
   auto extents() const {
-    static_assert(nc_has_extents<nc_binary_op>::value,
+    static_assert(nc_has_val_expr<nc_binary_op>::value,
                   "Binary expression has no extents (scalar + scalar)");
 
-    if constexpr (nc_has_extents<A0>::value) {
+    if constexpr (nc_has_val_expr<A0>::value) {
       return a0_.extents();
     } else {
       return a1_.extents();
