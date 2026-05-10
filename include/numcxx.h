@@ -928,6 +928,17 @@ public:
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
+  auto eval() const {
+    static_assert(nc_has_extents<Expr>::value,
+                  "Cannot eval() a scalar-only expression (no extents)");
+    ndarray<value_type, decltype(expr_.extents()), layout_right> res(
+        expr_.extents());
+    for (size_type i = 0; i < res.size(); ++i) {
+      res[i] = expr_[i];
+    }
+    return res;
+  }
+
   result_type operator[](size_type i) const { return expr_[i]; }
 
   // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
