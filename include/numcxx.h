@@ -127,9 +127,14 @@ template <class Tp, class Ex, class Lp> struct nc_has_extents<ndarray      <Tp, 
 template <class Tp, class Ex, class Lp> struct nc_has_extents<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents<mask_view    <Tp>        > : std::true_type  {};
 template <class Tp>                     struct nc_has_extents<indirect_view<Tp>        > : std::true_type  {};
-template <class Op, class A0>           struct nc_has_extents<nc_unary_op  <Op, A0>>     : nc_has_extents<std::decay_t<A0>> {};
+template <class Op, class A0>           struct nc_has_extents<nc_unary_op  <Op, A0>    > : nc_has_extents<std::decay_t<A0>> {};
 template <class Op, class A0, class A1> struct nc_has_extents<nc_binary_op <Op, A0, A1>> : std::bool_constant<nc_has_extents<std::decay_t<A0>>::value  ||
                                                                                                               nc_has_extents<std::decay_t<A1>>::value> {};
+template <class Ex, class = void>       struct nc_expr_layout;
+template <class Tp, class Ex, class Lp> struct nc_expr_layout<ndarray      <Tp, Ex, Lp>> { using type = Lp; };
+template <class Tp, class Ex, class Lp> struct nc_expr_layout<slice_view   <Tp, Ex, Lp>> { using type = Lp; };
+template <class Op, class A0>           struct nc_expr_layout<nc_unary_op  <Op, A0>    > { using type = typename nc_expr_layout<std::decay_t<A0>>::type; };
+template <class Op, class A0, class A1> struct nc_expr_layout<nc_binary_op <Op, A0, A1>> { using type = typename nc_expr_layout<std::decay_t<A0>>::type; };
 
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
