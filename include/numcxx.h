@@ -963,7 +963,7 @@ public:
   // clang-format on
 
   auto eval() const {
-    static_assert(nc_has_extents<Expr>::value,
+    static_assert(nc_has_extents<ValExpr>::value,
                   "Cannot eval() a scalar-only expression (no extents)");
     ndarray<value_type, decltype(expr_.extents()), layout_right> res(
         expr_.extents());
