@@ -30,15 +30,19 @@
 #include <vector>
 #include <version>
 
+// clang-format off
 #if __cplusplus >= 202600L
 #define NUMCXX_USE_STD 1
 #include <mdarray>
 #include <mdspan>
+#include <linalg>
 #else
 #define NUMCXX_USE_STD 0
 #include <mdspan/mdarray.hpp>
 #include <mdspan/mdspan.hpp>
+#include <experimental/linalg>
 #endif
+// clang-format on
 
 namespace numcxx {
 using size_type = std::size_t;

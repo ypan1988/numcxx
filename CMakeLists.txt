@@ -97,8 +97,10 @@ target_include_directories(numcxx
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/mdspan/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/stdblas/include>
         $<INSTALL_INTERFACE:include>
         $<INSTALL_INTERFACE:include/third_party/mdspan/include>
+        $<INSTALL_INTERFACE:include/third_party/stdblas/include>
 )
 
 target_compile_features(numcxx INTERFACE cxx_std_17)
