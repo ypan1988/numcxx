@@ -19,6 +19,7 @@ set(TEST_TARGETS
     test_et_binary_op
     test_et_binary_fn
     test_et_unary_op
+    test_linalg_matmul
 )
 
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)
