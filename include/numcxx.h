@@ -324,14 +324,14 @@ public:
   }
 
   // subset operations (mask_view):
-  template <typename BoolExpr>
-  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
+  [[nodiscard]] mask_view<element_type>
   operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
-  template <typename BoolExpr>
-  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
+  [[nodiscard]] mask_view<element_type>
   operator[](BoolExpr &&expr) {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
@@ -516,14 +516,14 @@ public:
   }
 
   // subset operations (mask_view):
-  template <typename BoolExpr>
-  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
+  [[nodiscard]] mask_view<element_type>
   operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
-  template <typename BoolExpr>
-  [[nodiscard]] std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, mask_view<element_type>>
+  template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
+  [[nodiscard]] mask_view<element_type>
   operator[](BoolExpr &&expr) {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
