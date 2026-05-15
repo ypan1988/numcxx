@@ -7,7 +7,7 @@
 ## 1. Vector, Matrix, Cube and NdArray Classes
 
 ### 1.0 `ndarray<T, Extents, LayoutPolicy>`
-+ `ndarray` is a template class represents a **generic, multidimensional array**.
++ `ndarray` is a template class that represents a **generic, multidimensional array**.
 	+ **`T`**: the type (`double`, `float`, `int`, ...) of the stored elements.
 	+ **`Extents`**: describes the rank (i.e., number of dimensions) and size of each dimension. You can choose:
 	    + Dynamic extents with `dextents<Rank>` (e.g., dextents<2> for a 2-D ndarray whose shape is decided at run-time).
