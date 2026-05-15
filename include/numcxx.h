@@ -1495,33 +1495,19 @@ NdArrayType randint(int low, int high, std::initializer_list<size_type> shape) {
 namespace linalg {
 
 template <class A, class B> auto matmul(const A &a, const B &b) {
-  // ---- type extraction ----
-  using value_type = typename A::value_type;
-
-  // ---- shape checks ----
-  const auto &a_ext = a.extents();
-  const auto &b_ext = b.extents();
-
   static_assert(A::rank() == 2, "matmul requires rank-2 lhs");
   static_assert(B::rank() == 2, "matmul requires rank-2 rhs");
 
+  const auto &a_ext = a.extents();
+  const auto &b_ext = b.extents();
   if (a_ext.extent(1) != b_ext.extent(0)) {
-    throw std::runtime_error("matmul: incompatible shapes");
+    NUMCXX_THROW(std::invalid_argument, "matmul: incompatible shapes");
   }
 
-  // ---- result shape ----
-  const std::size_t M = a_ext.extent(0);
-  const std::size_t K = a_ext.extent(1);
-  const std::size_t N = b_ext.extent(1);
-
-  (void)K; // silence unused warning
-
+  using value_type = typename A::value_type;
   using extents_type = dextents<2>;
-
-  // ---- allocate result ----
-  ndarray<value_type, extents_type, layout_right> c(M, N);
-
-  // ---- call stdBLAS ----
+  ndarray<value_type, extents_type, layout_right> c(a_ext.extent(0),
+                                                    b_ext.extent(1));
   detail::linalg::matrix_product(a.to_mdspan(), b.to_mdspan(), c.to_mdspan());
 
   return c;
