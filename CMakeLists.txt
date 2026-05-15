@@ -98,6 +98,7 @@ target_include_directories(numcxx
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/mdspan/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/stdblas/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/stdblas/include/experimental>
         $<INSTALL_INTERFACE:include>
         $<INSTALL_INTERFACE:include/third_party/mdspan/include>
         $<INSTALL_INTERFACE:include/third_party/stdblas/include>
