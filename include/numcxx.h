@@ -79,8 +79,8 @@ namespace linalg = stdblas_ns::linalg;
 } // namespace detail
 
 // clang-format off
-template <size_type    Rank   > using dextents     = detail::dextents<size_type,       Rank>;
-template <size_type... Extents> using  extents     = detail::extents<size_type , Extents...>;
+template <size_type    Rank   > using dextents     = detail::dextents<size_type, Rank      >;
+template <size_type... Extents> using extents      = detail::extents <size_type, Extents...>;
                                 using layout_left  = detail::layout_left ;
                                 using layout_right = detail::layout_right;
 // clang-format on
