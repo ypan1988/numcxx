@@ -180,16 +180,16 @@ public:
 template <class Tp> struct nc_unary_plus { typedef Tp result_type; Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { typedef Tp result_type; Tp operator()(const Tp &x) const { return ~x; } };
 
-template <typename T> struct is_slice_or_integral : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> || std::is_integral_v<std::decay_t<T>>> {};
-template <typename T>       inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
-template <typename... Args> inline constexpr bool are_all_slice_or_integral_v = (is_slice_or_integral_v<Args> && ...);
+template <class T> struct is_slice_or_integral : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> || std::is_integral_v<std::decay_t<T>>> {};
+template <class T>       inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
+template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is_slice_or_integral_v<Args> && ...);
 
 namespace detail {
 
-template <typename Ex>          inline constexpr bool is_static_extents_v = Ex::rank_dynamic() == 0;
-template <typename NdArrayType> inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename NdArrayType::extents_type>;
+template <class Ex>          inline constexpr bool is_static_extents_v = Ex::rank_dynamic() == 0;
+template <class NdArrayType> inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename NdArrayType::extents_type>;
 
-template <typename Extents>  struct static_extents_size;
+template <class Ex>          struct static_extents_size;
 template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
 
 template <class Tp, class Ex, bool IsStaticExtents = is_static_extents_v<Ex>> struct mdarray_container_selector;
@@ -197,8 +197,8 @@ template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > {
 template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
 template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
 
-template <typename T, typename = void> struct is_boolean_expr                                                                                      : std::false_type {};
-template <typename T>                  struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>()[size_type{}]))>> : std::true_type  {};
+template <class T, class = void> struct is_boolean_expr                                                                                      : std::false_type {};
+template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>()[size_type{}]))>> : std::true_type  {};
 
 template <class Op, class Expr> auto make_unary_op(const Expr &);
 
