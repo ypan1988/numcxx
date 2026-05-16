@@ -26,6 +26,7 @@
 #include <memory>
 #include <optional>
 #include <random>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
