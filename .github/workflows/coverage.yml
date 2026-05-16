@@ -38,7 +38,7 @@ jobs:
           genhtml coverage.info --output-directory ../coverage_html
       
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           files: ./build/coverage.info
           flags: unittests
@@ -47,7 +47,7 @@ jobs:
           verbose: true
       
       - name: Upload HTML report as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage_html/
