@@ -75,10 +75,12 @@
 
 // [numcxx.user_config]
 #ifndef NUMCXX_SIZE_TYPE
+// Unsigned integer type for sizes and extents (maximum size of any theoretically possible object)
 #define NUMCXX_SIZE_TYPE std::size_t
 #endif
 
 #ifndef NUMCXX_INDEX_TYPE
+// Signed integer type for index arithmetic and NumPy-style indexing (negative indices supported)
 #define NUMCXX_INDEX_TYPE std::ptrdiff_t
 #endif
 
