@@ -19,9 +19,10 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdio>  // std::fprintf, std::fflush
+#include <cstdlib> // std::abort
 #include <functional>
 #include <initializer_list>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <random>
@@ -47,9 +48,9 @@
 #define NUMCXX_ASSERT(expr, msg)                                               \
   do {                                                                         \
     if (!(expr)) {                                                             \
-      std::cerr << "numcxx assertion failed: " << (msg) << "\n"                \
-                << "  at " << __FILE__ << ":" << __LINE__ << " (" << __func__  \
-                << ")\n";                                                      \
+      std::fprintf(stderr, "numcxx:%s:%d: %s: Assertion failed: %s\n",         \
+                   __FILE__, __LINE__, __func__, msg);                         \
+      std::fflush(stderr);                                                     \
       std::abort();                                                            \
     }                                                                          \
   } while (0)
@@ -65,7 +66,9 @@
 #else
 #define NUMCXX_THROW(exception_type, msg)                                      \
   do {                                                                         \
-    std::cerr << "numcxx critical error: " << (msg) << "\n";                   \
+    std::fprintf(stderr, "numcxx:%s:%d: %s: Fatal error: %s\n", __FILE__,      \
+                 __LINE__, __func__, msg);                                     \
+    std::fflush(stderr);                                                       \
     std::abort();                                                              \
   } while (0)
 #endif
@@ -201,8 +204,7 @@ template <class Op, class Expr> auto make_unary_op(const Expr &);
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
   index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
-  NUMCXX_ASSERT(res >= 0,
-                static_cast<size_type>(res) < dim_len && "Index out of bounds");
+  NUMCXX_ASSERT(res >= 0 && static_cast<size_type>(res) < dim_len, "Index out of bounds");
   return static_cast<size_type>(res);
 }
 
