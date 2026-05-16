@@ -31,16 +31,15 @@
 #include <version>
 
 // clang-format off
-#if __cplusplus >= 202600L
-#define NUMCXX_USE_STD 1
-#include <mdarray>
-#include <mdspan>
-#include <linalg>
-#else
-#define NUMCXX_USE_STD 0
-#include <mdspan/mdarray.hpp>
+#if __cplusplus < 202600L
+#define NUMCXX_KOKKOS_BACKEND
 #include <mdspan/mdspan.hpp>
+#include <mdspan/mdarray.hpp>
 #include <experimental/linalg>
+#else
+#include <mdspan>
+#include <mdarray>
+#include <linalg>
 #endif
 // clang-format on
 
@@ -49,7 +48,19 @@ using size_type = std::size_t;
 using index_type = std::ptrdiff_t;
 
 namespace detail {
-#if NUMCXX_USE_STD
+#ifdef NUMCXX_KOKKOS_BACKEND
+using Kokkos::dextents;
+using Kokkos::extents;
+using Kokkos::full_extent;
+using Kokkos::layout_left;
+using Kokkos::layout_right;
+using Kokkos::mdspan;
+using Kokkos::strided_slice;
+using Kokkos::submdspan;
+using Kokkos::Experimental::mdarray;
+namespace linalg =
+    MDSPAN_IMPL_STANDARD_NAMESPACE::MDSPAN_IMPL_PROPOSED_NAMESPACE::linalg;
+#else
 using std::dextents;
 using std::extents;
 using std::full_extent;
@@ -60,21 +71,6 @@ using std::mdspan;
 using std::strided_slice;
 using std::submdspan;
 namespace linalg = std::linalg;
-#else
-using Kokkos::dextents;
-using Kokkos::extents;
-using Kokkos::full_extent;
-using Kokkos::layout_left;
-using Kokkos::layout_right;
-using Kokkos::mdspan;
-using Kokkos::strided_slice;
-using Kokkos::submdspan;
-using Kokkos::Experimental::mdarray;
-
-namespace stdblas_ns =
-    MDSPAN_IMPL_STANDARD_NAMESPACE::MDSPAN_IMPL_PROPOSED_NAMESPACE;
-namespace linalg = stdblas_ns::linalg;
-
 #endif
 } // namespace detail
 
