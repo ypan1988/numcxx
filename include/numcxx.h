@@ -43,6 +43,33 @@
 #endif
 // clang-format on
 
+#ifndef NUMCXX_NO_DEBUG
+#define NUMCXX_ASSERT(expr, msg)                                               \
+  do {                                                                         \
+    if (!(expr)) {                                                             \
+      std::cerr << "numcxx assertion failed: " << (msg) << "\n"                \
+                << "  at " << __FILE__ << ":" << __LINE__ << " (" << __func__  \
+                << ")\n";                                                      \
+      std::abort();                                                            \
+    }                                                                          \
+  } while (0)
+#else
+#define NUMCXX_ASSERT(expr, msg) ((void)0)
+#endif
+
+#ifndef NUMCXX_NO_EXCEPTIONS
+#define NUMCXX_THROW(exception_type, msg)                                      \
+  do {                                                                         \
+    throw exception_type(msg);                                                 \
+  } while (0)
+#else
+#define NUMCXX_THROW(exception_type, msg)                                      \
+  do {                                                                         \
+    std::cerr << "numcxx critical error: " << (msg) << "\n";                   \
+    std::abort();                                                              \
+  } while (0)
+#endif
+
 namespace numcxx {
 using size_type = std::size_t;
 using index_type = std::ptrdiff_t;
@@ -81,33 +108,6 @@ template <size_type... Extents> using extents      = detail::extents <size_type,
                                 using layout_right = detail::layout_right;
 // clang-format on
 } // namespace numcxx
-
-#ifndef NUMCXX_NO_DEBUG
-#define NUMCXX_ASSERT(expr, msg)                                               \
-  do {                                                                         \
-    if (!(expr)) {                                                             \
-      std::cerr << "numcxx assertion failed: " << (msg) << "\n"                \
-                << "  at " << __FILE__ << ":" << __LINE__ << " (" << __func__  \
-                << ")\n";                                                      \
-      std::abort();                                                            \
-    }                                                                          \
-  } while (0)
-#else
-#define NUMCXX_ASSERT(expr, msg) ((void)0)
-#endif
-
-#ifndef NUMCXX_NO_EXCEPTIONS
-#define NUMCXX_THROW(exception_type, msg)                                      \
-  do {                                                                         \
-    throw exception_type(msg);                                                 \
-  } while (0)
-#else
-#define NUMCXX_THROW(exception_type, msg)                                      \
-  do {                                                                         \
-    std::cerr << "numcxx critical error: " << (msg) << "\n";                   \
-    std::abort();                                                              \
-  } while (0)
-#endif
 
 namespace numcxx {
 // clang-format off
