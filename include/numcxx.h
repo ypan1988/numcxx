@@ -33,11 +33,13 @@
 
 // clang-format off
 #if __cplusplus < 202600L
-#define NUMCXX_KOKKOS_BACKEND
+// Uses Kokkos mdspan/submdspan/mdarray/linalg as backend
+#define NUMCXX_KOKKOS_MDSPAN_BACKEND
 #include <mdspan/mdspan.hpp>
 #include <mdspan/mdarray.hpp>
 #include <experimental/linalg>
 #else
+// Uses std mdspan/submdspan/mdarray/linalg as backend (in the future)
 #include <mdspan>
 #include <mdarray>
 #include <linalg>
@@ -95,7 +97,7 @@ using size_type = std::size_t;
 using index_type = std::ptrdiff_t;
 
 namespace detail {
-#ifdef NUMCXX_KOKKOS_BACKEND
+#ifdef NUMCXX_KOKKOS_MDSPAN_BACKEND
 using Kokkos::dextents;
 using Kokkos::extents;
 using Kokkos::full_extent;
