@@ -73,6 +73,21 @@
   } while (0)
 #endif
 
+// [numcxx.user_config]
+#ifndef NUMCXX_SIZE_TYPE
+#define NUMCXX_SIZE_TYPE std::size_t
+#endif
+
+#ifndef NUMCXX_INDEX_TYPE
+#define NUMCXX_INDEX_TYPE std::ptrdiff_t
+#endif
+
+#ifndef NUMCXX_DEFAULT_LAYOUT_LEFT
+// Row major (C / Numpy style) is used by default.
+// To use Column major (Fortran / Matlab style) as default layout, please uncomment the line below.
+// #define NUMCXX_DEFAULT_LAYOUT_LEFT
+#endif
+
 namespace numcxx {
 using size_type = std::size_t;
 using index_type = std::ptrdiff_t;
