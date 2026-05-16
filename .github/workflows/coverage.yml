@@ -16,7 +16,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y lcov
+          sudo apt-get install -y lcov libopenblas-dev pkg-config
       
       - name: Configure with coverage
         run: |
