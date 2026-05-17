@@ -94,10 +94,12 @@
 #endif
 
 namespace numcxx {
-using size_type = std::size_t;
-using index_type = std::ptrdiff_t;
 
+// clang-format off
+// [numcxx::internal.config]
 namespace detail {
+// Internal: generalize the backend for mdspan / submdspan / mdarray / linalg.
+// User code should not depend on anything inside this namespace directly.
 #ifdef NUMCXX_KOKKOS_MDSPAN_BACKEND
 using Kokkos::dextents;
 using Kokkos::extents;
@@ -108,8 +110,7 @@ using Kokkos::mdspan;
 using Kokkos::strided_slice;
 using Kokkos::submdspan;
 using Kokkos::Experimental::mdarray;
-namespace linalg =
-    MDSPAN_IMPL_STANDARD_NAMESPACE::MDSPAN_IMPL_PROPOSED_NAMESPACE::linalg;
+namespace linalg = MDSPAN_IMPL_STANDARD_NAMESPACE::MDSPAN_IMPL_PROPOSED_NAMESPACE::linalg;
 #else
 using std::dextents;
 using std::extents;
@@ -124,16 +125,20 @@ namespace linalg = std::linalg;
 #endif
 } // namespace detail
 
-// clang-format off
+// [numcxx.public_api]
+using  size_type = NUMCXX_SIZE_TYPE;
+using index_type = NUMCXX_INDEX_TYPE;
+
 template <size_type    Rank   > using dextents     = detail::dextents<size_type, Rank      >;
 template <size_type... Extents> using extents      = detail::extents <size_type, Extents...>;
                                 using layout_left  = detail::layout_left ;
                                 using layout_right = detail::layout_right;
-// clang-format on
-} // namespace numcxx
+#ifdef NUMCXX_DEFAULT_LAYOUT_LEFT
+using default_layout = layout_left;
+#else
+using default_layout = layout_right;
+#endif
 
-namespace numcxx {
-// clang-format off
                                         class         slice;
 template <class Tp, class Ex, class Lp> class       ndarray;
 template <class Tp, class Ex, class Lp> class    slice_view;
