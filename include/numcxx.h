@@ -201,10 +201,6 @@ public:
 };
 
 // clang-format off
-template <class Op, class Expr> auto make_unary_op(const Expr &);
-template <class Tp> struct nc_unary_plus { typedef Tp result_type; Tp operator()(const Tp &x) const { return +x; } };
-template <class Tp> struct nc_bit_not    { typedef Tp result_type; Tp operator()(const Tp &x) const { return ~x; } };
-
 template <class T> struct is_slice_or_integral : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> || std::is_integral_v<std::decay_t<T>>> {};
 template <class T>       inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
 template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is_slice_or_integral_v<Args> && ...);
@@ -279,6 +275,10 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
                       typename sub_mdspan_type::extents_type,
                       typename sub_mdspan_type::layout_type>(sub_mdspan);
 }
+
+template <class Op, class Expr> auto make_unary_op(const Expr &);
+template <class Tp> struct nc_unary_plus { typedef Tp result_type; Tp operator()(const Tp &x) const { return +x; } };
+template <class Tp> struct nc_bit_not    { typedef Tp result_type; Tp operator()(const Tp &x) const { return ~x; } };
 
 } // namespace detail
 // clang-format on
@@ -393,10 +393,10 @@ public:
   }
 
   // unary operators:
-  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
-  auto operator-() const { return apply_unary_op<std::negate>     (); }
-  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>(); }
+  auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
+  auto operator-() const { return apply_unary_op<std::negate>          (); }
+  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
 
   // computed assignment:
   ndarray &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -585,10 +585,10 @@ public:
   }
 
   // unary operators:
-  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
-  auto operator-() const { return apply_unary_op<std::negate>     (); }
-  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>(); }
+  auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
+  auto operator-() const { return apply_unary_op<std::negate>          (); }
+  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
 
   // computed assignment:
   slice_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -738,10 +738,10 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
 
   // unary operators:
-  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
-  auto operator-() const { return apply_unary_op<std::negate>     (); }
-  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>(); }
+  auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
+  auto operator-() const { return apply_unary_op<std::negate>          (); }
+  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
 
   // computed assignment:
   mask_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -858,10 +858,10 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
 
   // unary operators:
-  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
-  auto operator-() const { return apply_unary_op<std::negate>     (); }
-  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>(); }
+  auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
+  auto operator-() const { return apply_unary_op<std::negate>          (); }
+  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
 
   // computed assignment:
   indirect_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
@@ -969,10 +969,10 @@ public:
   // }
 
   // clang-format off
-  auto operator+() const { return apply_unary_op<nc_unary_plus>   (); }
-  auto operator-() const { return apply_unary_op<std::negate>     (); }
-  auto operator~() const { return apply_unary_op<nc_bit_not>      (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>(); }
+  auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
+  auto operator-() const { return apply_unary_op<std::negate>          (); }
+  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
   // clang-format on
 
   auto eval() const {
