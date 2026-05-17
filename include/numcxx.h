@@ -174,6 +174,7 @@ template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp
 template <class Tp, class Ex, class Lp>       Tp *end  (      ndarray<Tp, Ex, Lp> &v);
 // clang-format on
 
+// [numcxx.slice]
 class slice {
 private:
   std::optional<index_type> start_;
@@ -200,6 +201,7 @@ public:
 };
 
 // clang-format off
+template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { typedef Tp result_type; Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { typedef Tp result_type; Tp operator()(const Tp &x) const { return ~x; } };
 
@@ -222,8 +224,6 @@ template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_cont
 
 template <class T, class = void> struct is_boolean_expr                                                                                      : std::false_type {};
 template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>()[size_type{}]))>> : std::true_type  {};
-
-template <class Op, class Expr> auto make_unary_op(const Expr &);
 
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
@@ -282,6 +282,20 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
 
 } // namespace detail
 // clang-format on
+
+template <typename Tp, size_type Rank> struct nested_initializer_list {
+  using type = std::initializer_list<
+      typename nested_initializer_list<Tp, Rank - 1>::type>;
+};
+template <typename Tp> struct nested_initializer_list<Tp, 1> {
+  using type = std::initializer_list<Tp>;
+};
+template <typename Tp, size_type Rank>
+using nested_initializer_list_t =
+    typename nested_initializer_list<Tp, Rank>::type;
+template <size_type... Dims> static constexpr size_type product_of() {
+  return (Dims * ...);
+}
 
 // [numcxx.ndarray]
 template <class ElementType, class Extents,
