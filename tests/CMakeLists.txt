@@ -8,6 +8,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 set(TEST_TARGETS
+    test_error_handling
     test_basic
     test_storage
     test_ndarray_fixed
