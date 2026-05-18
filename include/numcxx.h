@@ -796,7 +796,7 @@ private:
 
     auto base = data_span.data_handle();
     extents_type ext(offsets.size());
-    auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
+    auto acc = detail::index_accessor<element_type>(std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
   }
 
@@ -908,7 +908,7 @@ private:
                          std::vector<size_type> offsets) {
     auto base = data_span.data_handle();
     extents_type ext(offsets.size());
-    auto acc = detail::index_accessor<element_type>(base, std::move(offsets));
+    auto acc = detail::index_accessor<element_type>(std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
   }
 
@@ -1029,11 +1029,11 @@ public:
   using value_type = std::remove_cv_t<Tp>;
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
-  const value_type &operator[](size_type) const { return t_; }
+  value_type operator[](size_type) const { return t_; }
   size_type size() const { return s_; }
 
 private:
-  const value_type &t_;
+  value_type t_;
   size_type s_;
 };
 
