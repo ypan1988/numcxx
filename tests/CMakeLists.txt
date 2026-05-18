@@ -16,6 +16,7 @@ set(TEST_TARGETS
     test_element_access
     test_ndarray_unary
     test_ndarray_compound
+    test_mask_view
     test_et
     test_et_binary_op
     test_et_binary_fn
