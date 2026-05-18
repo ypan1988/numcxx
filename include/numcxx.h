@@ -1394,6 +1394,43 @@ NdArrayType zeros(std::initializer_list<size_type> shape) {
   return arr;
 }
 
+// [numcxx.print]
+namespace detail {
+
+template <typename T> struct printf_format {
+  static constexpr const char *fmt = nullptr;
+};
+
+#define NUMCXX_DEF_PRINTF_FMT(T, fmt_str)                                      \
+  template <> struct printf_format<T> {                                        \
+    static constexpr const char *fmt = fmt_str;                                \
+  };
+
+// signed integers
+NUMCXX_DEF_PRINTF_FMT(short, "%hd")
+NUMCXX_DEF_PRINTF_FMT(int, "%d")
+NUMCXX_DEF_PRINTF_FMT(long, "%ld")
+NUMCXX_DEF_PRINTF_FMT(long long, "%lld")
+
+// unsigned integers
+NUMCXX_DEF_PRINTF_FMT(unsigned, "%u")
+NUMCXX_DEF_PRINTF_FMT(unsigned long, "%lu")
+NUMCXX_DEF_PRINTF_FMT(unsigned long long, "%llu")
+
+// floating point
+NUMCXX_DEF_PRINTF_FMT(float, "%.6g")
+NUMCXX_DEF_PRINTF_FMT(double, "%.6g")
+NUMCXX_DEF_PRINTF_FMT(long double, "%.6Lg")
+
+// char / bool
+NUMCXX_DEF_PRINTF_FMT(char, "%c")
+NUMCXX_DEF_PRINTF_FMT(bool, "%d")
+
+template <typename T>
+using printf_format_t = printf_format<std::remove_cv_t<T>>;
+
+} // namespace detail
+
 //
 // [numcxx.random] random number generation
 //
