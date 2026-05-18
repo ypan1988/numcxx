@@ -1344,7 +1344,7 @@ ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
 
   const size_type n = std::ceil((stop - start) / step);
 
-  ndarray<T, dextents<1>> arr({n});
+  ndarray<T, dextents<1>> arr(n);
   T *p = arr.data();
 
   T value = start;
