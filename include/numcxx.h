@@ -1476,7 +1476,7 @@ void print_recursive(const M &arr, FILE *file, size_type dim_idx,
     std::fprintf(file, "[");
     for (size_type i = 0; i < dim_len; ++i) {
       if (i != 0)
-        std::fprintf(file, ", ");
+        std::fprintf(file, ",\n ");
       print_recursive(arr, file, dim_idx + 1, offset + i * stride);
     }
     std::fprintf(file, "]");
