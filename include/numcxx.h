@@ -1429,7 +1429,61 @@ NUMCXX_DEF_PRINTF_FMT(bool, "%d")
 template <typename T>
 using printf_format_t = printf_format<std::remove_cv_t<T>>;
 
+template <typename T> void print_complex(const std::complex<T> &z, FILE *file) {
+  std::fprintf(file, "(%g, %g)", static_cast<double>(z.real()),
+               static_cast<double>(z.imag()));
+}
+
+template <typename T> void print_element(const T &x, FILE *file) {
+  using decay_t = std::decay_t<T>;
+  if constexpr (std::is_same_v<decay_t, std::complex<float>> ||
+                std::is_same_v<decay_t, std::complex<double>> ||
+                std::is_same_v<decay_t, std::complex<long double>>) {
+    print_complex(x, file);
+  } else {
+    std::fprintf(file, printf_format<decay_t>::fmt, x);
+  }
+}
+
+template <typename M>
+void print_recursive(const M &arr, FILE *file, size_type dim_idx,
+                     size_type offset) {
+  constexpr size_type R = std::decay_t<M>::rank();
+  size_type dim_len = arr.extent(dim_idx);
+  size_type stride = arr.stride(dim_idx);
+
+  if (dim_idx == R - 1) {
+    std::fprintf(file, "[");
+    for (size_type i = 0; i < dim_len; ++i) {
+      if (i != 0)
+        std::fprintf(file, ", ");
+      size_type idx = offset + i * stride;
+      print_element(arr[idx], file);
+    }
+    std::fprintf(file, "]");
+  } else {
+    std::fprintf(file, "[");
+    for (size_type i = 0; i < dim_len; ++i) {
+      if (i != 0)
+        std::fprintf(file, ", ");
+      print_recursive(arr, file, dim_idx + 1, offset + i * stride);
+    }
+    std::fprintf(file, "]");
+  }
+}
+
 } // namespace detail
+
+template <class M, std::enable_if_t<nc_mdspan_like_v<M>, int> = 0>
+void print(const M &arr, FILE *file = stdout) {
+  constexpr size_type R = std::decay_t<M>::rank();
+  if constexpr (R == 0) {
+    detail::print_element(arr[0], file);
+  } else {
+    detail::print_recursive(arr, file, 0, 0);
+  }
+  std::fprintf(file, "\n");
+}
 
 //
 // [numcxx.random] random number generation
