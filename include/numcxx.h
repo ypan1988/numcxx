@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <complex>
 #include <cstddef>
 #include <cstdio>  // std::fprintf, std::fflush
 #include <cstdlib> // std::abort
@@ -1397,54 +1398,61 @@ NdArrayType zeros(std::initializer_list<size_type> shape) {
 // [numcxx.print]
 namespace detail {
 
-template <typename T> struct printf_format {
-  static constexpr const char *fmt = nullptr;
-};
+// clang-format off
+template <typename T> struct printf_format { static constexpr const char *fmt = nullptr; };
+template <typename T> struct printf_format<const          T> : printf_format<T> {};
+template <typename T> struct printf_format<      volatile T> : printf_format<T> {};
+template <typename T> struct printf_format<const volatile T> : printf_format<T> {};
+template <typename T> using  printf_format_t = printf_format<std::remove_cv_t<T>> ;
 
 #define NUMCXX_DEF_PRINTF_FMT(T, fmt_str)                                      \
   template <> struct printf_format<T> {                                        \
     static constexpr const char *fmt = fmt_str;                                \
   };
 
-// signed integers
-NUMCXX_DEF_PRINTF_FMT(short, "%hd")
-NUMCXX_DEF_PRINTF_FMT(int, "%d")
-NUMCXX_DEF_PRINTF_FMT(long, "%ld")
-NUMCXX_DEF_PRINTF_FMT(long long, "%lld")
+// signed
+NUMCXX_DEF_PRINTF_FMT(short             , "%hd"  )
+NUMCXX_DEF_PRINTF_FMT(int               , "%d"   )
+NUMCXX_DEF_PRINTF_FMT(long              , "%ld"  )
+NUMCXX_DEF_PRINTF_FMT(long long         , "%lld" )
 
-// unsigned integers
-NUMCXX_DEF_PRINTF_FMT(unsigned short, "%hu")
-NUMCXX_DEF_PRINTF_FMT(unsigned int, "%u")
-NUMCXX_DEF_PRINTF_FMT(unsigned long, "%lu")
-NUMCXX_DEF_PRINTF_FMT(unsigned long long, "%llu")
+// unsigned
+NUMCXX_DEF_PRINTF_FMT(unsigned short    , "%hu"  )
+NUMCXX_DEF_PRINTF_FMT(unsigned int      , "%u"   )
+NUMCXX_DEF_PRINTF_FMT(unsigned long     , "%lu"  )
+NUMCXX_DEF_PRINTF_FMT(unsigned long long, "%llu" )
 
-// floating point
-NUMCXX_DEF_PRINTF_FMT(float, "%.6g")
-NUMCXX_DEF_PRINTF_FMT(double, "%.6g")
-NUMCXX_DEF_PRINTF_FMT(long double, "%.6Lg")
+// floating
+NUMCXX_DEF_PRINTF_FMT(float             , "%.6g" )
+NUMCXX_DEF_PRINTF_FMT(double            , "%.6g" )
+NUMCXX_DEF_PRINTF_FMT(long double       , "%.6Lg")
 
-// char / bool
-NUMCXX_DEF_PRINTF_FMT(char, "%c")
-NUMCXX_DEF_PRINTF_FMT(bool, "%d")
-NUMCXX_DEF_PRINTF_FMT(signed char, "%hhd")
-NUMCXX_DEF_PRINTF_FMT(unsigned char, "%hhu")
+// misc
+NUMCXX_DEF_PRINTF_FMT(char              , "%c"   )
+NUMCXX_DEF_PRINTF_FMT(bool              , "%d"   )
+NUMCXX_DEF_PRINTF_FMT(signed char       , "%hhd" )
+NUMCXX_DEF_PRINTF_FMT(unsigned char     , "%hhu" )
 
-template <typename T>
-using printf_format_t = printf_format<std::remove_cv_t<T>>;
+template <typename T> struct is_complex : std::false_type {};
+template <typename T> struct is_complex<std::complex<T>> : std::true_type {};
 
 template <typename T> void print_complex(const std::complex<T> &z, FILE *file) {
-  std::fprintf(file, "(%g, %g)", static_cast<double>(z.real()),
-               static_cast<double>(z.imag()));
+  if constexpr (std::is_same_v<T, long double>) {
+    std::fprintf(file, "(%Lg, %Lg)", z.real(), z.imag());
+  } else {
+    std::fprintf(file, "(%g, %g)", static_cast<double>(z.real()),
+                 static_cast<double>(z.imag()));
+  }
 }
 
 template <typename T> void print_element(const T &x, FILE *file) {
-  using decay_t = std::decay_t<T>;
-  if constexpr (std::is_same_v<decay_t, std::complex<float>> ||
-                std::is_same_v<decay_t, std::complex<double>> ||
-                std::is_same_v<decay_t, std::complex<long double>>) {
+  using U = std::remove_cv_t<std::remove_reference_t<T>>;
+
+  if constexpr (is_complex<U>::value) {
     print_complex(x, file);
   } else {
-    std::fprintf(file, printf_format<decay_t>::fmt, x);
+    static_assert(printf_format_t<U>::fmt != nullptr, "numcxx::print: unsupported type for printf_format");
+    std::fprintf(file, printf_format_t<U>::fmt, x);
   }
 }
 
@@ -1474,6 +1482,8 @@ void print_recursive(const M &arr, FILE *file, size_type dim_idx,
     std::fprintf(file, "]");
   }
 }
+
+// clang-format off
 
 } // namespace detail
 
