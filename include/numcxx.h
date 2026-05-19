@@ -1413,7 +1413,8 @@ NUMCXX_DEF_PRINTF_FMT(long, "%ld")
 NUMCXX_DEF_PRINTF_FMT(long long, "%lld")
 
 // unsigned integers
-NUMCXX_DEF_PRINTF_FMT(unsigned, "%u")
+NUMCXX_DEF_PRINTF_FMT(unsigned short, "%hu")
+NUMCXX_DEF_PRINTF_FMT(unsigned int, "%u")
 NUMCXX_DEF_PRINTF_FMT(unsigned long, "%lu")
 NUMCXX_DEF_PRINTF_FMT(unsigned long long, "%llu")
 
@@ -1425,6 +1426,8 @@ NUMCXX_DEF_PRINTF_FMT(long double, "%.6Lg")
 // char / bool
 NUMCXX_DEF_PRINTF_FMT(char, "%c")
 NUMCXX_DEF_PRINTF_FMT(bool, "%d")
+NUMCXX_DEF_PRINTF_FMT(signed char, "%hhd")
+NUMCXX_DEF_PRINTF_FMT(unsigned char, "%hhu")
 
 template <typename T>
 using printf_format_t = printf_format<std::remove_cv_t<T>>;
