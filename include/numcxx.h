@@ -209,7 +209,7 @@ template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is
 namespace detail {
 
 template <class Ex>          inline constexpr bool is_static_extents_v = Ex::rank_dynamic() == 0;
-template <class NdArrayType> inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename NdArrayType::extents_type>;
+template <class Array> inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
 
 template <class Ex>          struct static_extents_size;
 template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
@@ -1361,37 +1361,37 @@ template <typename T> ndarray<T, dextents<1>> arange(T stop) {
   return arange<T>(T(0), stop, T(1));
 }
 
-template <typename NdArrayType,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType ones() {
-  NdArrayType arr;
-  std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(1));
+template <typename Array,
+          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+Array ones() {
+  Arr arr;
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
 
-template <typename NdArrayType, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType ones(std::initializer_list<size_type> shape) {
-  constexpr auto rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
-  std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(1));
+template <typename Array,
+          typename = std::enable_if_t<!detail::is_static_ndarray_v<Array>>>
+Array ones(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr(detail::make_extents<rank>(shape));
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
 
-template <typename NdArrayType,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType zeros() {
-  NdArrayType arr;
-  std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(0));
+template <typename Array,
+          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+Array zeros() {
+  Array arr;
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
 }
 
-template <typename NdArrayType, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType zeros(std::initializer_list<size_type> shape) {
-  constexpr auto rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
-  std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(0));
+template <typename Array,
+          typename = std::enable_if_t<!detail::is_static_ndarray_v<Array>>>
+Array zeros(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr(detail::make_extents<rank>(shape));
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
 }
 
@@ -1513,8 +1513,8 @@ namespace detail {
 using ::numcxx::detail::is_static_ndarray_v;
 using ::numcxx::detail::make_extents;
 
-template <typename NdArrayType, typename Distribution>
-void fill_random(NdArrayType &arr, Distribution &&dist) {
+template <typename Array, typename Distribution>
+void fill_random(Array &arr, Distribution &&dist) {
   auto &engine = get_engine();
   for (size_type i = 0; i < arr.size(); ++i) {
     arr.data()[i] = dist(engine);
@@ -1523,74 +1523,74 @@ void fill_random(NdArrayType &arr, Distribution &&dist) {
 } // namespace detail
 
 // ---------- 1. rand: uniform [0,1) ----------
-template <typename NdArrayType,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType rand() {
-  NdArrayType arr;
+template <typename Array,
+          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+Array rand() {
+  Array arr;
   detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
 }
 
-template <typename NdArrayType, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType rand(std::initializer_list<size_type> shape) {
-  constexpr auto rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+template <typename Array, typename = std::enable_if_t<
+                                    !detail::is_static_ndarray_v<Array>>>
+Array rand(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
 }
 
 // ---------- 2. randn: standard normal ----------
-template <typename NdArrayType,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType randn() {
-  NdArrayType arr;
+template <typename Array,
+          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+Array randn() {
+  Array arr;
   detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
 }
 
-template <typename NdArrayType, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType randn(std::initializer_list<size_type> shape) {
-  constexpr auto rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+template <typename Array, typename = std::enable_if_t<
+                                    !detail::is_static_ndarray_v<Array>>>
+Array randn(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
 }
 
 // ---------- 3. uniform [low, high) ----------
-template <typename NdArrayType,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType uniform(double low, double high) {
-  NdArrayType arr;
+template <typename Array,
+          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+Array uniform(double low, double high) {
+  Array arr;
   detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
 }
 
-template <typename NdArrayType, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType uniform(double low, double high,
+template <typename Array, typename = std::enable_if_t<
+                                    !detail::is_static_ndarray_v<Array>>>
+Array uniform(double low, double high,
                     std::initializer_list<size_type> shape) {
-  constexpr auto rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
 }
 
 // ---------- 4. randint [low, high) ----------
-template <typename NdArrayType,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType randint(int low, int high) {
-  NdArrayType arr;
+template <typename Array,
+          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+Array randint(int low, int high) {
+  Array arr;
   detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
 }
 
-template <typename NdArrayType, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<NdArrayType>>>
-NdArrayType randint(int low, int high, std::initializer_list<size_type> shape) {
-  constexpr auto rank = NdArrayType::extents_type::rank();
-  NdArrayType arr(detail::make_extents<rank>(shape));
+template <typename Array, typename = std::enable_if_t<
+                                    !detail::is_static_ndarray_v<Array>>>
+Array randint(int low, int high, std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
 }
