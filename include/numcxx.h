@@ -48,6 +48,14 @@
 #endif
 // clang-format on
 
+#if defined(_MSC_VER)
+#define NUMCXX_RESTRICT __restrict
+#elif defined(__GNUC__) || defined(__clang__)
+#define NUMCXX_RESTRICT __restrict__
+#else
+#define NUMCXX_RESTRICT
+#endif
+
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
   do {                                                                         \
@@ -477,8 +485,11 @@ private:
 
   template <typename Op>
   ndarray &apply_scalar_op(Op &&op, const value_type &x) {
-    for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], x);
+    pointer NUMCXX_RESTRICT ptr = data();
+    const size_type n = size();
+#pragma omp simd
+    for (size_type i = 0; i < n; ++i)
+      op(ptr[i], x);
     return *this;
   }
 
