@@ -1524,15 +1524,15 @@ void fill_random(Array &arr, Distribution &&dist) {
 
 // ---------- 1. rand: uniform [0,1) ----------
 template <typename Array,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array rand() {
   Array arr;
   detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
 }
 
-template <typename Array, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<Array>>>
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array rand(std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
@@ -1542,15 +1542,15 @@ Array rand(std::initializer_list<size_type> shape) {
 
 // ---------- 2. randn: standard normal ----------
 template <typename Array,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array randn() {
   Array arr;
   detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
 }
 
-template <typename Array, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<Array>>>
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array randn(std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
@@ -1560,15 +1560,15 @@ Array randn(std::initializer_list<size_type> shape) {
 
 // ---------- 3. uniform [low, high) ----------
 template <typename Array,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array uniform(double low, double high) {
   Array arr;
   detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
 }
 
-template <typename Array, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<Array>>>
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array uniform(double low, double high,
                     std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
@@ -1579,15 +1579,15 @@ Array uniform(double low, double high,
 
 // ---------- 4. randint [low, high) ----------
 template <typename Array,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array randint(int low, int high) {
   Array arr;
   detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
 }
 
-template <typename Array, typename = std::enable_if_t<
-                                    !detail::is_static_ndarray_v<Array>>>
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array randint(int low, int high, std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
