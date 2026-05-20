@@ -716,7 +716,7 @@ public:
   using    size_type = typename extents_type::size_type;
   using    rank_type = typename extents_type::rank_type;
 
-  using         layout_type = detail::layout_right;
+  using         layout_type = default_layout;
   using const_accessor_type = detail::index_accessor<const element_type>;
   using       accessor_type = detail::index_accessor<      element_type>;
 
@@ -836,7 +836,7 @@ public:
   using    size_type = typename extents_type::size_type;
   using    rank_type = typename extents_type::rank_type;
 
-  using         layout_type = detail::layout_right;
+  using         layout_type = default_layout;
   using const_accessor_type = detail::index_accessor<const element_type>;
   using       accessor_type = detail::index_accessor<      element_type>;
 
