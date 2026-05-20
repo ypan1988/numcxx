@@ -1372,7 +1372,7 @@ NdArrayType ones() {
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
 NdArrayType ones(std::initializer_list<size_type> shape) {
-  constexpr size_type rank = NdArrayType::extents_type::rank();
+  constexpr auto rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(1));
   return arr;
@@ -1389,7 +1389,7 @@ NdArrayType zeros() {
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
 NdArrayType zeros(std::initializer_list<size_type> shape) {
-  constexpr size_type rank = NdArrayType::extents_type::rank();
+  constexpr auto rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   std::fill_n(arr.data(), arr.size(), typename NdArrayType::value_type(0));
   return arr;
@@ -1459,7 +1459,7 @@ template <typename T> void print_element(const T &x, FILE *file) {
 template <typename M>
 void print_recursive(const M &arr, FILE *file, size_type dim_idx,
                      size_type offset) {
-  constexpr size_type R = std::decay_t<M>::rank();
+  constexpr auto R = std::decay_t<M>::rank();
   size_type dim_len = arr.extent(dim_idx);
   size_type stride = arr.stride(dim_idx);
 
@@ -1489,7 +1489,7 @@ void print_recursive(const M &arr, FILE *file, size_type dim_idx,
 
 template <class M, std::enable_if_t<nc_mdspan_like_v<M>, int> = 0>
 void print(const M &arr, FILE *file = stdout) {
-  constexpr size_type R = std::decay_t<M>::rank();
+  constexpr auto R = std::decay_t<M>::rank();
   if constexpr (R == 0) {
     detail::print_element(arr[0], file);
   } else {
@@ -1534,7 +1534,7 @@ NdArrayType rand() {
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
 NdArrayType rand(std::initializer_list<size_type> shape) {
-  constexpr size_type rank = NdArrayType::extents_type::rank();
+  constexpr auto rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
   return arr;
@@ -1552,7 +1552,7 @@ NdArrayType randn() {
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
 NdArrayType randn(std::initializer_list<size_type> shape) {
-  constexpr size_type rank = NdArrayType::extents_type::rank();
+  constexpr auto rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::normal_distribution<double>(0.0, 1.0));
   return arr;
@@ -1571,7 +1571,7 @@ template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
 NdArrayType uniform(double low, double high,
                     std::initializer_list<size_type> shape) {
-  constexpr size_type rank = NdArrayType::extents_type::rank();
+  constexpr auto rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
   return arr;
@@ -1589,7 +1589,7 @@ NdArrayType randint(int low, int high) {
 template <typename NdArrayType, typename = std::enable_if_t<
                                     !detail::is_static_ndarray_v<NdArrayType>>>
 NdArrayType randint(int low, int high, std::initializer_list<size_type> shape) {
-  constexpr size_type rank = NdArrayType::extents_type::rank();
+  constexpr auto rank = NdArrayType::extents_type::rank();
   NdArrayType arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
   return arr;
