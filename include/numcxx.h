@@ -1375,7 +1375,7 @@ template <typename T> ndarray<T, dextents<1>> arange(T stop) {
 template <typename Array,
           typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
 Array ones() {
-  Arr arr;
+  Array arr;
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
