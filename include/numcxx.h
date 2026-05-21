@@ -495,8 +495,11 @@ private:
 
   template <class Op, class Expr>
   ndarray &apply_expr_op(Op &&op, const Expr &expr) {
-    for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr[i]);
+    pointer NUMCXX_RESTRICT ptr = data();
+    const size_type n = size();
+#pragma omp simd
+    for (size_type i = 0; i < n; ++i)
+      op(ptr[i], expr[i]);
     return *this;
   }
 
