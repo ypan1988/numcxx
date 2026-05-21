@@ -676,43 +676,30 @@ private:
 };
 
 namespace detail {
-
+// clang-format off
 template <class Tp> class index_accessor {
 public:
-  using element_type = Tp;
-  using reference = element_type &;
+  using element_type     = Tp;
+  using reference        = element_type &;
   using data_handle_type = element_type *;
-  using offset_policy = index_accessor;
+  using offset_policy    = index_accessor;
 
-  index_accessor() = default;
-  explicit index_accessor(const std::vector<size_type> &indices)
-      : indices_(indices) {}
+           index_accessor() = default;
+  explicit index_accessor(const std::vector<size_type> &indices) : indices_(indices) {}
 
   reference access(const data_handle_type p, const size_type i) const noexcept {
-    NUMCXX_ASSERT(i < indices_.size(),
-                  "index_accessor::access: index out of bounds");
+    NUMCXX_ASSERT(i < indices_.size(), "index_accessor::access: index out of bounds");
     return p[indices_[i]];
   }
-
-  data_handle_type offset(const data_handle_type p,
-                          const size_type i) const noexcept {
-    return p + indices_[i];
-  }
-
-  friend bool operator==(const index_accessor &a,
-                         const index_accessor &b) noexcept {
-    return a.indices_ == b.indices_;
-  }
-
-  friend bool operator!=(const index_accessor &a,
-                         const index_accessor &b) noexcept {
-    return !(a == b);
-  }
+  
+  data_handle_type offset(const data_handle_type p, const size_type i) const noexcept { return p + indices_[i]         ; }
+  friend bool operator==(const index_accessor &a, const index_accessor &b)   noexcept { return a.indices_ == b.indices_; }
+  friend bool operator!=(const index_accessor &a, const index_accessor &b)   noexcept { return        !(a == b)        ; }
 
 private:
   std::vector<size_type> indices_;
 };
-
+// clang-format on
 } // namespace detail
 
 // [numcxx.mask_view]
