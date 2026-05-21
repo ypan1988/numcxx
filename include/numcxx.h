@@ -1373,7 +1373,7 @@ template <typename T> ndarray<T, dextents<1>> arange(T stop) {
 }
 
 template <typename Array,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array ones() {
   Array arr;
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
@@ -1381,7 +1381,7 @@ Array ones() {
 }
 
 template <typename Array,
-          typename = std::enable_if_t<!detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array ones(std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
@@ -1390,7 +1390,7 @@ Array ones(std::initializer_list<size_type> shape) {
 }
 
 template <typename Array,
-          typename = std::enable_if_t<detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array zeros() {
   Array arr;
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
@@ -1398,7 +1398,7 @@ Array zeros() {
 }
 
 template <typename Array,
-          typename = std::enable_if_t<!detail::is_static_ndarray_v<Array>>>
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array zeros(std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
