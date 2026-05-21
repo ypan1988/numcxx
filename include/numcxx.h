@@ -1608,10 +1608,22 @@ Array randint(int low, int high, std::initializer_list<size_type> shape) {
 } // namespace random
 
 //
-// [numcxx.linalg] linear algebra (TODO)
+// [numcxx.linalg] linear algebra
 //
 namespace linalg {
 
+/// 2D matrix multiplication: C = A x B
+///
+/// Computes the matrix product of two rank-2 arrays or views.
+///
+/// @param a Left matrix of shape (M × K)
+/// @param b Right matrix of shape (K × N)
+/// @returns Result matrix of shape (M × N) as row-major ndarray
+///
+/// @tparam A Type with rank() == 2 and to_mdspan() (ndarray, slice_view)
+/// @tparam B Type with rank() == 2 and to_mdspan() (ndarray, slice_view)
+///
+/// @throws std::invalid_argument If the inner dimensions do not match
 template <class A, class B> auto matmul(const A &a, const B &b) {
   static_assert(A::rank() == 2, "matmul requires rank-2 lhs");
   static_assert(B::rank() == 2, "matmul requires rank-2 rhs");
