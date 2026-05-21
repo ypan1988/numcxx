@@ -1531,23 +1531,35 @@ void fill_random(Array &arr, Distribution &&dist) {
     arr.data()[i] = dist(engine);
   }
 }
+
+template <typename T>
+using uniform_distribution = std::conditional_t<
+  std::is_integral_v<T>,
+  std::uniform_int_distribution<T>,
+  std::uniform_real_distribution<T>
+>;
+
 } // namespace detail
 
 // ---------- 1. rand: uniform [0,1) ----------
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array rand() {
+  using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>, "rand() requires floating-point type (use randint() for integers)");
   Array arr;
-  detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
+  detail::fill_random(arr, std::uniform_real_distribution<T>(T(0), T(1)));
   return arr;
 }
 
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array rand(std::initializer_list<size_type> shape) {
+  using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>, "rand() requires floating-point type (use randint() for integers)");
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
-  detail::fill_random(arr, std::uniform_real_distribution<double>(0.0, 1.0));
+  detail::fill_random(arr, std::uniform_real_distribution<T>(T(0), T(1)));
   return arr;
 }
 
