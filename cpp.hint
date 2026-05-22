@@ -1,3 +1,7 @@
+// cpp.hint - Visual Studio only
+// Helps IntelliSense parse complex macros.
+// Ignored by other compilers / editors.
+
 #define NUMCXX_DEF_PRINTF_FMT
 #define NUMCXX_MAKE_UNARY_FN
 #define NUMCXX_MAKE_BINARY_OP
