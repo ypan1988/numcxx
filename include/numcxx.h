@@ -662,6 +662,7 @@ private:
 
   template <typename Op>
   slice_view &apply_scalar_op(Op &&op, const value_type &x) {
+#pragma omp simd
     for (size_type i = 0; i < size(); ++i)
       op((*this)[i], x);
     return *this;
@@ -669,6 +670,7 @@ private:
 
   template <class Op, class Expr>
   slice_view &apply_expr_op(Op &&op, const Expr &expr) {
+#pragma omp simd
     for (size_type i = 0; i < size(); ++i)
       op((*this)[i], expr[i]);
     return *this;
