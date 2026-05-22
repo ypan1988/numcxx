@@ -286,8 +286,8 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
 }
 
 template <class Op, class Expr> auto make_unary_op(const Expr &);
-template <class Tp> struct nc_unary_plus { typedef Tp result_type; Tp operator()(const Tp &x) const { return +x; } };
-template <class Tp> struct nc_bit_not    { typedef Tp result_type; Tp operator()(const Tp &x) const { return ~x; } };
+template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
+template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
 
 } // namespace detail
 // clang-format on
@@ -1182,26 +1182,26 @@ inline auto make_scalar_expr(const typename Expr::value_type &x,
     return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
   }
 
-  template <class Tp> struct nc_bit_shift_left  { typedef Tp result_type; Tp operator()(const Tp &x, const Tp &y) const { return x << y; } };
-  template <class Tp> struct nc_bit_shift_right { typedef Tp result_type; Tp operator()(const Tp &x, const Tp &y) const { return x >> y; } };
+  template <class Tp> struct nc_bit_shift_left  { Tp operator()(const Tp &x, const Tp &y) const { return x << y; } };
+  template <class Tp> struct nc_bit_shift_right { Tp operator()(const Tp &x, const Tp &y) const { return x >> y; } };
 
-  template <class Tp> struct nc_abs_expr   { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::abs  (x); } };
-  template <class Tp> struct nc_acos_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::acos (x); } };
-  template <class Tp> struct nc_asin_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::asin (x); } };
-  template <class Tp> struct nc_atan_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::atan (x); } };
-  template <class Tp> struct nc_cos_expr   { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::cos  (x); } };
-  template <class Tp> struct nc_cosh_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::cosh (x); } };
-  template <class Tp> struct nc_exp_expr   { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::exp  (x); } };
-  template <class Tp> struct nc_log_expr   { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::log  (x); } };
-  template <class Tp> struct nc_log10_expr { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::log10(x); } };
-  template <class Tp> struct nc_sin_expr   { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::sin  (x); } };
-  template <class Tp> struct nc_sinh_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::sinh (x); } };
-  template <class Tp> struct nc_sqrt_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::sqrt (x); } };
-  template <class Tp> struct nc_tan_expr   { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::tan  (x); } };
-  template <class Tp> struct nc_tanh_expr  { typedef Tp result_type; Tp operator()(const Tp& x) const { return std::tanh (x); } };
+  template <class Tp> struct nc_abs_expr   { Tp operator()(const Tp& x) const { return std::abs  (x); } };
+  template <class Tp> struct nc_acos_expr  { Tp operator()(const Tp& x) const { return std::acos (x); } };
+  template <class Tp> struct nc_asin_expr  { Tp operator()(const Tp& x) const { return std::asin (x); } };
+  template <class Tp> struct nc_atan_expr  { Tp operator()(const Tp& x) const { return std::atan (x); } };
+  template <class Tp> struct nc_cos_expr   { Tp operator()(const Tp& x) const { return std::cos  (x); } };
+  template <class Tp> struct nc_cosh_expr  { Tp operator()(const Tp& x) const { return std::cosh (x); } };
+  template <class Tp> struct nc_exp_expr   { Tp operator()(const Tp& x) const { return std::exp  (x); } };
+  template <class Tp> struct nc_log_expr   { Tp operator()(const Tp& x) const { return std::log  (x); } };
+  template <class Tp> struct nc_log10_expr { Tp operator()(const Tp& x) const { return std::log10(x); } };
+  template <class Tp> struct nc_sin_expr   { Tp operator()(const Tp& x) const { return std::sin  (x); } };
+  template <class Tp> struct nc_sinh_expr  { Tp operator()(const Tp& x) const { return std::sinh (x); } };
+  template <class Tp> struct nc_sqrt_expr  { Tp operator()(const Tp& x) const { return std::sqrt (x); } };
+  template <class Tp> struct nc_tan_expr   { Tp operator()(const Tp& x) const { return std::tan  (x); } };
+  template <class Tp> struct nc_tanh_expr  { Tp operator()(const Tp& x) const { return std::tanh (x); } };
 
-  template <class Tp> struct nc_atan2_expr { typedef Tp result_type; Tp operator()(const Tp& x, const Tp& y) const { return std::atan2(x, y); } };
-  template <class Tp> struct nc_pow_expr   { typedef Tp result_type; Tp operator()(const Tp& x, const Tp& y) const { return std::pow  (x, y); } };
+  template <class Tp> struct nc_atan2_expr { Tp operator()(const Tp& x, const Tp& y) const { return std::atan2(x, y); } };
+  template <class Tp> struct nc_pow_expr   { Tp operator()(const Tp& x, const Tp& y) const { return std::pow  (x, y); } };
 
 // applies binary operators to each element of two ndarrays, or a ndarray and a value
 NUMCXX_MAKE_BINARY_OP( +, std::plus         )
