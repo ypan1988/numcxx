@@ -1531,7 +1531,15 @@ using uniform_distribution = std::conditional_t<
 
 } // namespace detail
 
-// ---------- 1. rand: uniform [0,1) ----------
+/// Generates an array of random numbers uniformly distributed in [0,1)
+///
+/// @tparam Array A floating-point array type (e.g., dvec, dmat).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random numbers.
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array rand() {
@@ -1542,6 +1550,7 @@ Array rand() {
   return arr;
 }
 
+/// @copydoc rand()
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array rand(std::initializer_list<size_type> shape) {
