@@ -947,11 +947,10 @@ template <class ValExpr> class nc_val_expr {
 
 public:
   typedef typename RmExpr::value_type value_type;
-  typedef typename RmExpr::result_type result_type;
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  result_type operator[](size_type i) const { return expr_[i]; }
+  value_type operator[](size_type i) const { return expr_[i]; }
 
   // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
   //     typedef __slice_expr<ValExpr> NewExpr;
@@ -993,30 +992,30 @@ public:
   size_type size() const { return expr_.size(); }
   auto extents() const { return expr_.extents(); }
 
-  result_type sum() const {
+  value_type sum() const {
     size_type n = expr_.size();
-    result_type r = n ? expr_[0] : result_type();
+    value_type r = n ? expr_[0] : value_type();
     for (size_type i = 1; i < n; ++i)
       r += expr_[i];
     return r;
   }
 
-  result_type min() const {
+  value_type min() const {
     size_type n = size();
-    result_type r = n ? (*this)[0] : result_type();
+    value_type r = n ? (*this)[0] : value_type();
     for (size_type i = 1; i < n; ++i) {
-      result_type x = expr_[i];
+      value_type x = expr_[i];
       if (x < r)
         r = x;
     }
     return r;
   }
 
-  result_type max() const {
+  value_type max() const {
     size_type n = size();
-    result_type r = n ? (*this)[0] : result_type();
+    value_type r = n ? (*this)[0] : value_type();
     for (size_type i = 1; i < n; ++i) {
-      result_type x = expr_[i];
+      value_type x = expr_[i];
       if (r < x)
         r = x;
     }
@@ -1042,15 +1041,15 @@ private:
 };
 
 template <class Op, class A0> struct nc_unary_op {
-  typedef typename Op::result_type result_type;
-  using value_type = std::decay_t<result_type>;
+  using value_type =
+      std::decay_t<decltype(std::declval<Op>()(std::declval<A0>()[0]))>;
 
   Op op_;
   A0 a0_;
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
-  result_type operator[](size_type i) const { return op_(a0_[i]); }
+  value_type operator[](size_type i) const { return op_(a0_[i]); }
 
   size_type size() const { return a0_.size(); }
 
@@ -1062,8 +1061,8 @@ template <class Op, class A0> struct nc_unary_op {
 };
 
 template <class Op, class A0, class A1> struct nc_binary_op {
-  typedef typename Op::result_type result_type;
-  using value_type = std::decay_t<result_type>;
+  using value_type = std::decay_t<decltype(std::declval<Op>()(
+      std::declval<A0>()[0], std::declval<A1>()[0]))>;
 
   Op op_;
   A0 a0_;
@@ -1072,7 +1071,7 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
+  value_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
 
   size_type size() const { return a0_.size(); }
 
@@ -1086,74 +1085,6 @@ template <class Op, class A0, class A1> struct nc_binary_op {
       return a1_.extents();
     }
   }
-};
-
-template <class Op, class Tp, class Ex, class Lp>
-struct nc_unary_op<Op, ndarray<Tp, Ex, Lp>> {
-  typedef typename Op::result_type result_type;
-  using value_type = std::decay_t<result_type>;
-
-  Op op_;
-  const ndarray<Tp, Ex, Lp> &a0_;
-
-  nc_unary_op(const Op &op, const ndarray<Tp, Ex, Lp> &a0) : op_(op), a0_(a0) {}
-
-  result_type operator[](size_type i) const { return op_(a0_[i]); }
-
-  size_type size() const { return a0_.size(); }
-};
-
-template <class Op, class Tp, class Ex, class Lp, class A1>
-struct nc_binary_op<Op, ndarray<Tp, Ex, Lp>, A1> {
-  typedef typename Op::result_type result_type;
-  using value_type = std::decay_t<result_type>;
-
-  Op op_;
-  const ndarray<Tp, Ex, Lp> &a0_;
-  A1 a1_;
-
-  nc_binary_op(const Op &op, const ndarray<Tp, Ex, Lp> &a0, const A1 &a1)
-      : op_(op), a0_(a0), a1_(a1) {}
-
-  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
-
-  size_type size() const { return a0_.size(); }
-};
-
-template <class Op, class A0, class Tp, class Ex, class Lp>
-struct nc_binary_op<Op, A0, ndarray<Tp, Ex, Lp>> {
-  typedef typename Op::result_type result_type;
-  using value_type = std::decay_t<result_type>;
-
-  Op op_;
-  A0 a0_;
-  const ndarray<Tp, Ex, Lp> &a1_;
-
-  nc_binary_op(const Op &op, const A0 &a0, const ndarray<Tp, Ex, Lp> &a1)
-      : op_(op), a0_(a0), a1_(a1) {}
-
-  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
-
-  size_type size() const { return a0_.size(); }
-};
-
-template <class Op, class Tp1, class Ex1, class Lp1, class Tp2, class Ex2,
-          class Lp2>
-struct nc_binary_op<Op, ndarray<Tp1, Ex1, Lp1>, ndarray<Tp2, Ex2, Lp2>> {
-  typedef typename Op::result_type result_type;
-  using value_type = std::decay_t<result_type>;
-
-  Op op_;
-  const ndarray<Tp1, Ex1, Lp1> &a0_;
-  const ndarray<Tp2, Ex2, Lp2> &a1_;
-
-  nc_binary_op(const Op &op, const ndarray<Tp1, Ex1, Lp1> &a0,
-               const ndarray<Tp2, Ex2, Lp2> &a1)
-      : op_(op), a0_(a0), a1_(a1) {}
-
-  result_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
-
-  size_type size() const { return a0_.size(); }
 };
 
 // ndarray
