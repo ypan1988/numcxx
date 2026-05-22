@@ -1632,12 +1632,11 @@ namespace linalg {
 ///
 /// Computes the matrix product of two rank-2 arrays or views.
 ///
-/// @param a Left matrix of shape (M × K)
-/// @param b Right matrix of shape (K × N)
-/// @returns Result matrix of shape (M × N) as row-major ndarray
-///
 /// @tparam A Type with rank() == 2 and to_mdspan() (ndarray, slice_view)
 /// @tparam B Type with rank() == 2 and to_mdspan() (ndarray, slice_view)
+/// @param  a Left matrix of shape (M × K)
+/// @param  b Right matrix of shape (K × N)
+/// @returns Result matrix of shape (M × N) as row-major ndarray
 ///
 /// @throws std::invalid_argument If the inner dimensions do not match
 template <class A, class B> auto matmul(const A &a, const B &b) {
