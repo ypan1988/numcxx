@@ -1502,7 +1502,7 @@ Array randn() {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>, "randn() requires floating-point type");
   Array arr;
-  detail::fill_random(arr, std::normal_distribution<double>(T(0.0), T(1.0)));
+  detail::fill_random(arr, std::normal_distribution<T>(T(0.0), T(1.0)));
   return arr;
 }
 
@@ -1513,7 +1513,7 @@ Array randn(std::initializer_list<size_type> shape) {
   static_assert(std::is_floating_point_v<T>, "randn() requires floating-point type");
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
-  detail::fill_random(arr, std::normal_distribution<double>(T(0.0), T(1.0)));
+  detail::fill_random(arr, std::normal_distribution<T>(T(0.0), T(1.0)));
   return arr;
 }
 
