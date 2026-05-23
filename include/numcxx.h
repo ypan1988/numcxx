@@ -289,29 +289,16 @@ template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
 
-template <typename Tp, std::size_t Rank> struct nested_initializer_list {
-  using type = std::initializer_list<
-      typename nested_initializer_list<Tp, Rank - 1>::type>;
-};
-template <typename Tp> struct nested_initializer_list<Tp, 1> {
-  using type = std::initializer_list<Tp>;
-};
-template <typename Tp>
-struct nested_initializer_list<Tp, 0>; // undefined on purpose
+// [numcxx.nested_initializer_list]
+template <typename Tp, std::size_t Rank> struct nested_initializer_list        { using type = std::initializer_list<typename nested_initializer_list<Tp, Rank - 1>::type>; };
+template <typename Tp                  > struct nested_initializer_list<Tp, 1> { using type = std::initializer_list<Tp>;                                                   };
+template <typename Tp                  > struct nested_initializer_list<Tp, 0>; // undefined on purpose
+template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
 
-template <typename Tp, size_type Rank>
-using nested_initializer_list_t =
-    typename nested_initializer_list<Tp, Rank>::type;
-
-template <std::size_t N, typename List> bool check_non_jagged(const List &);
-template <std::size_t N, typename List>
-std::array<std::size_t, N> derive_extents(const List &);
-template <std::size_t N, typename I, typename T,
-          std::enable_if_t<N == 1, int> = 0>
-void add_extents(I &, const std::initializer_list<T> &);
-template <std::size_t N, typename I, typename List,
-          std::enable_if_t<(N > 1), int> = 0>
-void add_extents(I &, const List &);
+template <std::size_t N, typename List> bool                       check_non_jagged(const List &);
+template <std::size_t N, typename List> std::array<std::size_t, N>   derive_extents(const List &);
+template <std::size_t N, typename I, typename T   , std::enable_if_t< N == 1, int> = 0> void add_extents(I &, const std::initializer_list<T> &);
+template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int> = 0> void add_extents(I &, const List                     &);
 
 template <std::size_t N, typename List>
 std::array<std::size_t, N> derive_extents(const List &list) {
@@ -321,20 +308,16 @@ std::array<std::size_t, N> derive_extents(const List &list) {
   return a;
 }
 
-template <std::size_t N, typename I, typename T,
-          std::enable_if_t<N == 1, int>>
+template <std::size_t N, typename I, typename T, std::enable_if_t<N == 1, int>>
 void add_extents(I &first, const std::initializer_list<T> &list) {
   *first = list.size();
 }
 
-template <std::size_t N, typename I, typename List,
-          std::enable_if_t<(N > 1), int>>
+template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int>>
 void add_extents(I &first, const List &list) {
-
   if (!check_non_jagged<N>(list)) {
     NUMCXX_THROW(std::invalid_argument, "initializer list is jagged");
   }
-
   *first++ = list.size();
   add_extents<N - 1>(first, *list.begin());
 }
@@ -593,7 +576,8 @@ private:
 
 template <class Tp, class Ex, class Lp>
 ndarray<Tp, Ex, Lp>::ndarray(
-    detail::nested_initializer_list_t<element_type, extents_type::rank()> list) {
+    detail::nested_initializer_list_t<element_type, extents_type::rank()>
+        list) {
 
   constexpr std::size_t Rank = extents_type::rank();
 
