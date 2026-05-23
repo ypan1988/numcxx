@@ -315,9 +315,8 @@ void add_extents(I &first, const std::initializer_list<T> &list) {
 
 template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int>>
 void add_extents(I &first, const List &list) {
-  if (!check_non_jagged<N>(list)) {
-    NUMCXX_THROW(std::invalid_argument, "initializer list is jagged");
-  }
+  if (list.size() == 0          ) NUMCXX_THROW(std::invalid_argument, "empty initializer list"    );
+  if (!check_non_jagged<N>(list)) NUMCXX_THROW(std::invalid_argument, "initializer list is jagged");
   *first++ = list.size();
   add_extents<N - 1>(first, *list.begin());
 }
