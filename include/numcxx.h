@@ -306,20 +306,28 @@ template <typename Tp, size_type Rank>
 using nested_initializer_list_t =
     typename nested_initializer_list<Tp, Rank>::type;
 
+template <std::size_t N, typename List> bool check_non_jagged(const List &);
+template <std::size_t N, typename List>
+std::array<std::size_t, N> derive_extents(const List &);
+template <std::size_t N, typename I, typename T,
+          std::enable_if_t<N == 1, int> = 0>
+void add_extents(I &, const std::initializer_list<T> &);
+template <std::size_t N, typename I, typename List,
+          std::enable_if_t<(N > 1), int> = 0>
+void add_extents(I &, const List &);
+
+template <std::size_t N, typename List>
+std::array<std::size_t, N> derive_extents(const List &list) {
+  std::array<std::size_t, N> a;
+  auto f = a.begin();
+  add_extents<N>(f, list);
+  return a;
+}
+
 template <std::size_t N, typename I, typename T,
           std::enable_if_t<N == 1, int> = 0>
 void add_extents(I &first, const std::initializer_list<T> &list) {
   *first = list.size();
-}
-
-template <std::size_t N, typename List>
-bool check_non_jagged(const List &list) {
-  auto i = list.begin();
-  for (auto j = i + 1; j != list.end(); ++j) {
-    if (derive_extents<N - 1>(*i) != derive_extents<N - 1>(*j))
-      return false;
-  }
-  return true;
 }
 
 template <std::size_t N, typename I, typename List,
@@ -335,11 +343,13 @@ void add_extents(I &first, const List &list) {
 }
 
 template <std::size_t N, typename List>
-std::array<std::size_t, N> derive_extents(const List &list) {
-  std::array<std::size_t, N> a;
-  auto f = a.begin();
-  add_extents<N>(f, list);
-  return a;
+bool check_non_jagged(const List &list) {
+  auto i = list.begin();
+  for (auto j = i + 1; j != list.end(); ++j) {
+    if (derive_extents<N - 1>(*i) != derive_extents<N - 1>(*j))
+      return false;
+  }
+  return true;
 }
 
 template <typename T, typename Vec>
