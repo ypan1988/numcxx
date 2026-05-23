@@ -325,13 +325,13 @@ std::array<std::size_t, N> derive_extents(const List &list) {
 }
 
 template <std::size_t N, typename I, typename T,
-          std::enable_if_t<N == 1, int> = 0>
+          std::enable_if_t<N == 1, int>>
 void add_extents(I &first, const std::initializer_list<T> &list) {
   *first = list.size();
 }
 
 template <std::size_t N, typename I, typename List,
-          std::enable_if_t<(N > 1), int> = 0>
+          std::enable_if_t<(N > 1), int>>
 void add_extents(I &first, const List &list) {
 
   if (!check_non_jagged<N>(list)) {
