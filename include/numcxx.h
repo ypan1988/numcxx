@@ -307,14 +307,6 @@ using nested_initializer_list_t =
     typename nested_initializer_list<Tp, Rank>::type;
 
 template <std::size_t N, typename List>
-std::array<std::size_t, N> derive_extents(const List &list) {
-  std::array<std::size_t, N> a;
-  auto f = a.begin();
-  add_extents<N>(f, list);
-  return a;
-}
-
-template <std::size_t N, typename List>
 bool check_non_jagged(const List &list) {
   auto i = list.begin();
   for (auto j = i + 1; j != list.end(); ++j) {
@@ -340,6 +332,14 @@ void add_extents(I &first, const List &list) {
 
   *first++ = list.size();
   add_extents<N - 1>(first, *list.begin());
+}
+
+template <std::size_t N, typename List>
+std::array<std::size_t, N> derive_extents(const List &list) {
+  std::array<std::size_t, N> a;
+  auto f = a.begin();
+  add_extents<N>(f, list);
+  return a;
 }
 
 template <typename T, typename Vec>
