@@ -292,18 +292,109 @@ template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { re
 } // namespace detail
 // clang-format on
 
-template <typename Tp, size_type Rank> struct nested_initializer_list {
+template <typename Tp, std::size_t Rank> struct nested_initializer_list {
   using type = std::initializer_list<
       typename nested_initializer_list<Tp, Rank - 1>::type>;
 };
 template <typename Tp> struct nested_initializer_list<Tp, 1> {
   using type = std::initializer_list<Tp>;
 };
+template <typename Tp>
+struct nested_initializer_list<Tp, 0>; // undefined on purpose
+
 template <typename Tp, size_type Rank>
 using nested_initializer_list_t =
     typename nested_initializer_list<Tp, Rank>::type;
+
 template <size_type... Dims> static constexpr size_type product_of() {
   return (Dims * ...);
+}
+
+template <std::size_t N, typename I, typename T,
+          std::enable_if_t<N == 1, int> = 0>
+void add_extents(I &first, const std::initializer_list<T> &list) {
+  *first = list.size();
+}
+
+template <std::size_t N, typename I, typename List,
+          std::enable_if_t<(N > 1), int> = 0>
+void add_extents(I &first, const List &list) {
+
+  if (!check_non_jagged<N>(list)) {
+    NUMCXX_THROW(std::invalid_argument, "initializer list is jagged");
+  }
+
+  *first++ = list.size();
+  add_extents<N - 1>(first, *list.begin());
+}
+
+template <std::size_t N, typename List>
+std::array<std::size_t, N> derive_extents(const List &list) {
+  std::array<std::size_t, N> a;
+  auto f = a.begin();
+  add_extents<N>(f, list);
+  return a;
+}
+
+template <std::size_t N, typename List>
+bool check_non_jagged(const List &list) {
+  auto i = list.begin();
+  for (auto j = i + 1; j != list.end(); ++j) {
+    if (derive_extents<N - 1>(*i) != derive_extents<N - 1>(*j))
+      return false;
+  }
+  return true;
+}
+
+template <std::size_t N>
+std::size_t compute_strides(const std::array<std::size_t, N> &exts,
+                            std::array<std::size_t, N> &strs) {
+  std::size_t st = 1;
+  for (int i = N - 1; i >= 0; --i) {
+    strs[i] = st;
+    st *= exts[i];
+  }
+  return st;
+}
+
+template <std::size_t N>
+std::size_t compute_size(const std::array<std::size_t, N> &exts) {
+  return std::accumulate(exts.begin(), exts.end(), 1,
+                         std::multiplies<std::size_t>{});
+}
+
+template <typename T, typename Vec>
+void add_list(const T *first, const T *last, Vec &vec) {
+  vec.insert(vec.end(), first, last);
+}
+
+template <typename T, typename Vec>
+void add_list(const std::initializer_list<T> *first,
+              const std::initializer_list<T> *last, Vec &vec) {
+  for (; first != last; ++first)
+    add_list(first->begin(), first->end(), vec);
+}
+
+template <typename T, typename Vec>
+void insert_flat(std::initializer_list<T> list, Vec &vec) {
+  add_list(list.begin(), list.end(), vec);
+}
+
+template <typename T, typename Iter>
+void copy_list(const T *first, const T *last, Iter &iter) {
+  iter = std::copy(first, last, iter);
+}
+
+template <typename T, typename Iter>
+void copy_list(const std::initializer_list<T> *first,
+               const std::initializer_list<T> *last, Iter &it) {
+  for (; first != last; ++first)
+    copy_list(first->begin(), first->end(), it);
+}
+
+template <typename T, typename Iter>
+void copy_flat(std::initializer_list<T> list, Iter &iter) {
+  copy_list(list.begin(), list.end(), iter);
 }
 
 // [numcxx.ndarray]
@@ -325,6 +416,7 @@ public:
 
   using const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type>;
   using       mdspan_type = detail::mdspan<      element_type, extents_type, layout_type>;
+  using      mdarray_type = detail::mdarray<     element_type, extents_type, layout_type, detail::mdarray_container_t<ElementType, Extents>>;
 
   using const_reference = typename const_mdspan_type::reference;
   using       reference = typename       mdspan_type::reference;
@@ -340,8 +432,9 @@ public:
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
   ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
   // template <class Expr, std::enable_if_t<nc_is_val_expr<std::decay_t<Expr>>::value, int> = 0> explicit ndarray(const Expr& expr); // TODO
+  ndarray(nested_initializer_list_t<element_type, extents_type::rank()> list);
+
   ~ndarray() = default;
-  // ndarray(std::initializer_list<value_type> __il);
 
   // assignment:
   constexpr ndarray &operator=(const ndarray &v) = default;
@@ -508,6 +601,46 @@ private:
                   detail::mdarray_container_t<ElementType, Extents>>
       elem_;
 };
+
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp>::ndarray(
+    nested_initializer_list_t<element_type, extents_type::rank()> list) {
+
+  constexpr std::size_t Rank = extents_type::rank();
+  //static_assert(std::is_convertible_v<U, value_type>,
+  //              "initializer list type must be convertible");
+
+  if (list.size() == 0) {
+    NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
+  }
+
+  if (!check_non_jagged<Rank>(list)) {
+    NUMCXX_THROW(std::invalid_argument, "jagged initializer list");
+  }
+
+  auto derived = derive_extents<Rank>(list);
+
+  if constexpr (detail::is_static_extents_v<Ex>) {
+    // static extents: validate
+    Ex expected;
+
+    for (rank_type i = 0; i < Rank; ++i) {
+      if (derived[i] != expected.extent(i)) {
+        NUMCXX_THROW(std::invalid_argument,
+                     "initializer list shape does not match static extents");
+      }
+    }
+
+    elem_ = mdarray_type{}; // already has correct size
+  } else {
+    // dynamic extents: use derived shape
+    elem_ = mdarray_type(derived);
+  }
+
+  // flatten data
+  auto it = elem_.data();
+  copy_flat(list, it);
+}
 
 // template <class Tp, size_type _Size>
 // ndarray(const Tp(&)[_Size], size_type) -> ndarray<Tp>;
