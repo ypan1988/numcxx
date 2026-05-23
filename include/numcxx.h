@@ -306,10 +306,6 @@ template <typename Tp, size_type Rank>
 using nested_initializer_list_t =
     typename nested_initializer_list<Tp, Rank>::type;
 
-template <size_type... Dims> static constexpr size_type product_of() {
-  return (Dims * ...);
-}
-
 template <std::size_t N, typename I, typename T,
           std::enable_if_t<N == 1, int> = 0>
 void add_extents(I &first, const std::initializer_list<T> &list) {
@@ -344,23 +340,6 @@ bool check_non_jagged(const List &list) {
       return false;
   }
   return true;
-}
-
-template <std::size_t N>
-std::size_t compute_strides(const std::array<std::size_t, N> &exts,
-                            std::array<std::size_t, N> &strs) {
-  std::size_t st = 1;
-  for (int i = N - 1; i >= 0; --i) {
-    strs[i] = st;
-    st *= exts[i];
-  }
-  return st;
-}
-
-template <std::size_t N>
-std::size_t compute_size(const std::array<std::size_t, N> &exts) {
-  return std::accumulate(exts.begin(), exts.end(), 1,
-                         std::multiplies<std::size_t>{});
 }
 
 template <typename T, typename Vec>
