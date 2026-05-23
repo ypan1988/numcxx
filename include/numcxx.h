@@ -289,9 +289,6 @@ template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
 
-} // namespace detail
-// clang-format on
-
 template <typename Tp, std::size_t Rank> struct nested_initializer_list {
   using type = std::initializer_list<
       typename nested_initializer_list<Tp, Rank - 1>::type>;
@@ -386,6 +383,9 @@ void copy_flat(std::initializer_list<T> list, Iter &iter) {
   copy_list(list.begin(), list.end(), iter);
 }
 
+} // namespace detail
+// clang-format on
+
 // [numcxx.ndarray]
 template <class ElementType, class Extents,
           class LayoutPolicy = detail::layout_right>
@@ -421,7 +421,7 @@ public:
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
   ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
   // template <class Expr, std::enable_if_t<nc_is_val_expr<std::decay_t<Expr>>::value, int> = 0> explicit ndarray(const Expr& expr); // TODO
-  ndarray(nested_initializer_list_t<element_type, extents_type::rank()> list);
+  ndarray(detail::nested_initializer_list_t<element_type, extents_type::rank()> list);
 
   ~ndarray() = default;
 
@@ -593,21 +593,19 @@ private:
 
 template <class Tp, class Ex, class Lp>
 ndarray<Tp, Ex, Lp>::ndarray(
-    nested_initializer_list_t<element_type, extents_type::rank()> list) {
+    detail::nested_initializer_list_t<element_type, extents_type::rank()> list) {
 
   constexpr std::size_t Rank = extents_type::rank();
-  //static_assert(std::is_convertible_v<U, value_type>,
-  //              "initializer list type must be convertible");
 
   if (list.size() == 0) {
     NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
   }
 
-  if (!check_non_jagged<Rank>(list)) {
+  if (!detail::check_non_jagged<Rank>(list)) {
     NUMCXX_THROW(std::invalid_argument, "jagged initializer list");
   }
 
-  auto derived = derive_extents<Rank>(list);
+  auto derived = detail::derive_extents<Rank>(list);
 
   if constexpr (detail::is_static_extents_v<Ex>) {
     // static extents: validate
@@ -628,7 +626,7 @@ ndarray<Tp, Ex, Lp>::ndarray(
 
   // flatten data
   auto it = elem_.data();
-  copy_flat(list, it);
+  detail::copy_flat(list, it);
 }
 
 // template <class Tp, size_type _Size>
