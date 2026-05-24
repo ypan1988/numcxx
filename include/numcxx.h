@@ -230,61 +230,6 @@ template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_cont
 template <class T, class = void> struct is_boolean_expr                                                                                      : std::false_type {};
 template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>()[size_type{}]))>> : std::true_type  {};
 
-namespace slice_utils {
-inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
-  index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
-  NUMCXX_ASSERT(res >= 0 && static_cast<size_type>(res) < dim_len, "Index out of bounds");
-  return static_cast<size_type>(res);
-}
-
-inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
-  auto resolve_index = [dim_len](std::optional<index_type> idx_raw,
-                                 index_type default_val) {
-    index_type idx = idx_raw.has_value() ? idx_raw.value() : default_val;
-    return (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
-  };
-
-  index_type step = s.step();
-  index_type start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
-  index_type stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
-
-  index_type diff = stop - start;
-  NUMCXX_ASSERT((diff > 0 && step > 0) || (diff < 0 && step < 0),
-                "invalid slice");
-
-  size_type offset = static_cast<size_type>(start);
-  size_type extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
-  size_type stride = static_cast<size_type>(std::abs(s.step()));
-
-  return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
-      offset, extent, stride};
-}
-
-template <typename MdSpan, typename... Args, size_type... Is>
-auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
-  std::array<size_type, sizeof...(Args)> dims = {src.extent(Is)...};
-  return detail::submdspan(std::forward<MdSpan>(src),
-                           to_submdspan_arg(args, dims[Is])...);
-}
-
-} // namespace slice_utils
-
-template <typename MdSpan, typename... Args>
-decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
-  auto sub_mdspan = detail::slice_utils::make_submdspan(
-      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
-      std::forward<Args>(args)...);
-  using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
-
-  if constexpr (sub_mdspan_type::rank() == 0)
-    // all dimensions were indexed with integral indices.
-    return sub_mdspan();
-  else
-    return slice_view<typename sub_mdspan_type::element_type,
-                      typename sub_mdspan_type::extents_type,
-                      typename sub_mdspan_type::layout_type>(sub_mdspan);
-}
-
 template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
@@ -345,20 +290,8 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
 
   // subset operations (slice_view):
-  template <typename... Args>
-  [[nodiscard]] decltype(auto)
-  operator()(Args &&...args) const {
-    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
-    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
-    return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
-  }
-  template <typename... Args>
-  [[nodiscard]] decltype(auto)
-  operator()(Args &&...args) {
-    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
-    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
-    return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
-  }
+  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -547,16 +480,8 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
 
   // subset operations (slice_view)
-  template <typename... Args> decltype(auto) operator()(Args &&...args) const {
-    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
-    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
-    return detail::access_slice(span_, std::forward<Args>(args)...);
-  }
-  template <typename... Args> decltype(auto) operator()(Args &&...args) {
-    static_assert(sizeof...(Args) == extents_type::rank(), "Number of arguments must match array rank");
-    static_assert(are_all_slice_or_integral_v<Args...>, "Each argument must be slice or an integral type");
-    return detail::access_slice(span_, std::forward<Args>(args)...);
-  }
+  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -1049,6 +974,108 @@ ndarray<Tp, Ex, Lp>::ndarray(
   // flatten data
   auto it = elem_.data();
   detail::copy_flat(list, it);
+}
+
+// [numcxx.slicing_with_slice]
+// clang-format off
+namespace detail {
+namespace slice_utils {
+inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
+  index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
+  NUMCXX_ASSERT(res >= 0 && static_cast<size_type>(res) < dim_len,
+                "Index out of bounds");
+  return static_cast<size_type>(res);
+}
+
+inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
+  auto resolve_index = [dim_len](std::optional<index_type> idx_raw,
+                                 index_type default_val) {
+    index_type idx = idx_raw.has_value() ? idx_raw.value() : default_val;
+    return (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
+  };
+
+  index_type step = s.step();
+  index_type start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
+  index_type stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
+
+  index_type diff = stop - start;
+  NUMCXX_ASSERT((diff > 0 && step > 0) || (diff < 0 && step < 0),
+                "invalid slice");
+
+  size_type offset = static_cast<size_type>(start);
+  size_type extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
+  size_type stride = static_cast<size_type>(std::abs(s.step()));
+
+  return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
+      offset, extent, stride};
+}
+
+template <typename MdSpan, typename... Args, size_type... Is>
+auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
+  std::array<size_type, sizeof...(Args)> dims = {src.extent(Is)...};
+  return detail::submdspan(std::forward<MdSpan>(src),
+                           to_submdspan_arg(args, dims[Is])...);
+}
+
+} // namespace slice_utils
+
+template <typename MdSpan, typename... Args>
+decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
+  auto sub_mdspan = detail::slice_utils::make_submdspan(
+      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
+      std::forward<Args>(args)...);
+  using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
+
+  if constexpr (sub_mdspan_type::rank() == 0)
+    // all dimensions were indexed with integral indices.
+    return sub_mdspan();
+  else
+    return slice_view<typename sub_mdspan_type::element_type,
+                      typename sub_mdspan_type::extents_type,
+                      typename sub_mdspan_type::layout_type>(sub_mdspan);
+}
+
+} // namespace detail
+// clang-format on
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments must match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+  return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments must match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+  return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments must match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+  return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+template <typename... Args>
+decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
+  static_assert(sizeof...(Args) == extents_type::rank(),
+                "Number of arguments must match array rank");
+  static_assert(are_all_slice_or_integral_v<Args...>,
+                "Each argument must be slice or an integral type");
+  return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
 }
 
 // [numcxx.expression_template]
