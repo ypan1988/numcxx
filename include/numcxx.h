@@ -931,7 +931,7 @@ private:
   mdspan_type span_;
 };
 
-// [numcxx.nested_initializer_list]
+// [numcxx.ndarray.member_functions]
 namespace detail {
 template <std::size_t N, typename List> bool check_non_jagged(const List &);
 template <std::size_t N, typename List>
