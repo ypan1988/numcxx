@@ -14,6 +14,7 @@ set(TEST_TARGETS
     test_ndarray_fixed
     test_assign
     test_element_access
+    test_ndarray_nested_init
     test_ndarray_unary
     test_ndarray_compound
     test_mask_view
