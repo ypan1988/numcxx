@@ -939,6 +939,9 @@ template <class Tp, class Ex, class Lp>
 ndarray<Tp, Ex, Lp>::ndarray(
     detail::nested_initializer_list_t<element_type, extents_type::rank()>
         list) {
+  static_assert(std::is_same_v<layout_type, layout_right>,
+                "Nested initializer list is only supported for row-major "
+                "(layout_right) arrays.");
   if (list.size() == 0)
     NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
 
@@ -968,6 +971,9 @@ ndarray<Tp, Ex, Lp>::ndarray(
 template <class Tp, class Ex, class Lp>
 ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator=(
     detail::nested_initializer_list_t<value_type, extents_type::rank()> list) {
+  static_assert(std::is_same_v<layout_type, layout_right>,
+                "Nested initializer list is only supported for row-major "
+                "(layout_right) arrays.");
   if (list.size() == 0)
     NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
 
