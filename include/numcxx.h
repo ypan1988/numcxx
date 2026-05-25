@@ -858,15 +858,12 @@ private:
 
 // [numcxx.ndarray.member_functions]
 namespace detail {
-template <std::size_t N, typename List> bool check_non_jagged(const List &);
-template <std::size_t N, typename List>
-std::array<std::size_t, N> derive_extents(const List &);
-template <std::size_t N, typename I, typename T,
-          std::enable_if_t<N == 1, int> = 0>
-void add_extents(I &, const std::initializer_list<T> &);
-template <std::size_t N, typename I, typename List,
-          std::enable_if_t<(N > 1), int> = 0>
-void add_extents(I &, const List &);
+// clang-format off
+template <std::size_t N, typename List>             bool                                check_non_jagged(const List &);
+template <std::size_t N, typename List>             std::array<std::size_t, N>            derive_extents(const List &);
+template <std::size_t N, typename I, typename T   , std::enable_if_t< N == 1, int> = 0> void add_extents(I &, const std::initializer_list<T> &);
+template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int> = 0> void add_extents(I &, const List                     &);
+// clang-format on
 
 template <std::size_t N, typename List>
 std::array<std::size_t, N> derive_extents(const List &list) {
