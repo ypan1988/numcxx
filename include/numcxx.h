@@ -283,7 +283,7 @@ public:
   // assignment:
   constexpr ndarray &operator=(const ndarray &v) = default;
   constexpr ndarray &operator=(ndarray &&v) noexcept = default;
-  // ndarray& operator=(std::initializer_list<value_type>);
+  ndarray& operator=(detail::nested_initializer_list_t<value_type, extents_type::rank()> list);
 
   // element access (flattened)
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
@@ -963,6 +963,26 @@ ndarray<Tp, Ex, Lp>::ndarray(
   // flatten data
   auto it = elem_.data();
   detail::copy_flat(list, it);
+}
+
+template <class Tp, class Ex, class Lp>
+ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator=(
+    detail::nested_initializer_list_t<value_type, extents_type::rank()> list) {
+  if (list.size() == 0)
+    NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
+
+  constexpr std::size_t Rank = extents_type::rank();
+  auto derived = detail::derive_extents<Rank>(list);
+
+  for (rank_type i = 0; i < Rank; ++i) {
+    if (derived[i] != extent(i))
+      NUMCXX_THROW(std::invalid_argument,
+                   "initializer list shape does not match array extents");
+  }
+
+  auto it = data();
+  detail::copy_flat(list, it);
+  return *this;
 }
 
 // [numcxx.slicing_with_slice]
