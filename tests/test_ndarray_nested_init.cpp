@@ -5,34 +5,34 @@
 // Nested Initializer List Constructor Tests
 // ============================================================================
 
-// // 1. 1D array tests
-// TEST(NdarrayNestedInitTest, Vec1D) {
-//     // Dynamic 1D array
-//     numcxx::dvec v = {1.0, 2.0, 3.0, 4.0};
+// 1. 1D array tests
+TEST(NdarrayNestedInitTest, Vec1D) {
+    // Dynamic 1D array
+    numcxx::dvec v = {1.0, 2.0, 3.0, 4.0};
     
-//     EXPECT_EQ(v.rank(), 1);
-//     EXPECT_EQ(v.extent(0), 4);
-//     EXPECT_EQ(v.size(), 4);
+    EXPECT_EQ(v.rank(), 1);
+    EXPECT_EQ(v.extent(0), 4);
+    EXPECT_EQ(v.size(), 4);
     
-//     EXPECT_DOUBLE_EQ(v[0], 1.0);
-//     EXPECT_DOUBLE_EQ(v[1], 2.0);
-//     EXPECT_DOUBLE_EQ(v[2], 3.0);
-//     EXPECT_DOUBLE_EQ(v[3], 4.0);
-// }
+    EXPECT_DOUBLE_EQ(v[0], 1.0);
+    EXPECT_DOUBLE_EQ(v[1], 2.0);
+    EXPECT_DOUBLE_EQ(v[2], 3.0);
+    EXPECT_DOUBLE_EQ(v[3], 4.0);
+}
 
-// TEST(NdarrayNestedInitTest, Vec1DStatic) {
-//     // Static 1D array (fixed size)
-//     numcxx::dvec4 v = {1.0, 2.0, 3.0, 4.0};
+TEST(NdarrayNestedInitTest, Vec1DStatic) {
+    // Static 1D array (fixed size)
+    numcxx::dvec4 v = {1.0, 2.0, 3.0, 4.0};
     
-//     EXPECT_EQ(v.rank(), 1);
-//     EXPECT_EQ(v.extent(0), 4);
-//     EXPECT_EQ(v.size(), 4);
+    EXPECT_EQ(v.rank(), 1);
+    EXPECT_EQ(v.extent(0), 4);
+    EXPECT_EQ(v.size(), 4);
     
-//     EXPECT_DOUBLE_EQ(v[0], 1.0);
-//     EXPECT_DOUBLE_EQ(v[1], 2.0);
-//     EXPECT_DOUBLE_EQ(v[2], 3.0);
-//     EXPECT_DOUBLE_EQ(v[3], 4.0);
-// }
+    EXPECT_DOUBLE_EQ(v[0], 1.0);
+    EXPECT_DOUBLE_EQ(v[1], 2.0);
+    EXPECT_DOUBLE_EQ(v[2], 3.0);
+    EXPECT_DOUBLE_EQ(v[3], 4.0);
+}
 
 // 2. 2D array tests
 TEST(NdarrayNestedInitTest, Mat2D) {

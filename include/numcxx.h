@@ -859,23 +859,24 @@ private:
 // [numcxx.ndarray.member_functions]
 namespace detail {
 // clang-format off
-template <std::size_t N, typename List>             bool                                check_non_jagged(const List &);
-template <std::size_t N, typename List>             std::array<std::size_t, N>            derive_extents(const List &);
-template <std::size_t N, typename I, typename T   , std::enable_if_t< N == 1, int> = 0> void add_extents(I &, const std::initializer_list<T> &);
-template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int> = 0> void add_extents(I &, const List                     &);
+template <std::size_t N,             typename List> bool                                check_non_jagged(     const List &);
+template <std::size_t N,             typename List> std::array<std::size_t, N>            derive_extents(     const List &);
+template <std::size_t N, typename I, typename List, std::enable_if_t< N == 1, int> = 0> void add_extents(I &, const List &);
+template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int> = 0> void add_extents(I &, const List &);
 // clang-format on
 
 template <std::size_t N, typename List>
 std::array<std::size_t, N> derive_extents(const List &list) {
   std::array<std::size_t, N> a;
   auto f = a.begin();
-  add_extents<N>(f, list);
+  add_extents<N>(f, list); // add sizes (extents) to a
   return a;
 }
 
-template <std::size_t N, typename I, typename T, std::enable_if_t<N == 1, int>>
-void add_extents(I &first, const std::initializer_list<T> &list) {
-  *first = list.size();
+template <std::size_t N, typename I, typename List,
+          std::enable_if_t<N == 1, int>>
+void add_extents(I &first, const List &list) {
+  *first++ = list.size();
 }
 
 template <std::size_t N, typename I, typename List,
@@ -885,7 +886,7 @@ void add_extents(I &first, const List &list) {
     NUMCXX_THROW(std::invalid_argument, "empty initializer list");
   if (!check_non_jagged<N>(list))
     NUMCXX_THROW(std::invalid_argument, "initializer list is jagged");
-  *first++ = list.size();
+  *first++ = list.size(); // store this size (extent)
   add_extents<N - 1>(first, *list.begin());
 }
 
@@ -938,28 +939,19 @@ template <class Tp, class Ex, class Lp>
 ndarray<Tp, Ex, Lp>::ndarray(
     detail::nested_initializer_list_t<element_type, extents_type::rank()>
         list) {
+  if (list.size() == 0)
+    NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
 
   constexpr std::size_t Rank = extents_type::rank();
-
-  if (list.size() == 0) {
-    NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
-  }
-
-  if (!detail::check_non_jagged<Rank>(list)) {
-    NUMCXX_THROW(std::invalid_argument, "jagged initializer list");
-  }
-
   auto derived = detail::derive_extents<Rank>(list);
 
   if constexpr (detail::is_static_extents_v<Ex>) {
     // static extents: validate
     Ex expected;
-
     for (rank_type i = 0; i < Rank; ++i) {
-      if (derived[i] != expected.extent(i)) {
+      if (derived[i] != expected.extent(i))
         NUMCXX_THROW(std::invalid_argument,
                      "initializer list shape does not match static extents");
-      }
     }
 
     elem_ = mdarray_type{}; // already has correct size
