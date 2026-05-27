@@ -1,5 +1,5 @@
-#include <gtest/gtest.h>
 #include "numcxx.h"
+#include <gtest/gtest.h>
 
 // ============================================================================
 // Nested Initializer List Constructor Tests
@@ -7,169 +7,133 @@
 
 // 1. 1D array tests
 TEST(NdarrayNestedInitTest, Vec1D) {
-    // Dynamic 1D array
-    numcxx::dvec v = {1.0, 2.0, 3.0, 4.0};
-    
-    EXPECT_EQ(v.rank(), 1);
-    EXPECT_EQ(v.extent(0), 4);
-    EXPECT_EQ(v.size(), 4);
-    
-    EXPECT_DOUBLE_EQ(v[0], 1.0);
-    EXPECT_DOUBLE_EQ(v[1], 2.0);
-    EXPECT_DOUBLE_EQ(v[2], 3.0);
-    EXPECT_DOUBLE_EQ(v[3], 4.0);
+  // Dynamic 1D array
+  numcxx::dvec v = {1.0, 2.0, 3.0, 4.0};
+
+  EXPECT_EQ(v.rank(), 1);
+  EXPECT_EQ(v.extent(0), 4);
+  EXPECT_EQ(v.size(), 4);
+
+  EXPECT_DOUBLE_EQ(v[0], 1.0);
+  EXPECT_DOUBLE_EQ(v[1], 2.0);
+  EXPECT_DOUBLE_EQ(v[2], 3.0);
+  EXPECT_DOUBLE_EQ(v[3], 4.0);
 }
 
 TEST(NdarrayNestedInitTest, Vec1DStatic) {
-    // Static 1D array (fixed size)
-    numcxx::dvec4 v = {1.0, 2.0, 3.0, 4.0};
-    
-    EXPECT_EQ(v.rank(), 1);
-    EXPECT_EQ(v.extent(0), 4);
-    EXPECT_EQ(v.size(), 4);
-    
-    EXPECT_DOUBLE_EQ(v[0], 1.0);
-    EXPECT_DOUBLE_EQ(v[1], 2.0);
-    EXPECT_DOUBLE_EQ(v[2], 3.0);
-    EXPECT_DOUBLE_EQ(v[3], 4.0);
+  // Static 1D array (fixed size)
+  numcxx::dvec4 v = {1.0, 2.0, 3.0, 4.0};
+
+  EXPECT_EQ(v.rank(), 1);
+  EXPECT_EQ(v.extent(0), 4);
+  EXPECT_EQ(v.size(), 4);
+
+  EXPECT_DOUBLE_EQ(v[0], 1.0);
+  EXPECT_DOUBLE_EQ(v[1], 2.0);
+  EXPECT_DOUBLE_EQ(v[2], 3.0);
+  EXPECT_DOUBLE_EQ(v[3], 4.0);
 }
 
 // 2. 2D array tests
 TEST(NdarrayNestedInitTest, Mat2D) {
-    // Dynamic 2D array 2x3
-    numcxx::dmat a = {
-        {1.0, 2.0, 3.0},
-        {4.0, 5.0, 6.0}
-    };
-    
-    EXPECT_EQ(a.rank(), 2);
-    EXPECT_EQ(a.extent(0), 2);
-    EXPECT_EQ(a.extent(1), 3);
-    EXPECT_EQ(a.size(), 6);
-    
-    // Verify flattened storage order (row-major)
-    EXPECT_DOUBLE_EQ(a[0], 1.0);
-    EXPECT_DOUBLE_EQ(a[1], 2.0);
-    EXPECT_DOUBLE_EQ(a[2], 3.0);
-    EXPECT_DOUBLE_EQ(a[3], 4.0);
-    EXPECT_DOUBLE_EQ(a[4], 5.0);
-    EXPECT_DOUBLE_EQ(a[5], 6.0);
+  // Dynamic 2D array 2x3
+  numcxx::dmat a = {{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
+
+  EXPECT_EQ(a.rank(), 2);
+  EXPECT_EQ(a.extent(0), 2);
+  EXPECT_EQ(a.extent(1), 3);
+  EXPECT_EQ(a.size(), 6);
+
+  // Verify flattened storage order (row-major)
+  EXPECT_DOUBLE_EQ(a[0], 1.0);
+  EXPECT_DOUBLE_EQ(a[1], 2.0);
+  EXPECT_DOUBLE_EQ(a[2], 3.0);
+  EXPECT_DOUBLE_EQ(a[3], 4.0);
+  EXPECT_DOUBLE_EQ(a[4], 5.0);
+  EXPECT_DOUBLE_EQ(a[5], 6.0);
 }
 
 TEST(NdarrayNestedInitTest, Mat2DStatic) {
-    // Static 2D array 2x3
-    numcxx::mat_fixed<double, 2, 3> a = {
-        {1.0, 2.0, 3.0},
-        {4.0, 5.0, 6.0}
-    };
-    
-    EXPECT_EQ(a.rank(), 2);
-    EXPECT_EQ(a.extent(0), 2);
-    EXPECT_EQ(a.extent(1), 3);
-    EXPECT_EQ(a.size(), 6);
-    
-    EXPECT_DOUBLE_EQ(a[0], 1.0);
-    EXPECT_DOUBLE_EQ(a[1], 2.0);
-    EXPECT_DOUBLE_EQ(a[2], 3.0);
-    EXPECT_DOUBLE_EQ(a[3], 4.0);
-    EXPECT_DOUBLE_EQ(a[4], 5.0);
-    EXPECT_DOUBLE_EQ(a[5], 6.0);
+  // Static 2D array 2x3
+  numcxx::mat_fixed<double, 2, 3> a = {{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
+
+  EXPECT_EQ(a.rank(), 2);
+  EXPECT_EQ(a.extent(0), 2);
+  EXPECT_EQ(a.extent(1), 3);
+  EXPECT_EQ(a.size(), 6);
+
+  EXPECT_DOUBLE_EQ(a[0], 1.0);
+  EXPECT_DOUBLE_EQ(a[1], 2.0);
+  EXPECT_DOUBLE_EQ(a[2], 3.0);
+  EXPECT_DOUBLE_EQ(a[3], 4.0);
+  EXPECT_DOUBLE_EQ(a[4], 5.0);
+  EXPECT_DOUBLE_EQ(a[5], 6.0);
 }
 
 // 3. 3D array tests
 TEST(NdarrayNestedInitTest, Cube3D) {
-    // Dynamic 3D array 2x2x2
-    numcxx::dcube a = {
-        {
-            {1.0, 2.0},
-            {3.0, 4.0}
-        },
-        {
-            {5.0, 6.0},
-            {7.0, 8.0}
-        }
-    };
-    
-    EXPECT_EQ(a.rank(), 3);
-    EXPECT_EQ(a.extent(0), 2);
-    EXPECT_EQ(a.extent(1), 2);
-    EXPECT_EQ(a.extent(2), 2);
-    EXPECT_EQ(a.size(), 8);
-    
-    // Verify flattened storage order
-    EXPECT_DOUBLE_EQ(a[0], 1.0);
-    EXPECT_DOUBLE_EQ(a[1], 2.0);
-    EXPECT_DOUBLE_EQ(a[2], 3.0);
-    EXPECT_DOUBLE_EQ(a[3], 4.0);
-    EXPECT_DOUBLE_EQ(a[4], 5.0);
-    EXPECT_DOUBLE_EQ(a[5], 6.0);
-    EXPECT_DOUBLE_EQ(a[6], 7.0);
-    EXPECT_DOUBLE_EQ(a[7], 8.0);
+  // Dynamic 3D array 2x2x2
+  numcxx::dcube a = {{{1.0, 2.0}, {3.0, 4.0}}, {{5.0, 6.0}, {7.0, 8.0}}};
+
+  EXPECT_EQ(a.rank(), 3);
+  EXPECT_EQ(a.extent(0), 2);
+  EXPECT_EQ(a.extent(1), 2);
+  EXPECT_EQ(a.extent(2), 2);
+  EXPECT_EQ(a.size(), 8);
+
+  // Verify flattened storage order
+  EXPECT_DOUBLE_EQ(a[0], 1.0);
+  EXPECT_DOUBLE_EQ(a[1], 2.0);
+  EXPECT_DOUBLE_EQ(a[2], 3.0);
+  EXPECT_DOUBLE_EQ(a[3], 4.0);
+  EXPECT_DOUBLE_EQ(a[4], 5.0);
+  EXPECT_DOUBLE_EQ(a[5], 6.0);
+  EXPECT_DOUBLE_EQ(a[6], 7.0);
+  EXPECT_DOUBLE_EQ(a[7], 8.0);
 }
 
 TEST(NdarrayNestedInitTest, Cube3DStatic) {
-    // Static 3D array 2x2x2
-    numcxx::dcube222 a = {
-        {
-            {1.0, 2.0},
-            {3.0, 4.0}
-        },
-        {
-            {5.0, 6.0},
-            {7.0, 8.0}
-        }
-    };
-    
-    EXPECT_EQ(a.rank(), 3);
-    EXPECT_EQ(a.extent(0), 2);
-    EXPECT_EQ(a.extent(1), 2);
-    EXPECT_EQ(a.extent(2), 2);
-    EXPECT_EQ(a.size(), 8);
-    
-    EXPECT_DOUBLE_EQ(a[0], 1.0);
-    EXPECT_DOUBLE_EQ(a[1], 2.0);
-    EXPECT_DOUBLE_EQ(a[2], 3.0);
-    EXPECT_DOUBLE_EQ(a[3], 4.0);
-    EXPECT_DOUBLE_EQ(a[4], 5.0);
-    EXPECT_DOUBLE_EQ(a[5], 6.0);
-    EXPECT_DOUBLE_EQ(a[6], 7.0);
-    EXPECT_DOUBLE_EQ(a[7], 8.0);
+  // Static 3D array 2x2x2
+  numcxx::dcube222 a = {{{1.0, 2.0}, {3.0, 4.0}}, {{5.0, 6.0}, {7.0, 8.0}}};
+
+  EXPECT_EQ(a.rank(), 3);
+  EXPECT_EQ(a.extent(0), 2);
+  EXPECT_EQ(a.extent(1), 2);
+  EXPECT_EQ(a.extent(2), 2);
+  EXPECT_EQ(a.size(), 8);
+
+  EXPECT_DOUBLE_EQ(a[0], 1.0);
+  EXPECT_DOUBLE_EQ(a[1], 2.0);
+  EXPECT_DOUBLE_EQ(a[2], 3.0);
+  EXPECT_DOUBLE_EQ(a[3], 4.0);
+  EXPECT_DOUBLE_EQ(a[4], 5.0);
+  EXPECT_DOUBLE_EQ(a[5], 6.0);
+  EXPECT_DOUBLE_EQ(a[6], 7.0);
+  EXPECT_DOUBLE_EQ(a[7], 8.0);
 }
 
-// // 4. Different numeric types
-// TEST(NdarrayNestedInitTest, DifferentTypes) {
-//     // int
-//     numcxx::imat im = {
-//         {1, 2, 3},
-//         {4, 5, 6}
-//     };
-//     EXPECT_EQ(im[0], 1);
-//     EXPECT_EQ(im[4], 5);
-    
-//     // unsigned int
-//     numcxx::umat um = {
-//         {1u, 2u, 3u},
-//         {4u, 5u, 6u}
-//     };
-//     EXPECT_EQ(um[0], 1u);
-//     EXPECT_EQ(um[4], 5u);
-    
-//     // float
-//     numcxx::fmat fm = {
-//         {1.0f, 2.0f, 3.0f},
-//         {4.0f, 5.0f, 6.0f}
-//     };
-//     EXPECT_FLOAT_EQ(fm[0], 1.0f);
-//     EXPECT_FLOAT_EQ(fm[4], 5.0f);
-    
-//     // double
-//     numcxx::dmat dm = {
-//         {1.0, 2.0, 3.0},
-//         {4.0, 5.0, 6.0}
-//     };
-//     EXPECT_DOUBLE_EQ(dm[0], 1.0);
-//     EXPECT_DOUBLE_EQ(dm[4], 5.0);
-// }
+// 4. Different numeric types
+TEST(NdarrayNestedInitTest, DifferentTypes) {
+  // int
+  numcxx::imat im = {{1, 2, 3}, {4, 5, 6}};
+  EXPECT_EQ(im[0], 1);
+  EXPECT_EQ(im[4], 5);
+
+  // unsigned int
+  numcxx::umat um = {{1u, 2u, 3u}, {4u, 5u, 6u}};
+  EXPECT_EQ(um[0], 1u);
+  EXPECT_EQ(um[4], 5u);
+
+  // float
+  numcxx::fmat fm = {{1.0f, 2.0f, 3.0f}, {4.0f, 5.0f, 6.0f}};
+  EXPECT_FLOAT_EQ(fm[0], 1.0f);
+  EXPECT_FLOAT_EQ(fm[4], 5.0f);
+
+  // double
+  numcxx::dmat dm = {{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
+  EXPECT_DOUBLE_EQ(dm[0], 1.0);
+  EXPECT_DOUBLE_EQ(dm[4], 5.0);
+}
 
 // // 5. String type (verify template support)
 // TEST(NdarrayNestedInitTest, StringType) {
@@ -200,7 +164,7 @@ TEST(NdarrayNestedInitTest, Cube3DStatic) {
 //     numcxx::dvec v = {42.0};
 //     EXPECT_EQ(v.size(), 1);
 //     EXPECT_DOUBLE_EQ(v[0], 42.0);
-    
+
 //     // Static 1x1 matrix
 //     numcxx::dmat11 m = {{42.0}};
 //     EXPECT_EQ(m.size(), 1);
@@ -283,7 +247,7 @@ TEST(NdarrayNestedInitTest, Cube3DStatic) {
 // TEST(NdarrayNestedInitTest, CompareWithArange) {
 //     auto a = numcxx::arange(1.0, 7.0, 1.0);  // [1, 2, 3, 4, 5, 6]
 //     numcxx::dvec b = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
-    
+
 //     EXPECT_EQ(a.size(), b.size());
 //     for (numcxx::size_type i = 0; i < a.size(); ++i) {
 //         EXPECT_DOUBLE_EQ(a[i], b[i]);
@@ -296,7 +260,7 @@ TEST(NdarrayNestedInitTest, Cube3DStatic) {
 //         {1.0, 1.0, 1.0},
 //         {1.0, 1.0, 1.0}
 //     };
-    
+
 //     EXPECT_EQ(a.size(), b.size());
 //     for (numcxx::size_type i = 0; i < a.size(); ++i) {
 //         EXPECT_DOUBLE_EQ(a[i], b[i]);
@@ -312,7 +276,7 @@ TEST(NdarrayNestedInitTest, Cube3DStatic) {
 //     // This mainly tests that nested init overhead is acceptable
 //     numcxx::dmat a(50, 50);
 //     EXPECT_EQ(a.size(), 2500);
-    
+
 //     // Fill and verify a few values
 //     for (numcxx::size_type i = 0; i < a.size(); ++i) {
 //         a[i] = static_cast<double>(i);
