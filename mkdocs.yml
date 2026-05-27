@@ -1,3 +1,8 @@
+site_name: numcxx
+
+theme:
+  name: material
+
 nav:
   - Home: index.md
   - API Reference: API.md
