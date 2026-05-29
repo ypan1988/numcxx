@@ -1649,7 +1649,15 @@ Array rand(std::initializer_list<size_type> shape) {
   return arr;
 }
 
-// ---------- 2. randn: standard normal ----------
+/// Generates an array of random numbers from the standard normal distribution.
+///
+/// @tparam Array A floating-point array type (e.g., dvec, dmat).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random numbers sampled from N(0, 1).
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array randn() {
@@ -1660,6 +1668,7 @@ Array randn() {
   return arr;
 }
 
+/// @copydoc randn()
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array randn(std::initializer_list<size_type> shape) {
