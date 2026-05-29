@@ -1685,6 +1685,7 @@ template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array uniform(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>, "uniform() requires floating-point type");
   Array arr;
   detail::fill_random(arr, std::uniform_real_distribution<T>(low, high));
   return arr;
@@ -1695,6 +1696,7 @@ template <typename Array,
 Array uniform(typename Array::value_type low, typename Array::value_type high,
               std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>, "uniform() requires floating-point type");
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_real_distribution<T>(low, high));
@@ -1706,6 +1708,7 @@ template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array randint(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
+  static_assert(std::is_integral_v<T>, "randint() requires integral type");
   Array arr;
   detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
   return arr;
@@ -1716,6 +1719,7 @@ template <typename Array,
 Array randint(typename Array::value_type low, typename Array::value_type high,
               std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
+  static_assert(std::is_integral_v<T>, "randint() requires integral type");
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
