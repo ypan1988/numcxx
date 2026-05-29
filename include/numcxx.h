@@ -1709,6 +1709,7 @@ template <typename Array,
 Array randint(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
   static_assert(std::is_integral_v<T>, "randint() requires integral type");
+  if (low >= high) NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
   Array arr;
   detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
   return arr;
@@ -1720,6 +1721,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high,
               std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
   static_assert(std::is_integral_v<T>, "randint() requires integral type");
+  if (low >= high) NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
   detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
