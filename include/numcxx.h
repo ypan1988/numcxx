@@ -1683,37 +1683,42 @@ Array randn(std::initializer_list<size_type> shape) {
 // ---------- 3. uniform [low, high) ----------
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array uniform(double low, double high) {
+Array uniform(typename Array::value_type low, typename Array::value_type high) {
+  using T = typename Array::value_type;
   Array arr;
-  detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
+  detail::fill_random(arr, std::uniform_real_distribution<T>(low, high));
   return arr;
 }
 
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array uniform(double low, double high,
-                    std::initializer_list<size_type> shape) {
+Array uniform(typename Array::value_type low, typename Array::value_type high,
+              std::initializer_list<size_type> shape) {
+  using T = typename Array::value_type;
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
-  detail::fill_random(arr, std::uniform_real_distribution<double>(low, high));
+  detail::fill_random(arr, std::uniform_real_distribution<T>(low, high));
   return arr;
 }
 
 // ---------- 4. randint [low, high) ----------
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array randint(int low, int high) {
+Array randint(typename Array::value_type low, typename Array::value_type high) {
+  using T = typename Array::value_type;
   Array arr;
-  detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
+  detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
   return arr;
 }
 
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array randint(int low, int high, std::initializer_list<size_type> shape) {
+Array randint(typename Array::value_type low, typename Array::value_type high,
+              std::initializer_list<size_type> shape) {
+  using T = typename Array::value_type;
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
-  detail::fill_random(arr, std::uniform_int_distribution<int>(low, high - 1));
+  detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
   return arr;
 }
 
