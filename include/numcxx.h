@@ -1604,10 +1604,11 @@ using ::numcxx::detail::make_extents;
 template <typename Array, typename Distribution>
 void fill_random(Array &arr, Distribution &&dist) {
   auto &engine = get_engine();
-  for (size_type i = 0; i < arr.size(); ++i) {
-    arr.data()[i] = dist(engine);
+  auto *data = arr.data();
+  const size_type n = arr.size();
+  for (size_type i = 0; i < n; ++i)
+    data[i] = dist(engine);
   }
-}
 
 } // namespace detail
 
