@@ -991,6 +991,267 @@ ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator=(
   return *this;
 }
 
+// [numcxx.ndarray_construction] array creation: factories and random
+
+namespace detail {
+
+template <std::size_t Rank>
+std::array<size_type, Rank> make_shape(std::initializer_list<size_type> shape) {
+  if (shape.size() != Rank)
+    NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
+
+  std::array<size_type, Rank> dims{};
+  std::copy(shape.begin(), shape.end(), dims.begin());
+  return dims;
+}
+
+template <typename Array>
+Array make_dynamic_array(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
+
+  auto dims = make_shape<rank>(shape);
+  return Array(typename Array::extents_type(dims));
+}
+
+} // namespace detail
+
+template <typename T>
+ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
+  static_assert(std::is_arithmetic_v<T>,
+                "arange requires an arithmetic value type");
+
+  const size_type n = std::ceil((stop - start) / step);
+
+  ndarray<T, dextents<1>> arr(n);
+  T *p = arr.data();
+
+  T value = start;
+  for (size_type i = 0; i < n; ++i) {
+    p[i] = value;
+    value += step;
+  }
+
+  return arr;
+}
+
+template <typename T> ndarray<T, dextents<1>> arange(T stop) {
+  return arange<T>(T(0), stop, T(1));
+}
+
+template <typename Array,
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+Array ones() {
+  Array arr;
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
+  return arr;
+}
+
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+Array ones(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr = detail::make_dynamic_array<Array>(shape);
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
+  return arr;
+}
+
+template <typename Array,
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+Array zeros() {
+  Array arr;
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
+  return arr;
+}
+
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+Array zeros(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  Array arr = detail::make_dynamic_array<Array>(shape);
+  std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
+  return arr;
+}
+
+//
+// random number generation
+//
+namespace random {
+inline std::mt19937 &get_engine() {
+  static thread_local std::mt19937 engine(std::random_device{}());
+  return engine;
+}
+
+inline void seed(unsigned int value) { get_engine().seed(value); }
+
+namespace detail {
+using ::numcxx::detail::is_static_ndarray_v;
+using ::numcxx::detail::make_dynamic_array;
+
+template <typename Array, typename Distribution>
+void fill_random(Array &arr, Distribution &&dist) {
+  auto &engine = get_engine();
+  auto *data = arr.data();
+  const size_type n = arr.size();
+  for (size_type i = 0; i < n; ++i)
+    data[i] = dist(engine);
+}
+} // namespace detail
+
+/// Generates an array of random numbers uniformly distributed in [0,1)
+///
+/// @tparam Array A floating-point array type (e.g., dvec, dmat).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random numbers.
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
+template <typename Array,
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+Array rand() {
+  using T = typename Array::value_type;
+  static_assert(
+      std::is_floating_point_v<T>,
+      "rand() requires floating-point type (use randint() for integers)");
+  Array arr;
+  std::uniform_real_distribution<T> dist(T(0.0), T(1.0));
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+/// @copydoc rand()
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+Array rand(std::initializer_list<size_type> shape) {
+  using T = typename Array::value_type;
+  static_assert(
+      std::is_floating_point_v<T>,
+      "rand() requires floating-point type (use randint() for integers)");
+  Array arr = detail::make_dynamic_array<Array>(shape);
+  std::uniform_real_distribution<T> dist(T(0.0), T(1.0));
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+/// Generates an array of random numbers from the standard normal distribution.
+///
+/// @tparam Array A floating-point array type (e.g., dvec, dmat).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random numbers sampled from N(0, 1).
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
+template <typename Array,
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+Array randn() {
+  using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>,
+                "randn() requires floating-point type");
+  Array arr;
+  std::normal_distribution<T> dist(T(0.0), T(1.0));
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+/// @copydoc randn()
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+Array randn(std::initializer_list<size_type> shape) {
+  using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>,
+                "randn() requires floating-point type");
+  Array arr = detail::make_dynamic_array<Array>(shape);
+  std::normal_distribution<T> dist(T(0.0), T(1.0));
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+/// Generates an array of random numbers uniformly distributed in [low, high).
+///
+/// @tparam Array An array type (e.g., dvec, dmat) with floating-point value type.
+/// @param low  Lower bound of the distribution (inclusive).
+/// @param high Upper bound of the distribution (exclusive).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random numbers.
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
+/// @note Requires `low < high`.
+template <typename Array,
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+Array uniform(typename Array::value_type low, typename Array::value_type high) {
+  using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>,
+                "uniform() requires floating-point type");
+  Array arr;
+  std::uniform_real_distribution<T> dist(low, high);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+/// @copydoc uniform()
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+Array uniform(typename Array::value_type low, typename Array::value_type high,
+              std::initializer_list<size_type> shape) {
+  using T = typename Array::value_type;
+  static_assert(std::is_floating_point_v<T>,
+                "uniform() requires floating-point type");
+  Array arr = detail::make_dynamic_array<Array>(shape);
+  std::uniform_real_distribution<T> dist(low, high);
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+/// Generates an array of random integers uniformly distributed in [low, high).
+///
+/// @tparam Array An array type (e.g., vec, mat) with integral value type.
+/// @param low  Lower bound of the distribution (inclusive).
+/// @param high Upper bound of the distribution (exclusive).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random integers.
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
+/// @note Requires `low < high`. The value `high` itself is never generated.
+template <typename Array,
+          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+Array randint(typename Array::value_type low, typename Array::value_type high) {
+  using T = typename Array::value_type;
+  static_assert(std::is_integral_v<T>, "randint() requires integral type");
+  if (low >= high)
+    NUMCXX_THROW(
+        std::invalid_argument,
+        "randint: low must be less than high (empty range not supported)");
+  Array arr;
+  std::uniform_int_distribution<T> dist(low, high - T(1));
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+/// @copydoc randint()
+template <typename Array,
+          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+Array randint(typename Array::value_type low, typename Array::value_type high,
+              std::initializer_list<size_type> shape) {
+  using T = typename Array::value_type;
+  static_assert(std::is_integral_v<T>, "randint() requires integral type");
+  if (low >= high)
+    NUMCXX_THROW(
+        std::invalid_argument,
+        "randint: low must be less than high (empty range not supported)");
+  Array arr = detail::make_dynamic_array<Array>(shape);
+  std::uniform_int_distribution<T> dist(low, high - T(1));
+  detail::fill_random(arr, dist);
+  return arr;
+}
+
+} // namespace random
+
 // [numcxx.slicing_with_slice]
 // clang-format off
 namespace detail {
@@ -1411,88 +1672,6 @@ template <class Tp, class Ex, class Lp> [[nodiscard]] inline const Tp *end  (con
 template <class Tp, class Ex, class Lp> [[nodiscard]] inline       Tp *end  (      ndarray<Tp, Ex, Lp> &v) { return v.data() + v.size(); }
 // clang-format on
 
-// [numcxx.ndarray_construction] array creation: factories and random
-
-namespace detail {
-
-template <std::size_t Rank>
-std::array<size_type, Rank> make_shape(std::initializer_list<size_type> shape) {
-  if (shape.size() != Rank)
-    NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
-
-  std::array<size_type, Rank> dims{};
-  std::copy(shape.begin(), shape.end(), dims.begin());
-  return dims;
-}
-
-template <typename Array>
-Array make_dynamic_array(std::initializer_list<size_type> shape) {
-  constexpr auto rank = Array::extents_type::rank();
-  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
-
-  auto dims = make_shape<rank>(shape);
-  return Array(typename Array::extents_type(dims));
-}
-
-} // namespace detail
-
-template <typename T>
-ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
-  static_assert(std::is_arithmetic_v<T>,
-                "arange requires an arithmetic value type");
-
-  const size_type n = std::ceil((stop - start) / step);
-
-  ndarray<T, dextents<1>> arr(n);
-  T *p = arr.data();
-
-  T value = start;
-  for (size_type i = 0; i < n; ++i) {
-    p[i] = value;
-    value += step;
-  }
-
-  return arr;
-}
-
-template <typename T> ndarray<T, dextents<1>> arange(T stop) {
-  return arange<T>(T(0), stop, T(1));
-}
-
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array ones() {
-  Array arr;
-  std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
-  return arr;
-}
-
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array ones(std::initializer_list<size_type> shape) {
-  constexpr auto rank = Array::extents_type::rank();
-  Array arr = detail::make_dynamic_array<Array>(shape);
-  std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
-  return arr;
-}
-
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array zeros() {
-  Array arr;
-  std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
-  return arr;
-}
-
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array zeros(std::initializer_list<size_type> shape) {
-  constexpr auto rank = Array::extents_type::rank();
-  Array arr = detail::make_dynamic_array<Array>(shape);
-  std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
-  return arr;
-}
-
 // [numcxx.print]
 namespace detail {
 
@@ -1595,171 +1774,6 @@ void print(const M &arr, FILE *file = stdout) {
   }
   std::fprintf(file, "\n");
 }
-
-//
-// [numcxx.random] random number generation
-//
-namespace random {
-inline std::mt19937 &get_engine() {
-  static thread_local std::mt19937 engine(std::random_device{}());
-  return engine;
-}
-
-inline void seed(unsigned int value) { get_engine().seed(value); }
-
-namespace detail {
-using ::numcxx::detail::is_static_ndarray_v;
-using ::numcxx::detail::make_dynamic_array;
-
-template <typename Array, typename Distribution>
-void fill_random(Array &arr, Distribution &&dist) {
-  auto &engine = get_engine();
-  auto *data = arr.data();
-  const size_type n = arr.size();
-  for (size_type i = 0; i < n; ++i)
-    data[i] = dist(engine);
-  }
-} // namespace detail
-
-/// Generates an array of random numbers uniformly distributed in [0,1)
-///
-/// @tparam Array A floating-point array type (e.g., dvec, dmat).
-/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
-///      Not used for static arrays (which have fixed shape).
-/// @returns An array of random numbers.
-///
-/// @note For static arrays (fixed extents), use the overload without `shape`.
-///       For dynamic arrays (dextents), use the overload with `shape`.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array rand() {
-  using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>, "rand() requires floating-point type (use randint() for integers)");
-  Array arr;
-  std::uniform_real_distribution<T> dist(T(0.0), T(1.0));
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-/// @copydoc rand()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array rand(std::initializer_list<size_type> shape) {
-  using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>, "rand() requires floating-point type (use randint() for integers)");
-  Array arr = detail::make_dynamic_array<Array>(shape);
-  std::uniform_real_distribution<T> dist(T(0.0), T(1.0));
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-/// Generates an array of random numbers from the standard normal distribution.
-///
-/// @tparam Array A floating-point array type (e.g., dvec, dmat).
-/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
-///      Not used for static arrays (which have fixed shape).
-/// @returns An array of random numbers sampled from N(0, 1).
-///
-/// @note For static arrays (fixed extents), use the overload without `shape`.
-///       For dynamic arrays (dextents), use the overload with `shape`.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array randn() {
-  using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>, "randn() requires floating-point type");
-  Array arr;
-  std::normal_distribution<T> dist(T(0.0), T(1.0));
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-/// @copydoc randn()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array randn(std::initializer_list<size_type> shape) {
-  using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>, "randn() requires floating-point type");
-  Array arr = detail::make_dynamic_array<Array>(shape);
-  std::normal_distribution<T> dist(T(0.0), T(1.0));
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-/// Generates an array of random numbers uniformly distributed in [low, high).
-///
-/// @tparam Array An array type (e.g., dvec, dmat) with floating-point value type.
-/// @param low  Lower bound of the distribution (inclusive).
-/// @param high Upper bound of the distribution (exclusive).
-/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
-///      Not used for static arrays (which have fixed shape).
-/// @returns An array of random numbers.
-///
-/// @note For static arrays (fixed extents), use the overload without `shape`.
-///       For dynamic arrays (dextents), use the overload with `shape`.
-/// @note Requires `low < high`.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array uniform(typename Array::value_type low, typename Array::value_type high) {
-  using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>, "uniform() requires floating-point type");
-  Array arr;
-  std::uniform_real_distribution<T> dist(low, high);
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-/// @copydoc uniform()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array uniform(typename Array::value_type low, typename Array::value_type high,
-              std::initializer_list<size_type> shape) {
-  using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>, "uniform() requires floating-point type");
-  Array arr = detail::make_dynamic_array<Array>(shape);
-  std::uniform_real_distribution<T> dist(low, high);
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-/// Generates an array of random integers uniformly distributed in [low, high).
-///
-/// @tparam Array An array type (e.g., vec, mat) with integral value type.
-/// @param low  Lower bound of the distribution (inclusive).
-/// @param high Upper bound of the distribution (exclusive).
-/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
-///      Not used for static arrays (which have fixed shape).
-/// @returns An array of random integers.
-///
-/// @note For static arrays (fixed extents), use the overload without `shape`.
-///       For dynamic arrays (dextents), use the overload with `shape`.
-/// @note Requires `low < high`. The value `high` itself is never generated.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
-Array randint(typename Array::value_type low, typename Array::value_type high) {
-  using T = typename Array::value_type;
-  static_assert(std::is_integral_v<T>, "randint() requires integral type");
-  if (low >= high) NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
-  Array arr;
-  std::uniform_int_distribution<T> dist(low, high - T(1));
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-/// @copydoc randint()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
-Array randint(typename Array::value_type low, typename Array::value_type high,
-              std::initializer_list<size_type> shape) {
-  using T = typename Array::value_type;
-  static_assert(std::is_integral_v<T>, "randint() requires integral type");
-  if (low >= high) NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
-  Array arr = detail::make_dynamic_array<Array>(shape);
-  std::uniform_int_distribution<T> dist(low, high - T(1));
-  detail::fill_random(arr, dist);
-  return arr;
-}
-
-} // namespace random
 
 //
 // [numcxx.linalg] linear algebra
