@@ -1016,6 +1016,9 @@ Array make_dynamic_array(std::initializer_list<size_type> shape) {
 
 } // namespace detail
 
+// -----------------------------
+// array creation (factories)
+// -----------------------------
 template <typename T>
 ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
   static_assert(std::is_arithmetic_v<T>,
@@ -1073,9 +1076,9 @@ Array zeros(std::initializer_list<size_type> shape) {
   return arr;
 }
 
-//
+// -----------------------------
 // random number generation
-//
+// -----------------------------
 namespace random {
 inline std::mt19937 &get_engine() {
   static thread_local std::mt19937 engine(std::random_device{}());
