@@ -1639,6 +1639,7 @@ Array rand(std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>, "rand() requires floating-point type (use randint() for integers)");
   constexpr auto rank = Array::extents_type::rank();
+  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
   Array arr(detail::make_extents<rank>(shape));
   auto dist = std::uniform_real_distribution<T>(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
@@ -1672,6 +1673,7 @@ Array randn(std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>, "randn() requires floating-point type");
   constexpr auto rank = Array::extents_type::rank();
+  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
   Array arr(detail::make_extents<rank>(shape));
   auto dist = std::normal_distribution<T>(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
@@ -1709,6 +1711,7 @@ Array uniform(typename Array::value_type low, typename Array::value_type high,
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>, "uniform() requires floating-point type");
   constexpr auto rank = Array::extents_type::rank();
+  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
   Array arr(detail::make_extents<rank>(shape));
   auto dist = std::uniform_real_distribution<T>(low, high);
   detail::fill_random(arr, dist);
@@ -1748,6 +1751,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high,
   static_assert(std::is_integral_v<T>, "randint() requires integral type");
   if (low >= high) NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
   constexpr auto rank = Array::extents_type::rank();
+  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
   Array arr(detail::make_extents<rank>(shape));
   auto dist = std::uniform_int_distribution<T>(low, high - T(1));
   detail::fill_random(arr, dist);
