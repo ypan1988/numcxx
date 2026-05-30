@@ -1680,7 +1680,18 @@ Array randn(std::initializer_list<size_type> shape) {
   return arr;
 }
 
-// ---------- 3. uniform [low, high) ----------
+/// Generates an array of random numbers uniformly distributed in [low, high).
+///
+/// @tparam Array An array type (e.g., dvec, dmat) with floating-point value type.
+/// @param low  Lower bound of the distribution (inclusive).
+/// @param high Upper bound of the distribution (exclusive).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random numbers.
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
+/// @note Requires `low < high`.
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array uniform(typename Array::value_type low, typename Array::value_type high) {
@@ -1691,6 +1702,7 @@ Array uniform(typename Array::value_type low, typename Array::value_type high) {
   return arr;
 }
 
+/// @copydoc uniform()
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array uniform(typename Array::value_type low, typename Array::value_type high,
@@ -1703,7 +1715,18 @@ Array uniform(typename Array::value_type low, typename Array::value_type high,
   return arr;
 }
 
-// ---------- 4. randint [low, high) ----------
+/// Generates an array of random integers uniformly distributed in [low, high).
+///
+/// @tparam Array An array type (e.g., vec, mat) with integral value type.
+/// @param low  Lower bound of the distribution (inclusive).
+/// @param high Upper bound of the distribution (exclusive).
+/// @param shape (for dynamic arrays) The shape as a braced list, e.g., {3,4}.
+///      Not used for static arrays (which have fixed shape).
+/// @returns An array of random integers.
+///
+/// @note For static arrays (fixed extents), use the overload without `shape`.
+///       For dynamic arrays (dextents), use the overload with `shape`.
+/// @note Requires `low < high`. The value `high` itself is never generated.
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array randint(typename Array::value_type low, typename Array::value_type high) {
@@ -1715,6 +1738,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high) {
   return arr;
 }
 
+/// @copydoc randint()
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array randint(typename Array::value_type low, typename Array::value_type high,
