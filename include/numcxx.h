@@ -1411,21 +1411,31 @@ template <class Tp, class Ex, class Lp> [[nodiscard]] inline const Tp *end  (con
 template <class Tp, class Ex, class Lp> [[nodiscard]] inline       Tp *end  (      ndarray<Tp, Ex, Lp> &v) { return v.data() + v.size(); }
 // clang-format on
 
+// [numcxx.ndarray_construction] array creation: factories and random
+
 namespace detail {
-template <size_type Rank>
-auto make_extents(const std::initializer_list<size_type> &shape) {
-  if (shape.size() != Rank) {
+
+template <std::size_t Rank>
+std::array<size_type, Rank> make_shape(std::initializer_list<size_type> shape) {
+  if (shape.size() != Rank)
     NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
-  }
-  std::array<size_type, Rank> dims;
+
+  std::array<size_type, Rank> dims{};
   std::copy(shape.begin(), shape.end(), dims.begin());
-  return extents(dims);
+  return dims;
 }
+
+template <typename Array>
+Array make_dynamic_array(std::initializer_list<size_type> shape) {
+  constexpr auto rank = Array::extents_type::rank();
+  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
+
+  auto dims = make_shape<rank>(shape);
+  return Array(typename Array::extents_type(dims));
+}
+
 } // namespace detail
 
-//
-// [numcxx.factory] ndarray creation
-//
 template <typename T>
 ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
   static_assert(std::is_arithmetic_v<T>,
@@ -1461,7 +1471,7 @@ template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array ones(std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
-  Array arr(detail::make_extents<rank>(shape));
+  Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
@@ -1478,7 +1488,7 @@ template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array zeros(std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
-  Array arr(detail::make_extents<rank>(shape));
+  Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
 }
@@ -1599,7 +1609,7 @@ inline void seed(unsigned int value) { get_engine().seed(value); }
 
 namespace detail {
 using ::numcxx::detail::is_static_ndarray_v;
-using ::numcxx::detail::make_extents;
+using ::numcxx::detail::make_dynamic_array;
 
 template <typename Array, typename Distribution>
 void fill_random(Array &arr, Distribution &&dist) {
@@ -1609,14 +1619,6 @@ void fill_random(Array &arr, Distribution &&dist) {
   for (size_type i = 0; i < n; ++i)
     data[i] = dist(engine);
   }
-
-template <typename Array>
-Array make_dynamic_array(std::initializer_list<size_type> shape) {
-  constexpr auto rank = Array::extents_type::rank();
-  NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
-  return Array(make_extents<rank>(shape));
-}
-
 } // namespace detail
 
 /// Generates an array of random numbers uniformly distributed in [0,1)
