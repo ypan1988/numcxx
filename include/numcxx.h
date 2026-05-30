@@ -856,7 +856,7 @@ private:
   mdspan_type span_;
 };
 
-// [numcxx.ndarray.member_functions]
+// [numcxx.array_initialization] initialization of ndarrays and slice views from nested initializer_list
 namespace detail {
 // clang-format off
 template <std::size_t N,             typename List> bool                                check_non_jagged(     const List &);
