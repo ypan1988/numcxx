@@ -1609,13 +1609,6 @@ void fill_random(Array &arr, Distribution &&dist) {
   }
 }
 
-template <typename T>
-using uniform_distribution = std::conditional_t<
-  std::is_integral_v<T>,
-  std::uniform_int_distribution<T>,
-  std::uniform_real_distribution<T>
->;
-
 } // namespace detail
 
 /// Generates an array of random numbers uniformly distributed in [0,1)
@@ -1734,7 +1727,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high) {
   static_assert(std::is_integral_v<T>, "randint() requires integral type");
   if (low >= high) NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
   Array arr;
-  detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
+  detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - T(1)));
   return arr;
 }
 
@@ -1748,7 +1741,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high,
   if (low >= high) NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
   constexpr auto rank = Array::extents_type::rank();
   Array arr(detail::make_extents<rank>(shape));
-  detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - 1));
+  detail::fill_random(arr, std::uniform_int_distribution<T>(low, high - T(1)));
   return arr;
 }
 
