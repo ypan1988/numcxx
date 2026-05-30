@@ -428,6 +428,33 @@ private:
     return *this;
   }
 
+  value_type logical(size_type i) const {
+    if constexpr (std::is_same_v<layout_type, default_layout>) {
+      return data()[i];
+    }
+
+    constexpr std::size_t rank = extents_type::rank();
+    std::array<size_type, rank> idx{};
+
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
+      // row-major unflatten
+      for (std::size_t r = rank; r-- > 0;) {
+        idx[r] = i % extent(r);
+        i /= extent(r);
+      }
+    } else {
+      // column-major unflatten
+      for (std::size_t r = 0; r < rank; ++r) {
+        idx[r] = i % extent(r);
+        i /= extent(r);
+      }
+    }
+
+    const auto &mapping = elem_.mapping();
+    return std::apply(
+        [&](auto... indices) { return data()[mapping(indices...)]; }, idx);
+  }
+
 private:
   detail::mdarray<ElementType, Extents, LayoutPolicy,
                   detail::mdarray_container_t<ElementType, Extents>>
