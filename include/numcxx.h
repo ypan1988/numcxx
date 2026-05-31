@@ -1080,7 +1080,6 @@ Array ones() {
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array ones(std::initializer_list<size_type> shape) {
-  constexpr auto rank = Array::extents_type::rank();
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
@@ -1097,7 +1096,6 @@ Array zeros() {
 template <typename Array,
           std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
 Array zeros(std::initializer_list<size_type> shape) {
-  constexpr auto rank = Array::extents_type::rank();
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
