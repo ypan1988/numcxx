@@ -1280,6 +1280,28 @@ Array randint(typename Array::value_type low, typename Array::value_type high,
 
 } // namespace random
 
+template <typename Layout = default_layout, typename Extents>
+auto unravel_index(size_type i, const Extents &extents) {
+  constexpr std::size_t rank = Extents::rank();
+  std::array<size_type, rank> idx{};
+
+  if constexpr (std::is_same_v<Layout, layout_right>) {
+    // row-major ('C')
+    for (std::size_t r = rank; r-- > 0;) {
+      idx[r] = i % extents.extent(r);
+      i /= extents.extent(r);
+    }
+  } else {
+    // column-major ('F')
+    for (std::size_t r = 0; r < rank; ++r) {
+      idx[r] = i % extents.extent(r);
+      i /= extents.extent(r);
+    }
+  }
+
+  return idx;
+}
+
 // [numcxx.slicing_with_slice]
 // clang-format off
 namespace detail {
