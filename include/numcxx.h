@@ -456,9 +456,8 @@ private:
   }
 
 private:
-  detail::mdarray<ElementType, Extents, LayoutPolicy,
-                  detail::mdarray_container_t<ElementType, Extents>>
-      elem_;
+  mdarray_type elem_;
+  std::vector<size_type> logical_offset_;
 };
 
 // template <class Tp, size_type _Size>
@@ -622,6 +621,7 @@ private:
 
 private:
   mdspan_type span_;
+  std::vector<size_type> logical_offset_;
 };
 
 namespace detail {
