@@ -216,7 +216,7 @@ template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is
 
 namespace detail {
 
-template <class Ex>          inline constexpr bool is_static_extents_v = Ex::rank_dynamic() == 0;
+template <class Ex>    inline constexpr bool is_static_extents_v = Ex::rank_dynamic() == 0;
 template <class Array> inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
 
 template <class Ex>          struct static_extents_size;
