@@ -216,8 +216,9 @@ template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is
 
 namespace detail {
 
-template <class Ex>    inline constexpr bool is_static_extents_v = Ex::rank_dynamic() == 0;
-template <class Array> inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
+template <class Ex, class = void> inline constexpr bool is_static_extents_v = false;
+template <class Ex   >            inline constexpr bool is_static_extents_v<Ex, std::void_t<decltype(Ex::rank_dynamic())>> = (Ex::rank_dynamic() == 0);
+template <class Array>            inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
 
 template <class Ex>          struct static_extents_size;
 template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
@@ -1072,7 +1073,7 @@ template <typename T> ndarray<T, dextents<1>> arange(T stop) {
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array ones() {
-  Array arr;
+  Array arr{};
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
@@ -1088,7 +1089,7 @@ Array ones(std::initializer_list<size_type> shape) {
 template <typename Array,
           std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
 Array zeros() {
-  Array arr;
+  Array arr{};
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
 }
@@ -1142,7 +1143,7 @@ Array rand() {
   static_assert(
       std::is_floating_point_v<T>,
       "rand() requires floating-point type (use randint() for integers)");
-  Array arr;
+  Array arr{};
   std::uniform_real_distribution<T> dist(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
   return arr;
@@ -1177,7 +1178,7 @@ Array randn() {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>,
                 "randn() requires floating-point type");
-  Array arr;
+  Array arr{};
   std::normal_distribution<T> dist(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
   return arr;
@@ -1214,7 +1215,7 @@ Array uniform(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>,
                 "uniform() requires floating-point type");
-  Array arr;
+  Array arr{};
   std::uniform_real_distribution<T> dist(low, high);
   detail::fill_random(arr, dist);
   return arr;
@@ -1255,7 +1256,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high) {
     NUMCXX_THROW(
         std::invalid_argument,
         "randint: low must be less than high (empty range not supported)");
-  Array arr;
+  Array arr{};
   std::uniform_int_distribution<T> dist(low, high - T(1));
   detail::fill_random(arr, dist);
   return arr;
