@@ -1882,24 +1882,24 @@ template <class T, size_type M, size_type N>              using  mat_fixed = nda
 template <class T, size_type M, size_type N, size_type K> using cube_fixed = ndarray<T, extents<M, N, K>>;
 
 // int
-using ivec  =  vec<int>;
-using imat  =  mat<int>;
-using icube = cube<int>;
+using ivec     =  vec<int>     ;
+using imat     =  mat<int>     ;
+using icube    = cube<int>     ;
 
 // unsigned int
-using uvec  =  vec<unsigned>;
-using umat  =  mat<unsigned>;
-using ucube = cube<unsigned>;
+using uvec     =  vec<unsigned>;
+using umat     =  mat<unsigned>;
+using ucube    = cube<unsigned>;
 
 // double
-using dvec  =  vec<double>;
-using dmat  =  mat<double>; 
-using dcube = cube<double>;
+using dvec     =  vec<double>  ;
+using dmat     =  mat<double>  ; 
+using dcube    = cube<double>  ;
 
 // float
-using fvec  =  vec<float>;
-using fmat  =  mat<float>;
-using fcube = cube<float>;
+using fvec     =  vec<float>   ;
+using fmat     =  mat<float>   ;
+using fcube    = cube<float>   ;
 
 // int
 using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
