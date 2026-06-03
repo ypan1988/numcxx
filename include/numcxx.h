@@ -158,20 +158,20 @@ template <class Op, class A0>           struct nc_unary_op ;
 template <class Op, class A0, class A1> struct nc_binary_op;
 
 template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
-template <class ValExpr>                struct nc_is_val_expr<nc_val_expr  <ValExpr   >> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<mask_view    <Tp>        > : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr<    mask_view<Tp>        > : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp>        > : std::true_type  {};
+template <class ValExpr>                struct nc_is_val_expr<  nc_val_expr<ValExpr   >> : std::true_type  {};
 
 // mdspan-like types are ultimately backed by mdarray/mdspan and provide extents and layout semantics.
 template <class Tp>                     struct nc_mdspan_like                            : std::false_type {};
-template <class Tp, class Ex, class Lp> struct nc_mdspan_like<ndarray      <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_mdspan_like<slice_view   <Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_mdspan_like<mask_view    <Tp>        > : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_mdspan_like<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_mdspan_like<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_mdspan_like<    mask_view<Tp>        > : std::true_type  {};
 template <class Tp>                     struct nc_mdspan_like<indirect_view<Tp>        > : std::true_type  {};
-template <class Op, class A0>           struct nc_mdspan_like<nc_unary_op  <Op, A0>    > : nc_mdspan_like<std::decay_t<A0>> {};
-template <class Op, class A0, class A1> struct nc_mdspan_like<nc_binary_op <Op, A0, A1>> : std::bool_constant<nc_mdspan_like<std::decay_t<A0>>::value  ||
+template <class Op, class A0>           struct nc_mdspan_like<  nc_unary_op<Op, A0>    > : nc_mdspan_like<std::decay_t<A0>> {};
+template <class Op, class A0, class A1> struct nc_mdspan_like< nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_mdspan_like<std::decay_t<A0>>::value  ||
                                                                                                               nc_mdspan_like<std::decay_t<A1>>::value> {};
 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<Tp>::value;
