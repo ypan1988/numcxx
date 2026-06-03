@@ -429,6 +429,8 @@ private:
     return *this;
   }
 
+  // Interpret `i` as a linear index in default_layout,
+  // regardless of the actual storage layout.
   auto logical(size_type i) const;
 
 private:
@@ -1283,9 +1285,10 @@ auto ndarray<Tp, Ex, Lp>::logical(size_type i) const {
   if constexpr (std::is_same_v<layout_type, default_layout>)
     return data()[i];
   auto idx = unravel_index<default_layout>(i, extents());
+
+  const auto &mapping = elem_.mapping();
   return std::apply(
-      [this](auto... indices) { return data()[elem_.mapping()(indices...)]; },
-      idx);
+      [&](auto... indices) { return data()[mapping(indices...)]; }, idx);
 }
 
 // [numcxx.slicing_with_slice]
