@@ -1882,6 +1882,12 @@ template <class T, size_type N>                           using  vec_fixed = nda
 template <class T, size_type M, size_type N>              using  mat_fixed = ndarray<T, extents<M, N>>   ;
 template <class T, size_type M, size_type N, size_type K> using cube_fixed = ndarray<T, extents<M, N, K>>;
 
+
+// ============================================
+// Typed aliases (Armadillo-style)
+// ============================================
+
+// -------- dynamic --------
 // int
 using ivec     =  vec<int>     ;
 using imat     =  mat<int>     ;
@@ -1902,6 +1908,7 @@ using fvec     =  vec<float>   ;
 using fmat     =  mat<float>   ;
 using fcube    = cube<float>   ;
 
+// -------- fixed-size --------
 // int
 using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
 using imat22   =  mat_fixed<int,      2, 2>   ; using imat33   =  mat_fixed<int,      3, 3>   ; using imat44   =  mat_fixed<int,      4, 4>   ;
