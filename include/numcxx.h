@@ -429,32 +429,7 @@ private:
     return *this;
   }
 
-  value_type logical(size_type i) const {
-    if constexpr (std::is_same_v<layout_type, default_layout>) {
-      return data()[i];
-    }
-
-    constexpr std::size_t rank = extents_type::rank();
-    std::array<size_type, rank> idx{};
-
-    if constexpr (std::is_same_v<default_layout, layout_right>) {
-      // row-major unflatten
-      for (std::size_t r = rank; r-- > 0;) {
-        idx[r] = i % extent(r);
-        i /= extent(r);
-      }
-    } else {
-      // column-major unflatten
-      for (std::size_t r = 0; r < rank; ++r) {
-        idx[r] = i % extent(r);
-        i /= extent(r);
-      }
-    }
-
-    const auto &mapping = elem_.mapping();
-    return std::apply(
-        [&](auto... indices) { return data()[mapping(indices...)]; }, idx);
-  }
+  auto logical(size_type i) const;
 
 private:
   mdarray_type elem_;
@@ -1301,6 +1276,16 @@ auto unravel_index(size_type i, const Extents &extents) {
   }
 
   return idx;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::logical(size_type i) const {
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return data()[i];
+  auto idx = unravel_index<default_layout>(i, extents());
+  return std::apply(
+      [this](auto... indices) { return data()[elem_.mapping()(indices...)]; },
+      idx);
 }
 
 // [numcxx.slicing_with_slice]
