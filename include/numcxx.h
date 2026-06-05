@@ -597,6 +597,10 @@ private:
     return *this;
   }
 
+  // Interpret `i` as a linear index in default_layout,
+  // regardless of the actual storage layout.
+  auto logical(size_type i) const;
+
 private:
   mdspan_type span_;
   std::vector<size_type> logical_offset_;
@@ -1289,6 +1293,15 @@ auto ndarray<Tp, Ex, Lp>::logical(size_type i) const {
   const auto &mapping = elem_.mapping();
   return std::apply(
       [&](auto... indices) { return data()[mapping(indices...)]; }, idx);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return operator[](i);
+  auto idx = unravel_index<default_layout>(i, extents());
+
+  return std::apply([this](auto... indices) { return span_(indices...); }, idx);
 }
 
 // [numcxx.slicing_with_slice]
