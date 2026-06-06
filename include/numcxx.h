@@ -1335,7 +1335,7 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
                 "invalid slice");
 
   size_type offset = static_cast<size_type>(start);
-  size_type extent = (diff / step) + ((diff % step) != 0 ? 1 : 0);
+  size_type extent = static_cast<size_type>(diff);
   size_type stride = static_cast<size_type>(std::abs(s.step()));
 
   return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{

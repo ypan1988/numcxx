@@ -158,21 +158,21 @@ TEST(ElementAccess, NegativeIndex) {
   EXPECT_EQ(a(-2, -3), 11);
 }
 
-///* ============================================================
-// * Step slicing
-// * ============================================================ */
-//
-//TEST(ElementAccess, StepSlice) {
-//  numcxx::imat a(3, 4);
-//  fill_2d(a);
-//
-//  auto v = a(1, slice{0, 4, 2});
-//
-//  EXPECT_EQ(v.extent(0), 2);
-//  EXPECT_EQ(v(0), 10);
-//  EXPECT_EQ(v(1), 12);
-//}
-//
+/* ============================================================
+ * Step slicing
+ * ============================================================ */
+
+TEST(ElementAccess, StepSlice) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  auto v = a(1, slice{0, 4, 2});
+
+  EXPECT_EQ(v.extent(0), 2);
+  EXPECT_EQ(v(0), 10);
+  EXPECT_EQ(v(1), 12);
+}
+
 ///* ============================================================
 // * Reverse slicing (negative step)
 // * ============================================================ */
