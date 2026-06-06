@@ -290,6 +290,9 @@ public:
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
 
+  // Internal: interpret i as a linear index in default_layout, regardless of the actual storage layout.
+  auto logical(size_type i) const;
+
   // subset operations (slice_view):
   template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
   template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
@@ -425,13 +428,9 @@ private:
     const size_type n = size();
 #pragma omp simd
     for (size_type i = 0; i < n; ++i)
-      op(ptr[i], expr[i]);
+      op(ptr[i], expr.logical(i));
     return *this;
   }
-
-  // Interpret `i` as a linear index in default_layout,
-  // regardless of the actual storage layout.
-  auto logical(size_type i) const;
 
 private:
   mdarray_type elem_;
@@ -482,6 +481,9 @@ public:
   // element access (flattened)
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
+
+  // Internal: interpret `i` as a linear index in default_layout, regardless of the actual storage layout.
+  auto logical(size_type i) const;
 
   // subset operations (slice_view)
   template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
@@ -593,13 +595,9 @@ private:
   slice_view &apply_expr_op(Op &&op, const Expr &expr) {
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr[i]);
+      op((*this)[i], expr.logical(i));
     return *this;
   }
-
-  // Interpret `i` as a linear index in default_layout,
-  // regardless of the actual storage layout.
-  auto logical(size_type i) const;
 
 private:
   mdspan_type span_;
@@ -666,6 +664,9 @@ public:
   // element access
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
+
+  // Intenal: Interpret `i` as a linear index in default_layout, regardless of the actual storage layout.
+  auto logical(size_type i) const { return (*this)[i]; }
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -744,13 +745,9 @@ private:
   template <class Op, class Expr>
   mask_view &apply_expr_op(Op &&op, const Expr &expr) {
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr[i]);
+      op((*this)[i], expr.logical(i));
     return *this;
   }
-
-  // Interpret `i` as a linear index in default_layout,
-  // regardless of the actual storage layout.
-  auto logical(size_type i) const { return (*this)[i]; }
 
   template <class, class, class> friend class ndarray;
 
@@ -790,6 +787,9 @@ public:
   // element access
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
+
+  // intenal: Interpret `i` as a linear index in default_layout, regardless of the actual storage layout.
+  auto logical(size_type i) const { return (*this)[i]; }
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -860,13 +860,9 @@ private:
   template <class Op, class Expr>
   indirect_view &apply_expr_op(Op &&op, const Expr &expr) {
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr[i]);
+      op((*this)[i], expr.logical(i));
     return *this;
   }
-
-  // Interpret `i` as a linear index in default_layout,
-  // regardless of the actual storage layout.
-  auto logical(size_type i) const { return (*this)[i]; }
 
   template <class, class, class> friend class ndarray;
 
@@ -1426,6 +1422,7 @@ public:
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
   value_type operator[](size_type i) const { return expr_[i]; }
+  value_type logical(size_type i) const { return expr_.logical(i); }
 
   // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
   //     typedef __slice_expr<ValExpr> NewExpr;
@@ -1508,6 +1505,7 @@ public:
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
   value_type operator[](size_type) const { return t_; }
+  value_type logical(size_type) const { return t_; }
   size_type size() const { return s_; }
 
 private:
@@ -1517,14 +1515,15 @@ private:
 
 template <class Op, class A0> struct nc_unary_op {
   using value_type =
-      std::decay_t<decltype(std::declval<Op>()(std::declval<A0>()[0]))>;
+      std::decay_t<decltype(std::declval<Op>()(std::declval<A0>().logical(0)))>;
 
   Op op_;
   A0 a0_;
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
-  value_type operator[](size_type i) const { return op_(a0_[i]); }
+  value_type operator[](size_type i) const { return op_(a0_.logical(i)); }
+  value_type logical(size_type i) const { return (*this)[i]; }
 
   size_type size() const { return a0_.size(); }
 
@@ -1537,7 +1536,7 @@ template <class Op, class A0> struct nc_unary_op {
 
 template <class Op, class A0, class A1> struct nc_binary_op {
   using value_type = std::decay_t<decltype(std::declval<Op>()(
-      std::declval<A0>()[0], std::declval<A1>()[0]))>;
+      std::declval<A0>().logical(0), std::declval<A1>().logical(0)))>;
 
   Op op_;
   A0 a0_;
@@ -1546,7 +1545,8 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  value_type operator[](size_type i) const { return op_(a0_[i], a1_[i]); }
+  value_type operator[](size_type i) const { return op_(a0_.logical(i), a1_.logical(i)); }
+  value_type logical(size_type i) const { return (*this)[i]; }
 
   size_type size() const { return a0_.size(); }
 
