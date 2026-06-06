@@ -748,6 +748,10 @@ private:
     return *this;
   }
 
+  // Interpret `i` as a linear index in default_layout,
+  // regardless of the actual storage layout.
+  auto logical(size_type i) const { return (*this)[i]; }
+
   template <class, class, class> friend class ndarray;
 
   mdspan_type span_;
@@ -859,6 +863,10 @@ private:
       op((*this)[i], expr[i]);
     return *this;
   }
+
+  // Interpret `i` as a linear index in default_layout,
+  // regardless of the actual storage layout.
+  auto logical(size_type i) const { return (*this)[i]; }
 
   template <class, class, class> friend class ndarray;
 
