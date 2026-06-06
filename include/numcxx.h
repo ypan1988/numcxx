@@ -228,7 +228,7 @@ template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > {
 template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
 template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
 
-template <class T, class = void> struct is_boolean_expr                                                                                      : std::false_type {};
+template <class T, class = void> struct is_boolean_expr                                                                                              : std::false_type {};
 template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>().logical(size_type{})))>> : std::true_type  {};
 
 template <class Op, class Expr> auto make_unary_op(const Expr &);
@@ -1486,7 +1486,7 @@ public:
     size_type n = size();
     value_type r = n ? (*this)[0] : value_type();
     for (size_type i = 1; i < n; ++i) {
-      value_type x = expr_[i];
+      value_type x = expr_.logical(i);
       if (r < x)
         r = x;
     }

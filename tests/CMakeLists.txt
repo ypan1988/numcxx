@@ -22,6 +22,7 @@ set(TEST_TARGETS
     test_et_binary_op
     test_et_binary_fn
     test_et_unary_op
+    test_et_layout
     test_random
     test_linalg_matmul
 )
