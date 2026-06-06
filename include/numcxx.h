@@ -229,7 +229,7 @@ template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> {
 template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
 
 template <class T, class = void> struct is_boolean_expr                                                                                      : std::false_type {};
-template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>()[size_type{}]))>> : std::true_type  {};
+template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>().logical(size_type{})))>> : std::true_type  {};
 
 template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
@@ -721,7 +721,7 @@ private:
 
     const auto &mapping = data_span.mapping();
     for (size_type i = 0; i < expr.size(); ++i) {
-      if (static_cast<bool>(expr[i]))
+      if (static_cast<bool>(expr.logical(i)))
         offsets.push_back(mapping(i));
     }
 
@@ -1421,7 +1421,6 @@ public:
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  value_type operator[](size_type i) const { return expr_[i]; }
   value_type logical(size_type i) const { return expr_.logical(i); }
 
   // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
@@ -1456,7 +1455,7 @@ public:
     ndarray<value_type, decltype(expr_.extents()), layout_right> res(
         expr_.extents());
     for (size_type i = 0; i < res.size(); ++i) {
-      res[i] = expr_[i];
+      res[i] = expr_.logical(i);
     }
     return res;
   }
@@ -1466,9 +1465,9 @@ public:
 
   value_type sum() const {
     size_type n = expr_.size();
-    value_type r = n ? expr_[0] : value_type();
+    value_type r = n ? expr_.logical(0) : value_type();
     for (size_type i = 1; i < n; ++i)
-      r += expr_[i];
+      r += expr_.logical(i);
     return r;
   }
 
@@ -1476,7 +1475,7 @@ public:
     size_type n = size();
     value_type r = n ? (*this)[0] : value_type();
     for (size_type i = 1; i < n; ++i) {
-      value_type x = expr_[i];
+      value_type x = expr_.logical(i);
       if (x < r)
         r = x;
     }
@@ -1504,7 +1503,6 @@ public:
   using value_type = std::remove_cv_t<Tp>;
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
-  value_type operator[](size_type) const { return t_; }
   value_type logical(size_type) const { return t_; }
   size_type size() const { return s_; }
 
@@ -1522,8 +1520,7 @@ template <class Op, class A0> struct nc_unary_op {
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
-  value_type operator[](size_type i) const { return op_(a0_.logical(i)); }
-  value_type logical(size_type i) const { return (*this)[i]; }
+  value_type logical(size_type i) const { return op_(a0_.logical(i)); }
 
   size_type size() const { return a0_.size(); }
 
@@ -1545,8 +1542,9 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  value_type operator[](size_type i) const { return op_(a0_.logical(i), a1_.logical(i)); }
-  value_type logical(size_type i) const { return (*this)[i]; }
+  value_type logical(size_type i) const {
+    return op_(a0_.logical(i), a1_.logical(i));
+  }
 
   size_type size() const { return a0_.size(); }
 
