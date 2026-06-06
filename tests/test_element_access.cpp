@@ -30,19 +30,15 @@ TEST(ElementAccess, NdarrayDirectElement) {
   EXPECT_EQ(a(2, 3), 23);
 }
 
-//TEST(ElementAccess, NdarraySliceCollapseToElement) {
-//  numcxx::imat a(3, 4);
-//  fill_2d(a);
-//
-//  // slice + slice -> rank-0
-//  EXPECT_EQ(a(slice{1, 2}, slice{2, 3}), 12);
-//
-//  // slice + index -> rank-0
-//  EXPECT_EQ(a(slice{2, 3}, 1), 21);
-//
-//  // index + slice -> rank-0
-//  EXPECT_EQ(a(0, slice{3, 4}), 3);
-//}
+TEST(ElementAccess, NdarrayScalarReturnType) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  auto x = a(1, 2);
+
+  static_assert(std::is_same_v<decltype(x), int>);
+  EXPECT_EQ(x, 12);
+}
 
 TEST(ElementAccess, ConstNdarrayElementAccess) {
   numcxx::imat tmp(2, 2);
@@ -53,7 +49,6 @@ TEST(ElementAccess, ConstNdarrayElementAccess) {
 
   const auto &a = tmp;
 
-  // Must bind to const reference
   const int &r = a(1, 1);
   EXPECT_EQ(r, 4);
 }
@@ -73,20 +68,6 @@ TEST(ElementAccess, SliceViewDirectElement) {
   EXPECT_EQ(v(1, 2), 23);
 }
 
-//TEST(ElementAccess, SliceViewSliceCollapseToElement) {
-//  numcxx::imat a(3, 4);
-//  fill_2d(a);
-//
-//  // view shape: 2 x 4
-//  auto v = a(slice{1, 3}, slice{0, 4});
-//
-//  // index + slice -> rank-0
-//  EXPECT_EQ(v(1, slice{2, 3}), 22);
-//
-//  // slice + index -> rank-0
-//  EXPECT_EQ(v(slice{0, 1}, 3), 13);
-//}
-
 TEST(ElementAccess, ConstSliceViewElementAccess) {
   numcxx::imat a(2, 2);
   a(0, 0) = 5;
@@ -96,9 +77,44 @@ TEST(ElementAccess, ConstSliceViewElementAccess) {
 
   const auto v = a(slice{0, 2}, slice{0, 2});
 
-  // Must bind to const reference
   const int &r = v(1, 1);
   EXPECT_EQ(r, 8);
+}
+
+/* ============================================================
+ * Rank / dimension semantics
+ * ============================================================ */
+
+TEST(ElementAccess, RankReduction) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  auto v = a(1, slice{});
+
+  static_assert(std::decay_t<decltype(v)>::extents_type::rank() == 1);
+  EXPECT_EQ(v.extent(0), 4);
+}
+
+TEST(ElementAccess, PreserveRankWithSlices) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  auto v = a(slice{}, slice{});
+
+  static_assert(std::decay_t<decltype(v)>::extents_type::rank() == 2);
+  EXPECT_EQ(v.extent(0), 3);
+  EXPECT_EQ(v.extent(1), 4);
+}
+
+TEST(ElementAccess, SingletonSliceKeepsDimension) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  auto v = a(slice{1, 2}, slice{2, 3});
+
+  EXPECT_EQ(v.extent(0), 1);
+  EXPECT_EQ(v.extent(1), 1);
+  EXPECT_EQ(v(0, 0), 12);
 }
 
 /* ============================================================
@@ -115,3 +131,59 @@ TEST(ElementAccess, ChainedSlicingToElement) {
   // ndarray -> slice_view -> rank-1 view -> scalar via [0]
   EXPECT_EQ(a(slice{1, 3}, slice{0, 4})(slice{0, 1}, 3)[0], 13);
 }
+
+/* ============================================================
+ * Linear access for rank-1 views
+ * ============================================================ */
+
+TEST(ElementAccess, Rank1LinearAccess) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  auto v = a(1, slice{});
+
+  EXPECT_EQ(v[0], 10);
+  EXPECT_EQ(v[2], 12);
+}
+
+/* ============================================================
+ * Negative indexing
+ * ============================================================ */
+
+TEST(ElementAccess, NegativeIndex) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  EXPECT_EQ(a(-1, -1), 23);
+  EXPECT_EQ(a(-2, -3), 11);
+}
+
+///* ============================================================
+// * Step slicing
+// * ============================================================ */
+//
+//TEST(ElementAccess, StepSlice) {
+//  numcxx::imat a(3, 4);
+//  fill_2d(a);
+//
+//  auto v = a(1, slice{0, 4, 2});
+//
+//  EXPECT_EQ(v.extent(0), 2);
+//  EXPECT_EQ(v(0), 10);
+//  EXPECT_EQ(v(1), 12);
+//}
+//
+///* ============================================================
+// * Reverse slicing (negative step)
+// * ============================================================ */
+//
+//TEST(ElementAccess, ReverseSlice) {
+//  numcxx::imat a(3, 4);
+//  fill_2d(a);
+//
+//  auto v = a(1, slice{std::nullopt, std::nullopt, -1});
+//
+//  EXPECT_EQ(v.extent(0), 4);
+//  EXPECT_EQ(v(0), 13);
+//  EXPECT_EQ(v(3), 10);
+//}
