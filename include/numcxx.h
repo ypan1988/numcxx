@@ -1325,48 +1325,60 @@ auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
 // clang-format off
 namespace detail {
 namespace slice_utils {
-inline size_type to_submdspan_arg(index_type idx, size_type dim_len) {
+inline size_type to_submdspan_arg(index_type idx, size_type dim_len, bool &is_slice, bool &flag) {
+  is_slice = flag = false;
   index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
   NUMCXX_ASSERT(res >= 0 && static_cast<size_type>(res) < dim_len,
                 "Index out of bounds");
   return static_cast<size_type>(res);
 }
 
-inline auto to_submdspan_arg(const slice &s, size_type dim_len) {
+inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_slice, bool &flag) {
   auto resolve_index = [dim_len](std::optional<index_type> idx_raw,
                                  index_type default_val) {
     index_type idx = idx_raw.has_value() ? idx_raw.value() : default_val;
     return (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
   };
 
-  index_type step = s.step();
+  is_slice = true;
+  index_type step = s.step(), abs_step = std::abs(step);
   index_type start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
   index_type stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
 
+  flag = (step < 0);
+  if (flag) {
+    std::swap(start, stop);
+    if (start < 0) start = 0;
+    if (stop > static_cast<index_type>(dim_len)) stop = dim_len;
+  }
+
   index_type diff = stop - start;
-  NUMCXX_ASSERT((diff > 0 && step > 0) || (diff < 0 && step < 0),
-                "invalid slice");
+  NUMCXX_ASSERT(diff > 0 && abs_step > 0, "invalid slice");
 
   size_type offset = static_cast<size_type>(start);
   size_type extent = static_cast<size_type>(diff);
-  size_type stride = static_cast<size_type>(std::abs(s.step()));
+  size_type stride = static_cast<size_type>(abs_step);
 
-  return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
-      offset, extent, stride};
+  using strided_slice_type = ::numcxx::detail::strided_slice<size_type, size_type, size_type>;
+  return strided_slice_type{offset, extent, stride};
 }
 
 template <typename MdSpan, typename... Args, size_type... Is>
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
-  std::array<size_type, sizeof...(Args)> dims = {src.extent(Is)...};
-  return detail::submdspan(std::forward<MdSpan>(src),
-                           to_submdspan_arg(args, dims[Is])...);
+  constexpr size_type N = sizeof...(Args);
+  std::array<size_type, N> dims = {src.extent(Is)...};
+  std::array<bool, N> is_slice_arg{};
+  std::array<bool, N> reverse_full{};
+  auto sub = detail::submdspan(std::forward<MdSpan>(src),
+             to_submdspan_arg(args, dims[Is], is_slice_arg[Is], reverse_full[Is])...);
+  return std::tuple{std::move(sub), is_slice_arg, reverse_full};
 }
 
 } // namespace slice_utils
 
 template <typename MdSpan, typename... Args>
 decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
-  auto sub_mdspan = detail::slice_utils::make_submdspan(
+  auto [sub_mdspan, is_slice_arg, reverse_full] = detail::slice_utils::make_submdspan(
       std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
       std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
@@ -1374,10 +1386,19 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
   if constexpr (sub_mdspan_type::rank() == 0)
     // all dimensions were indexed with integral indices.
     return sub_mdspan();
-  else
+  else {
+    constexpr std::size_t new_rank = sub_mdspan_type::rank();
+    std::array<bool, new_rank> reverses{};
+    std::size_t rev_idx = 0;
+    for (std::size_t i = 0; i < sizeof...(Args); ++i) {
+      if (is_slice_arg[i]) {
+        reverses[rev_idx++] = reverse_full[i];
+      }
+    }
     return slice_view<typename sub_mdspan_type::element_type,
                       typename sub_mdspan_type::extents_type,
-                      typename sub_mdspan_type::layout_type>(sub_mdspan);
+                      typename sub_mdspan_type::layout_type>(sub_mdspan, reverses);
+  }
 }
 
 } // namespace detail
