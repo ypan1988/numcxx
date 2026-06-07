@@ -1859,10 +1859,10 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
     NUMCXX_THROW(std::invalid_argument, "matmul: incompatible shapes");
   }
 
-  using value_type = typename A::value_type;
+  using value_type = std::common_type_t<typename A::value_type, typename B::value_type>;
   using extents_type = dextents<2>;
-  ndarray<value_type, extents_type, layout_right> c(a_ext.extent(0),
-                                                    b_ext.extent(1));
+  ndarray<value_type, extents_type, default_layout> c(a_ext.extent(0),
+                                                      b_ext.extent(1));
   detail::linalg::matrix_product(a.to_mdspan(), b.to_mdspan(), c.to_mdspan());
 
   return c;
