@@ -471,7 +471,7 @@ public:
   slice_view() = delete;
   slice_view(const slice_view &) = default;
   slice_view(slice_view &&) noexcept = default;
-  explicit slice_view(mdspan_type span) : span_(span) {}
+  explicit slice_view(mdspan_type span, std::array<bool, extents_type::rank()> reverse = {}) : span_(span), reverse_dims_(reverse) {}
   ~slice_view() = default;
 
   // assignment:
@@ -572,9 +572,21 @@ public:
 private:
   size_type calc_offset(size_type i) const noexcept {
     size_type offset = 0, remaining = i;
-    for (rank_type r = rank(); r-- > 0;) {
-      offset += (remaining % extent(r)) * span_.stride(r);
-      remaining /= extent(r);
+    auto process_dim = [&](rank_type r) {
+      size_type dim_len = extent(r);
+      size_type idx = remaining % dim_len;
+      if (reverse_dims_[r]) {
+        idx = dim_len - 1 - idx;
+      }
+      offset += idx * span_.stride(r);
+      remaining /= dim_len;
+    };
+    if constexpr (std::is_same_v<layout_type, layout_right>) {
+      for (rank_type r = rank(); r-- > 0;)
+        process_dim(r);
+    } else {
+      for (rank_type r = 0; r < rank(); ++r)
+        process_dim(r);
     }
     return offset;
   }
@@ -601,6 +613,7 @@ private:
 
 private:
   mdspan_type span_;
+  std::array<bool, extents_type::rank()> reverse_dims_{};
   // std::vector<size_type> logical_offset_;
 };
 
