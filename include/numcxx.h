@@ -1850,6 +1850,8 @@ namespace linalg {
 ///
 /// @throws std::invalid_argument If the inner dimensions do not match
 template <class A, class B> auto matmul(const A &a, const B &b) {
+  static_assert(nc_mdspan_like_v<A>, "lhs must be ndarray/slice_view type");
+  static_assert(nc_mdspan_like_v<B>, "rhs must be ndarray/slice_view type");
   static_assert(A::rank() == 2, "matmul requires rank-2 lhs");
   static_assert(B::rank() == 2, "matmul requires rank-2 rhs");
 
