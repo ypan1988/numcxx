@@ -210,10 +210,6 @@ public:
 };
 
 // clang-format off
-template <class T> struct is_slice_or_integral : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> || std::is_integral_v<std::decay_t<T>>> {};
-template <class T>       inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
-template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is_slice_or_integral_v<Args> && ...);
-
 namespace detail {
 
 template <class Ex, class = void> inline constexpr bool is_static_extents_v = false;
@@ -1402,6 +1398,11 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
 }
 
 } // namespace detail
+
+template <class T> struct is_slice_or_integral : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> || std::is_integral_v<std::decay_t<T>>> {};
+template <class T>       inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
+template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is_slice_or_integral_v<Args> && ...);
+
 // clang-format on
 
 template <typename Tp, typename Ex, typename Lp>
