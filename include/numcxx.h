@@ -1905,6 +1905,87 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
   return c;
 }
 
+/// Dot product
+///
+/// - 1D x 1D: inner product (scalar)
+/// - 2D x 1D: matrix-vector product (1D)
+/// - 1D x 2D: vector-matrix product (1D)
+/// - 2D x 2D: matrix multiplication (2D)
+///
+/// @tparam A Type with to_mdspan() (ndarray, slice_view, ...)
+/// @tparam B Type with to_mdspan()
+/// @param a First operand
+/// @param b Second operand
+/// @returns Result (scalar, 1D array, or 2D array)
+///
+/// @throws std::invalid_argument If shapes are incompatible
+template <class A, class B> auto dot(const A &a, const B &b) {
+  static_assert(nc_mdspan_like_v<A>, "lhs must be ndarray/slice_view type");
+  static_assert(nc_mdspan_like_v<B>, "rhs must be ndarray/slice_view type");
+
+  constexpr int rankA = A::rank();
+  constexpr int rankB = B::rank();
+
+  using value_type = std::common_type_t<typename A::value_type, typename B::value_type>;
+
+  // 1D x 1D: inner product (scalar)
+  if constexpr (rankA == 1 && rankB == 1) {
+    const auto &a_ext = a.extents();
+    const auto &b_ext = b.extents();
+    if (a_ext.extent(0) != b_ext.extent(0)) {
+      NUMCXX_THROW(std::invalid_argument, "dot: incompatible shapes for 1D dot product");
+    }
+    value_type result = value_type{};
+    for (size_type i = 0; i < a_ext.extent(0); ++i) {
+      result += a[i] * b[i];
+    }
+    return result;
+  }
+  // 2D x 1D: matrix-vector product
+  else if constexpr (rankA == 2 && rankB == 1) {
+    const auto &a_ext = a.extents();
+    const auto &b_ext = b.extents();
+    if (a_ext.extent(1) != b_ext.extent(0)) {
+      NUMCXX_THROW(std::invalid_argument, "dot: matrix columns must match vector size");
+    }
+    using extents_type = dextents<1>;
+    ndarray<value_type, extents_type, default_layout> c(a_ext.extent(0));
+    detail::linalg::matrix_vector_product(a.to_mdspan(), b.to_mdspan(), c.to_mdspan());
+    return c;
+  }
+  // 1D x 2D: vector-matrix product
+  else if constexpr (rankA == 1 && rankB == 2) {
+    const auto &a_ext = a.extents();
+    const auto &b_ext = b.extents();
+    if (a_ext.extent(0) != b_ext.extent(0)) {
+      NUMCXX_THROW(std::invalid_argument, "dot: vector size must match matrix rows");
+    }
+    using extents_type = dextents<1>;
+    ndarray<value_type, extents_type, default_layout> c(b_ext.extent(1));
+    // For row vector x matrix: (1×M) x (M×N) = (1×N)
+    // Use matrix-vector product on transposed perspective, or loop.
+    // Simpler: implement directly.
+    for (size_type j = 0; j < b_ext.extent(1); ++j) {
+      value_type sum = value_type{};
+      for (size_type i = 0; i < a_ext.extent(0); ++i) {
+        sum += a[i] * b(i, j);
+      }
+      c[j] = sum;
+    }
+    return c;
+  }
+  // 2D x 2D: matrix multiplication
+  else if constexpr (rankA == 2 && rankB == 2) {
+    return matmul(a, b);
+  }
+  else {
+    static_assert((rankA == 1 || rankA == 2) && (rankB == 1 || rankB == 2),
+                  "dot currently only supports 1D/2D combinations");
+    // The static_assert above will fail; add a friendly message:
+    NUMCXX_THROW(std::invalid_argument, "dot: unsupported rank combination");
+  }
+}
+
 } // namespace linalg
 
 //
