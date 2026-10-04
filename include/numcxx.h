@@ -410,7 +410,7 @@ private:
 
   template <typename Op>
   ndarray &apply_scalar_op(Op &&op, const value_type &x) {
-    pointer NUMCXX_RESTRICT ptr = data();
+    auto ptr = data();
     const size_type n = size();
 #pragma omp simd
     for (size_type i = 0; i < n; ++i)
@@ -420,7 +420,7 @@ private:
 
   template <class Op, class Expr>
   ndarray &apply_expr_op(Op &&op, const Expr &expr) {
-    pointer NUMCXX_RESTRICT ptr = data();
+    auto ptr = data();
     const size_type n = size();
 #pragma omp simd
     for (size_type i = 0; i < n; ++i)

@@ -115,7 +115,7 @@ target_include_directories(numcxx
         $<INSTALL_INTERFACE:include/third_party/stdblas/include>
 )
 
-target_compile_features(numcxx INTERFACE cxx_std_17)
+target_compile_features(numcxx INTERFACE cxx_std_20)
 target_link_libraries(numcxx INTERFACE numcxx::blas)
 
 # ------------------------------------------------------------
