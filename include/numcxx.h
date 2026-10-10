@@ -48,14 +48,6 @@
 #endif
 // clang-format on
 
-#if defined(_MSC_VER)
-#define NUMCXX_RESTRICT __restrict
-#elif defined(__GNUC__) || defined(__clang__)
-#define NUMCXX_RESTRICT __restrict__
-#else
-#define NUMCXX_RESTRICT
-#endif
-
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
   do {                                                                         \
