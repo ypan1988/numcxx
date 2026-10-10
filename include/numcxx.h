@@ -27,7 +27,9 @@
 #include <memory>
 #include <optional>
 #include <random>
+#include <source_location>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -48,34 +50,52 @@
 #endif
 // clang-format on
 
+namespace numcxx::detail {
+
+[[noreturn]]
+inline void assertion_failed(
+    const char *expr, std::string_view msg,
+    std::source_location loc = std::source_location::current()) noexcept {
+  std::fprintf(stderr, "numcxx:%s:%u: %s: Assertion failed: (%s): %s\n",
+               loc.file_name(), loc.line(), loc.function_name(), expr,
+               msg.data());
+
+  std::fflush(stderr);
+  std::abort();
+}
+
+[[noreturn]]
+inline void fatal_error(
+    std::string_view msg,
+    std::source_location loc = std::source_location::current()) noexcept {
+  std::fprintf(stderr, "numcxx:%s:%u: %s: Fatal error: %s\n", loc.file_name(),
+               loc.line(), loc.function_name(), msg.data());
+
+  std::fflush(stderr);
+  std::abort();
+}
+
+template <class Exception>
+[[noreturn]]
+inline void throw_exception(std::string_view msg) {
+#ifdef NUMCXX_NO_EXCEPTIONS
+  fatal_error(msg);
+#else
+  throw Exception(std::string(msg));
+#endif
+}
+
+} // namespace numcxx::detail
+
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
-  do {                                                                         \
-    if (!(expr)) {                                                             \
-      std::fprintf(stderr, "numcxx:%s:%d: %s: Assertion failed: %s\n",         \
-                   __FILE__, __LINE__, __func__, msg);                         \
-      std::fflush(stderr);                                                     \
-      std::abort();                                                            \
-    }                                                                          \
-  } while (0)
+  ((expr) ? (void)0 : ::numcxx::detail::assertion_failed(#expr, (msg)))
 #else
 #define NUMCXX_ASSERT(expr, msg) ((void)0)
 #endif
 
-#ifndef NUMCXX_NO_EXCEPTIONS
 #define NUMCXX_THROW(exception_type, msg)                                      \
-  do {                                                                         \
-    throw exception_type(msg);                                                 \
-  } while (0)
-#else
-#define NUMCXX_THROW(exception_type, msg)                                      \
-  do {                                                                         \
-    std::fprintf(stderr, "numcxx:%s:%d: %s: Fatal error: %s\n", __FILE__,      \
-                 __LINE__, __func__, msg);                                     \
-    std::fflush(stderr);                                                       \
-    std::abort();                                                              \
-  } while (0)
-#endif
+  ::numcxx::detail::throw_exception<exception_type>((msg))
 
 // [numcxx.user_config]
 #ifndef NUMCXX_SIZE_TYPE
