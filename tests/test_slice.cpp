@@ -1,39 +1,60 @@
 #include "numcxx.h"
 #include <gtest/gtest.h>
+#include <limits>
+
+using numcxx::index_type;
+using numcxx::slice;
 
 TEST(SliceTest, DefaultConstructor) {
-  numcxx::slice s;
-  EXPECT_EQ(s.start(), std::nullopt);
-  EXPECT_EQ(s.stop(), std::nullopt);
-  EXPECT_EQ(s.step(), 1);
+  constexpr slice s;
+  static_assert(s.start() == std::nullopt);
+  static_assert(s.stop() == std::nullopt);
+  static_assert(s.step() == 1);
 }
 
 TEST(SliceTest, ParameterizedConstructor) {
-  numcxx::slice s(1, 5, 2);
-  EXPECT_EQ(s.start(), 1);
-  EXPECT_EQ(s.stop(), 5);
-  EXPECT_EQ(s.step(), 2);
+  constexpr slice s(1, 5, 2);
+  static_assert(s.start() == 1);
+  static_assert(s.stop() == 5);
+  static_assert(s.step() == 2);
 }
 
-TEST(SliceTest, StartStopDefaultStep) {
-  numcxx::slice s(1, 5);
-  EXPECT_EQ(s.start(), 1);
-  EXPECT_EQ(s.stop(), 5);
-  EXPECT_EQ(s.step(), 1);
+TEST(SliceTest, DefaultStep) {
+  constexpr slice s(1, 5);
+  static_assert(s.start() == 1);
+  static_assert(s.stop() == 5);
+  static_assert(s.step() == 1);
 }
 
-TEST(SliceTest, NoneNoneStep) {
-  numcxx::slice s({}, {}, 2);
-  EXPECT_EQ(s.start(), std::nullopt);
-  EXPECT_EQ(s.stop(), std::nullopt);
-  EXPECT_EQ(s.step(), 2);
+TEST(SliceTest, NulloptStartStop) {
+  constexpr slice s({}, {}, 2);
+  static_assert(s.start() == std::nullopt);
+  static_assert(s.stop() == std::nullopt);
+  static_assert(s.step() == 2);
+
+  constexpr slice s_neg({}, {}, -1);
+  static_assert(s_neg.step() == -1);
 }
 
-TEST(SliceTest, NegativeStep) {
-  numcxx::slice s({}, {}, -1);
-  EXPECT_EQ(s.start(), std::nullopt);
-  EXPECT_EQ(s.stop(), std::nullopt);
-  EXPECT_EQ(s.step(), -1);
+TEST(SliceTest, Equality) {
+  constexpr slice s1(1, 5, 2);
+  constexpr slice s2(1, 5, 2);
+  constexpr slice s3(1, 5, 3);
+  constexpr slice s4(2, 5, 2);
+
+  static_assert(s1 == s2);
+  static_assert(!(s1 == s3));
+  static_assert(!(s1 == s4));
+}
+
+TEST(SliceTest,BoundaryValue) {
+  constexpr auto min = std::numeric_limits<index_type>::min();
+  constexpr auto max = std::numeric_limits<index_type>::max();
+
+  constexpr slice s(min, max, 1);
+  static_assert(s.start() == min);
+  static_assert(s.stop() == max);
+  static_assert(s.step() == 1);
 }
 
 TEST(SliceTest, StepCannotBeZero) {
