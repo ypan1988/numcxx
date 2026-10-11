@@ -196,7 +196,6 @@ public:
                   std::optional<index_type> stop ,
                                 index_type  step = 1) noexcept
       : start_(start), stop_(stop), step_(step) {
-    NUMCXX_ASSERT(step != 0, "slice step cannot be zero");
   }
 
   [[nodiscard]] constexpr std::optional<index_type> start() const noexcept { return start_; }

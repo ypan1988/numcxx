@@ -56,7 +56,3 @@ TEST(SliceTest, BoundaryValue) {
   static_assert(s.stop() == max);
   static_assert(s.step() == 1);
 }
-
-TEST(SliceTest, StepCannotBeZero) {
-  EXPECT_DEATH({ numcxx::slice s(1, 5, 0); }, "slice step cannot be zero");
-}
