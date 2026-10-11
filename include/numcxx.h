@@ -204,7 +204,7 @@ public:
   [[nodiscard]] constexpr               index_type  step () const noexcept { return step_ ; }
 
   [[nodiscard]] friend constexpr bool operator==(const slice &x, const slice &y) noexcept {
-    return x.start() == y.start() && x.stop() == y.stop() && x.step() == y.step();
+    return x.start_ == y.start_ && x.stop_ == y.stop_ && x.step_ == y.step_;
   }
   [[nodiscard]] friend constexpr bool operator!=(const slice &x, const slice &y) noexcept {
     return !(x == y);
