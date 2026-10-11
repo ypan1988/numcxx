@@ -50,41 +50,6 @@
 #endif
 // clang-format on
 
-namespace numcxx::detail {
-
-[[noreturn]]
-inline void
-fail(const char *kind, const char *msg,
-     std::source_location loc = std::source_location::current()) noexcept {
-  std::fprintf(stderr, "numcxx:%s:%u: %s: %s: %s\n", loc.file_name(),
-               loc.line(), loc.function_name(), kind, msg);
-  std::fflush(stderr);
-  std::abort();
-}
-
-template <class Exception>
-[[noreturn]]
-inline void throw_exception(const char *msg) {
-#ifdef NUMCXX_NO_EXCEPTIONS
-  fail("Exception", msg);
-#else
-  throw Exception(msg);
-#endif
-}
-
-} // namespace numcxx::detail
-
-#ifndef NUMCXX_NO_DEBUG
-#define NUMCXX_ASSERT(expr, msg)                                               \
-  ((expr) ? (void)0                                                            \
-          : ::numcxx::detail::fail("Assertion failed (" #expr ")", (msg)))
-#else
-#define NUMCXX_ASSERT(expr, msg) ((void)0)
-#endif
-
-#define NUMCXX_THROW(exception_type, msg)                                      \
-  ::numcxx::detail::throw_exception<exception_type>((msg))
-
 // [numcxx.user_config]
 #ifndef NUMCXX_SIZE_TYPE
 // Unsigned integer type for sizes and extents (maximum size of any theoretically possible object)
@@ -101,6 +66,17 @@ inline void throw_exception(const char *msg) {
 // To use Column major (Fortran / Matlab style) as default layout, please uncomment the line below.
 // #define NUMCXX_DEFAULT_LAYOUT_LEFT
 #endif
+
+#ifndef NUMCXX_NO_DEBUG
+#define NUMCXX_ASSERT(expr, msg)                                               \
+  ((expr) ? (void)0                                                            \
+          : ::numcxx::detail::fail("Assertion failed (" #expr ")", (msg)))
+#else
+#define NUMCXX_ASSERT(expr, msg) ((void)0)
+#endif
+
+#define NUMCXX_THROW(exception_type, msg)                                      \
+  ::numcxx::detail::throw_exception<exception_type>((msg))
 
 namespace numcxx {
 
@@ -182,6 +158,30 @@ template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp
 template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *end  (      ndarray<Tp, Ex, Lp> &v);
 // clang-format on
+
+namespace detail {
+
+[[noreturn]]
+inline void
+fail(const char *kind, const char *msg,
+     std::source_location loc = std::source_location::current()) noexcept {
+  std::fprintf(stderr, "numcxx:%s:%u: %s: %s: %s\n", loc.file_name(),
+               loc.line(), loc.function_name(), kind, msg);
+  std::fflush(stderr);
+  std::abort();
+}
+
+template <class Exception>
+[[noreturn]]
+inline void throw_exception(const char *msg) {
+#ifdef NUMCXX_NO_EXCEPTIONS
+  fail("Exception", msg);
+#else
+  throw Exception(msg);
+#endif
+}
+
+} // namespace detail
 
 // [numcxx.slice]
 class slice {
