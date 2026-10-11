@@ -47,7 +47,7 @@ TEST(SliceTest, Equality) {
   static_assert(!(s1 == s4));
 }
 
-TEST(SliceTest,BoundaryValue) {
+TEST(SliceTest, BoundaryValue) {
   constexpr auto min = std::numeric_limits<index_type>::min();
   constexpr auto max = std::numeric_limits<index_type>::max();
 
