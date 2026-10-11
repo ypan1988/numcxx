@@ -183,11 +183,11 @@ inline void throw_exception(const char *msg) {
 } // namespace detail
 
 // [numcxx.slice]
-// A Numpy-style slice `start:stop:step`
+/// A Numpy-style slice `start:stop:step`
 class slice {
 private:
   std::optional<index_type> start_{};
-  std::optional<index_type> stop_ {};
+  std::optional<index_type> stop_{};
                 index_type  step_ = 1;
 
 public:
@@ -203,7 +203,7 @@ public:
   [[nodiscard]] constexpr std::optional<index_type> stop () const noexcept { return stop_ ; }
   [[nodiscard]] constexpr               index_type  step () const noexcept { return step_ ; }
 
-  [[nodiscard]] friend bool operator==(const slice &x, const slice &y) noexcept {
+  [[nodiscard]] friend constexpr bool operator==(const slice &x, const slice &y) noexcept {
     return x.start() == y.start() && x.stop() == y.stop() && x.step() == y.step();
   }
 };
