@@ -54,23 +54,21 @@ namespace numcxx::detail {
 
 [[noreturn]]
 inline void
-error(std::string_view err_type, std::string_view err_msg,
-      std::source_location loc = std::source_location::current()) noexcept {
-  std::fprintf(stderr, "numcxx:%s:%u: %s: %.*s: %.*s\n", loc.file_name(),
-               static_cast<unsigned>(loc.line()), loc.function_name(),
-               static_cast<int>(err_type.size()), err_type.data(),
-               static_cast<int>(err_msg.size()), err_msg.data());
+fail(const char *kind, const char *msg,
+     std::source_location loc = std::source_location::current()) noexcept {
+  std::fprintf(stderr, "numcxx:%s:%u: %s: %s: %s\n", loc.file_name(),
+               loc.line(), loc.function_name(), kind, msg);
   std::fflush(stderr);
   std::abort();
 }
 
 template <class Exception>
 [[noreturn]]
-inline void throw_exception(std::string_view msg) {
+inline void throw_exception(const char *msg) {
 #ifdef NUMCXX_NO_EXCEPTIONS
-  error("Exception", msg);
+  fail("Exception", msg);
 #else
-  throw Exception(std::string(msg));
+  throw Exception(msg);
 #endif
 }
 
@@ -79,7 +77,7 @@ inline void throw_exception(std::string_view msg) {
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
   ((expr) ? (void)0                                                            \
-          : ::numcxx::detail::error("Assertion failed (" #expr ")", (msg)))
+          : ::numcxx::detail::fail("Assertion failed (" #expr ")", (msg)))
 #else
 #define NUMCXX_ASSERT(expr, msg) ((void)0)
 #endif
