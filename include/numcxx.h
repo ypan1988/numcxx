@@ -157,7 +157,6 @@ template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *end  (      ndarray<Tp, Ex, Lp> &v);
-// clang-format on
 
 namespace detail {
 
@@ -184,32 +183,31 @@ inline void throw_exception(const char *msg) {
 } // namespace detail
 
 // [numcxx.slice]
+// A Numpy-style slice `start:stop:step`
 class slice {
 private:
-  std::optional<index_type> start_;
-  std::optional<index_type> stop_;
-  index_type step_ = 1;
+  std::optional<index_type> start_{};
+  std::optional<index_type> stop_ {};
+                index_type  step_ = 1;
 
 public:
-  slice() = default;
-
-  slice(std::optional<index_type> start, std::optional<index_type> stop,
-        index_type step = 1)
+  constexpr slice() = default;
+  constexpr slice(std::optional<index_type> start,
+                  std::optional<index_type> stop ,
+                                index_type  step = 1) noexcept
       : start_(start), stop_(stop), step_(step) {
     NUMCXX_ASSERT(step != 0, "slice step cannot be zero");
   }
 
-  [[nodiscard]] std::optional<index_type> start() const { return start_; }
-  [[nodiscard]] std::optional<index_type> stop() const { return stop_; }
-  [[nodiscard]] index_type step() const { return step_; }
+  [[nodiscard]] constexpr std::optional<index_type> start() const noexcept { return start_; }
+  [[nodiscard]] constexpr std::optional<index_type> stop () const noexcept { return stop_ ; }
+  [[nodiscard]] constexpr               index_type  step () const noexcept { return step_ ; }
 
-  friend bool operator==(const slice &x, const slice &y) {
-    return x.start() == y.start() && x.stop() == y.stop() &&
-           x.step() == y.step();
+  [[nodiscard]] friend bool operator==(const slice &x, const slice &y) noexcept {
+    return x.start() == y.start() && x.stop() == y.stop() && x.step() == y.step();
   }
 };
 
-// clang-format off
 namespace detail {
 
 template <class Ex, class = void> inline constexpr bool is_static_extents_v = false;
