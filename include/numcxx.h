@@ -209,38 +209,43 @@ public:
     return !(x == y);
   }
 
+public:
+  struct normalized_slice {
+    size_type offset;
+    size_type extent;
+    size_type stride;
+    bool reversed;
+  };
+
+  [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
   [[nodiscard]] constexpr bool is_reversed() const noexcept { return step_ < 0; }
-  //[[nodiscard]] constexpr auto to_strided_slice(size_type dim_len) const noexcept
-  //  -> detail::strided_slice<size_type, size_type, size_type>;
 };
 
-//constexpr auto
-//slice::to_strided_slice(size_type dim_len) const noexcept
-//    -> detail::strided_slice<size_type, size_type, size_type> {
-//    auto resolve_index = [dim_len](std::optional<index_type> idx_raw,
-//                                 index_type default_val) {
-//      index_type idx = idx_raw.has_value() ? idx_raw.value() : default_val;
-//      return (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
-//    };
-//    index_type step = step_, abs_step = std::abs(step);
-//    index_type start = resolve_index(start_, (step > 0) ? 0 : (dim_len - 1));
-//    index_type stop = resolve_index(stop_, (step > 0) ? dim_len : -1);
-//
-//    if (step < 0) {
-//      std::swap(start, stop);
-//      if (start < 0) start = 0;
-//      if (stop > static_cast<index_type>(dim_len)) stop = dim_len;
-//    }
-//
-//    index_type diff = stop - start;
-//
-//    size_type offset = static_cast<size_type>(start);
-//    size_type extent = static_cast<size_type>(diff);
-//    size_type stride = static_cast<size_type>(abs_step);
-//
-//    using strided_slice_type = ::numcxx::detail::strided_slice<size_type, size_type, size_type>;
-//    return strided_slice_type{offset, extent, stride};
-//}
+constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_slice
+{
+  const index_type len = static_cast<index_type>(dim_len);
+  auto resolve_index = [len](std::optional<index_type> idx, index_type def)
+  {
+    index_type v = idx.value_or(def);
+    return v < 0 ? v + len : v;
+  };
+
+  const bool reversed = step_ < 0;
+  index_type start = resolve_index(start_, reversed ? len - 1 : 0);
+  index_type stop = resolve_index(stop_, reversed ? -1 : len);
+
+  if (reversed) {
+    std::swap(start, stop);
+    if (start < 0) start = 0;
+    if (stop > len) stop = len;
+  }
+
+  const size_type offset = static_cast<size_type>(start);
+  const size_type extent = static_cast<size_type>(stop - start);
+  const size_type stride = static_cast<size_type>(std::abs(step_));
+
+  return {offset, extent, stride, reversed};
+}
 
 namespace detail {
 
