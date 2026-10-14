@@ -224,16 +224,15 @@ public:
 constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_slice
 {
   const index_type len = static_cast<index_type>(dim_len);
-  auto resolve_index = [len](std::optional<index_type> idx, index_type def)
-  {
-    index_type v = idx.value_or(def);
-    return v < 0 ? v + len : v;
-  };
-
   const bool reversed = step_ < 0;
-  index_type start = resolve_index(start_, reversed ? len - 1 : 0);
-  index_type stop = resolve_index(stop_, reversed ? -1 : len);
-  
+
+  index_type start = start_.value_or(reversed ? len - 1 : 0);
+  start += (start < 0) ? len : 0;
+
+  index_type stop = stop_.value_or(reversed ? -1 : len);
+  if (reversed && stop == -1) ;
+  else stop += (stop < 0) ? len : 0;
+
   size_type offset = static_cast<size_type>(start);
   size_type extent = 0;
   size_type stride = static_cast<size_type>(reversed ? -step_ : step_);

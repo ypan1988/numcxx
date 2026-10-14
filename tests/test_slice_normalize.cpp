@@ -18,7 +18,7 @@ TEST(SliceNormalizeTest, FullReverseSlice) {
   constexpr auto ns = s.normalize(10);
 
   static_assert(ns.reversed);
-  //static_assert(ns.extent > 0);
+  static_assert(ns.extent > 0);
 }
 
 TEST(SliceNormalizeTest, ForwardSlice) {
