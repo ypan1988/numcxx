@@ -10,6 +10,7 @@ FetchContent_MakeAvailable(googletest)
 set(TEST_TARGETS
     test_error_handling
     test_slice
+    test_slice_normalize
     test_basic
     test_storage
     test_ndarray_fixed

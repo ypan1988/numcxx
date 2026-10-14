@@ -236,7 +236,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
   
   size_type offset = static_cast<size_type>(start);
   size_type extent = 0;
-  size_type stride = static_cast<size_type>(std::abs(step_));
+  size_type stride = static_cast<size_type>(reversed ? -step_ : step_);
 
   const bool empty_slice = reversed ? start <= stop : start >= stop;
   if (empty_slice) return {offset, 0, stride, reversed};
