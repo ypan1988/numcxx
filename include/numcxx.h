@@ -229,7 +229,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
   index_type start = 0, stop = 0;
   size_type offset = 0, extent = 0;
   const size_type stride = static_cast<size_type>(reversed ? -step_ : step_);
-  
+
   if (len == 0) return {0, 0, stride, reversed};
 
   if (!reversed) {
@@ -251,7 +251,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     // Resolve the start index using NumPy reverse-slice semantics.
     start = start_.value_or(len - 1);
     if (start < 0) start += len;
-    start = std::clamp(start, index_type(0), len);
+    start = std::clamp(start, index_type(0), len-1);
 
     // Resolve the stop index.
     //
@@ -259,7 +259,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     // value -1 ("one position before the beginning") and must be
     // preserved. A user-supplied negative stop is treated as a
     // regular negative index and converted relative to the end.
-    if (stop_.has_value()){
+    if (stop_.has_value()) {
       stop = stop_.value();
       if (stop < 0) stop += len;
       stop = std::clamp(stop, index_type(0), len);
