@@ -224,12 +224,14 @@ public:
 constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_slice
 {
   const index_type len = static_cast<index_type>(dim_len);
-  bool reversed = step_ < 0, empty_slice = false;
+  const bool reversed = step_ < 0;
   
   index_type start = 0, stop = 0;
   size_type offset = 0, extent = 0;
   const size_type stride = static_cast<size_type>(reversed ? -step_ : step_);
   
+  if (len == 0) return {0, 0, stride, reversed};
+
   if (!reversed) {
     // Resolve the start index using NumPy forward-slice semantics.
     start = start_.value_or(0);
@@ -242,7 +244,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     stop = std::clamp(stop, index_type(0), len);
 
     // Convert [start, stop) to a forward strided_slice.
-    empty_slice = start >= stop;
+    bool empty_slice = start >= stop;
     offset = static_cast<size_type>(start);
     extent = static_cast<size_type>(empty_slice ? 0 : (stop - start));
   } else {
@@ -266,7 +268,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     }
 
     // NumPy reverse slices are empty when start <= stop.
-    empty_slice = start <= stop;
+    bool empty_slice = start <= stop;
     if (empty_slice) offset = static_cast<size_type>(start);
     else {
       // Compute the last index visited by the reverse slice.
