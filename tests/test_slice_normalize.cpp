@@ -17,8 +17,10 @@ TEST(SliceNormalizeTest, FullReverseSlice) {
   constexpr slice s({}, {}, -1);
   constexpr auto ns = s.normalize(10);
 
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 10);
+  static_assert(ns.stride == 1);
   static_assert(ns.reversed);
-  static_assert(ns.extent > 0);
 }
 
 TEST(SliceNormalizeTest, ForwardSlice) {
@@ -48,8 +50,32 @@ TEST(SliceNormalizeTest, ReverseSlice) {
 
   constexpr auto ns = s.normalize(10);
 
+  static_assert(ns.offset == 3);
+  static_assert(ns.extent == 6);
+  static_assert(ns.stride == 1);
   static_assert(ns.reversed);
-  static_assert(ns.extent > 0);
+}
+
+TEST(SliceNormalizeTest, ReverseSliceWithStride) {
+  constexpr slice s(8, 2, -2);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 4);
+  static_assert(ns.extent == 6);
+  static_assert(ns.stride == 2);
+  static_assert(ns.reversed);
+}
+
+TEST(SliceNormalizeTest, FullReverseSliceWithStride) {
+  constexpr slice s({}, {}, -2);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 1);
+  static_assert(ns.extent == 10);
+  static_assert(ns.stride == 2);
+  static_assert(ns.reversed);
 }
 
 TEST(SliceNormalizeTest, EmptyForwardSlice) {
@@ -86,4 +112,15 @@ TEST(SliceNormalizeTest, EqualBoundsReverse) {
   constexpr auto ns = s.normalize(10);
 
   static_assert(ns.extent == 0);
+}
+
+TEST(SliceNormalizeTest, ReverseNegativeIndices) {
+  constexpr slice s(-1, -5, -2);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 7);
+  static_assert(ns.extent == 4);
+  static_assert(ns.stride == 2);
+  static_assert(ns.reversed);
 }
