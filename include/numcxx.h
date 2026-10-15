@@ -278,8 +278,8 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
       // This becomes the offset of the equivalent forward
       // strided_slice; the original ordering is restored later
       // using the reversed flag.
-      const index_type n = (start - stop - 1) / (-step_);
-      offset = static_cast<size_type>(start + n * step_);
+      const size_type n = static_cast<size_type>(start - stop - 1) / stride;
+      offset = static_cast<size_type>(start + static_cast<index_type>(n) * step_);
     }
 
     extent = static_cast<size_type>(empty_slice ? 0 : (start - stop));
