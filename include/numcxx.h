@@ -217,8 +217,8 @@ public:
     bool reversed;
   };
 
+  [[nodiscard]] constexpr bool is_valid() const noexcept { return step_ != 0; }
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
-  [[nodiscard]] constexpr bool is_reversed() const noexcept { return step_ < 0; }
 };
 
 constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_slice
