@@ -158,6 +158,39 @@ TEST(SliceNormalizeTest, ClipBothSides) {
   static_assert(!ns.reversed);
 }
 
+TEST(SliceNormalizeTest, ReverseClipStartHigh) {
+  constexpr slice s(100, {}, -1);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 10);
+  static_assert(ns.stride == 1);
+  static_assert(ns.reversed);
+}
+
+TEST(SliceNormalizeTest, ReverseClipStopLow) {
+  constexpr slice s({}, -100, -1);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 10);
+  static_assert(ns.stride == 1);
+  static_assert(ns.reversed);
+}
+
+TEST(SliceNormalizeTest, ReverseClipBothSides) {
+  constexpr slice s(100, -100, -1);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 10);
+  static_assert(ns.stride == 1);
+  static_assert(ns.reversed);
+}
+
 TEST(SliceNormalizeTest, EmptyDimension) {
   constexpr slice s({}, {}, -1);
 
@@ -166,5 +199,16 @@ TEST(SliceNormalizeTest, EmptyDimension) {
   static_assert(ns.offset == 0);
   static_assert(ns.extent == 0);
   static_assert(ns.stride == 1);
+  static_assert(ns.reversed);
+}
+
+TEST(SliceNormalizeTest, EmptyDimensionWithStride) {
+  constexpr slice s({}, {}, -2);
+
+  constexpr auto ns = s.normalize(0);
+
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 0);
+  static_assert(ns.stride == 2);
   static_assert(ns.reversed);
 }

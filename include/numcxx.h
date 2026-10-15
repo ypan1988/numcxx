@@ -262,7 +262,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     if (stop_.has_value()) {
       stop = stop_.value();
       if (stop < 0) stop += len;
-      stop = std::clamp(stop, index_type(0), len);
+      stop = std::clamp(stop, index_type(-1), len-1);
     } else {
       stop = -1;
     }
