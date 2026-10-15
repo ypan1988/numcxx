@@ -249,12 +249,17 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     if (start < 0) start += len;
 
     // Resolve the stop index.
-    // The default stop (-1) is a NumPy sentinel meaning
-    // "one position before the beginning" and must not be
-    // converted to len - 1.
-    stop = stop_.value_or(-1);
-    const bool reverse_stop_sentinel = stop == -1;
-    if (!reverse_stop_sentinel && stop < 0) stop += len;
+    //
+    // For reverse slices, an omitted stop uses the NumPy sentinel
+    // value -1 ("one position before the beginning") and must be
+    // preserved. A user-supplied negative stop is treated as a
+    // regular negative index and converted relative to the end.
+    if (stop_.has_value()){
+      stop = stop_.value();
+      if (stop < 0) stop += len;
+    } else {
+      stop = -1;
+    }
 
     // NumPy reverse slices are empty when start <= stop.
     empty_slice = start <= stop;
