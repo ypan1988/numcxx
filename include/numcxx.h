@@ -228,7 +228,10 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
   
   index_type start = 0, stop = 0;
   size_type offset = 0, extent = 0;
-  const size_type stride = static_cast<size_type>(reversed ? -step_ : step_);
+
+  // Overflow-safe constexpr absolute value.
+  // Avoids relying on std::abs, which is not constexpr in C++20.
+  const size_type stride = static_cast<size_type>(reversed ? -(step_+1)+1 : step_);
 
   if (len == 0) return {0, 0, stride, reversed};
 
