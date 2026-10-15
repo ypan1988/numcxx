@@ -234,10 +234,12 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     // Resolve the start index using NumPy forward-slice semantics.
     start = start_.value_or(0);
     if (start < 0) start += len;
+    start = std::clamp(start, index_type(0), len);
 
     // Resolve the stop index using NumPy forward-slice semantics.
     stop = stop_.value_or(len);
     if (stop < 0) stop += len;
+    stop = std::clamp(stop, index_type(0), len);
 
     // Convert [start, stop) to a forward strided_slice.
     empty_slice = start >= stop;
@@ -247,6 +249,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     // Resolve the start index using NumPy reverse-slice semantics.
     start = start_.value_or(len - 1);
     if (start < 0) start += len;
+    start = std::clamp(start, index_type(0), len);
 
     // Resolve the stop index.
     //
@@ -257,6 +260,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     if (stop_.has_value()){
       stop = stop_.value();
       if (stop < 0) stop += len;
+      stop = std::clamp(stop, index_type(0), len);
     } else {
       stop = -1;
     }
