@@ -221,6 +221,7 @@ public:
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
 };
 
+// Precondition: is_valid() == true.
 constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_slice
 {
   const index_type len = static_cast<index_type>(dim_len);
