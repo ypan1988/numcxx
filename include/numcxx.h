@@ -224,29 +224,41 @@ public:
 constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_slice
 {
   const index_type len = static_cast<index_type>(dim_len);
-  const bool reversed = step_ < 0;
-
-  index_type start = start_.value_or(reversed ? len - 1 : 0);
-  start += (start < 0) ? len : 0;
-
-  index_type stop = stop_.value_or(reversed ? -1 : len);
-  if (reversed && stop == -1) ;
-  else stop += (stop < 0) ? len : 0;
-
-  size_type offset = static_cast<size_type>(start);
-  size_type extent = 0;
-  size_type stride = static_cast<size_type>(reversed ? -step_ : step_);
-
-  const bool empty_slice = reversed ? start <= stop : start >= stop;
-  if (empty_slice) return {offset, 0, stride, reversed};
+  bool reversed = step_ < 0, empty_slice = false;
   
-  if (reversed) {
-    std::swap(start, stop);
-    if (start < 0) start = 0;
-    if (stop > len) stop = len;
+  index_type start = 0, stop = 0;
+  size_type offset = 0, extent = 0;
+  const size_type stride = static_cast<size_type>(reversed ? -step_ : step_);
+  
+  if (!reversed) {
+    start = start_.value_or(0);
+    if (start < 0) start += len;
+
+    stop = stop_.value_or(len);
+    if (stop < 0) stop += len;
+
+    empty_slice = start >= stop;
+
     offset = static_cast<size_type>(start);
+    extent = static_cast<size_type>(empty_slice ? 0 : (stop - start));
+  } else {
+    start = start_.value_or(len - 1);
+    if (start < 0) start += len;
+
+    stop = stop_.value_or(-1);
+    const bool reverse_stop_sentinel = stop == -1;
+    if (!reverse_stop_sentinel && stop < 0) stop += len;
+
+    empty_slice = start <= stop;
+    if (empty_slice) offset = static_cast<size_type>(start);
+    else {
+      index_type tmp = start;
+      while (tmp + step_ > stop)  tmp += step_; 
+      offset = static_cast<size_type>(tmp);
+    }
+
+    extent = static_cast<size_type>(empty_slice ? 0 : (start - stop));
   }
-  extent = static_cast<size_type>(stop - start);
   
   return {offset, extent, stride, reversed};
 }
