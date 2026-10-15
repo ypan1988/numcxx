@@ -124,3 +124,47 @@ TEST(SliceNormalizeTest, ReverseNegativeIndices) {
   static_assert(ns.stride == 2);
   static_assert(ns.reversed);
 }
+
+TEST(SliceNormalizeTest, ClipStartLow) {
+  constexpr slice s(-100, 5);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 5);
+  static_assert(ns.stride == 1);
+  static_assert(!ns.reversed);
+}
+
+TEST(SliceNormalizeTest, ClipStopHigh) {
+  constexpr slice s(5, 100);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 5);
+  static_assert(ns.extent == 5);
+  static_assert(ns.stride == 1);
+  static_assert(!ns.reversed);
+}
+
+TEST(SliceNormalizeTest, ClipBothSides) {
+  constexpr slice s(-100, 100);
+
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 10);
+  static_assert(ns.stride == 1);
+  static_assert(!ns.reversed);
+}
+
+TEST(SliceNormalizeTest, EmptyDimension) {
+  constexpr slice s({}, {}, -1);
+
+  constexpr auto ns = s.normalize(0);
+
+  static_assert(ns.offset == 0);
+  static_assert(ns.extent == 0);
+  static_assert(ns.stride == 1);
+  static_assert(ns.reversed);
+}
