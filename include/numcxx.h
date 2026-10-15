@@ -252,9 +252,10 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
     empty_slice = start <= stop;
     if (empty_slice) offset = static_cast<size_type>(start);
     else {
-      index_type tmp = start;
-      while (tmp + step_ > stop)  tmp += step_; 
-      offset = static_cast<size_type>(tmp);
+      // Compute the last index visited by the reverse slice.
+      // It becomes the starting offset of the equivalent forward strided slice.
+      const index_type n = (start - stop - 1) / (-step_);
+      offset = static_cast<size_type>(start + n * step_);
     }
 
     extent = static_cast<size_type>(empty_slice ? 0 : (start - stop));
