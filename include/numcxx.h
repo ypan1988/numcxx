@@ -231,29 +231,39 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
   const size_type stride = static_cast<size_type>(reversed ? -step_ : step_);
   
   if (!reversed) {
+    // Resolve the start index using NumPy forward-slice semantics.
     start = start_.value_or(0);
     if (start < 0) start += len;
 
+    // Resolve the stop index using NumPy forward-slice semantics.
     stop = stop_.value_or(len);
     if (stop < 0) stop += len;
 
+    // Convert [start, stop) to a forward strided_slice.
     empty_slice = start >= stop;
-
     offset = static_cast<size_type>(start);
     extent = static_cast<size_type>(empty_slice ? 0 : (stop - start));
   } else {
+    // Resolve the start index using NumPy reverse-slice semantics.
     start = start_.value_or(len - 1);
     if (start < 0) start += len;
 
+    // Resolve the stop index.
+    // The default stop (-1) is a NumPy sentinel meaning
+    // "one position before the beginning" and must not be
+    // converted to len - 1.
     stop = stop_.value_or(-1);
     const bool reverse_stop_sentinel = stop == -1;
     if (!reverse_stop_sentinel && stop < 0) stop += len;
 
+    // NumPy reverse slices are empty when start <= stop.
     empty_slice = start <= stop;
     if (empty_slice) offset = static_cast<size_type>(start);
     else {
       // Compute the last index visited by the reverse slice.
-      // It becomes the starting offset of the equivalent forward strided slice.
+      // This becomes the offset of the equivalent forward
+      // strided_slice; the original ordering is restored later
+      // using the reversed flag.
       const index_type n = (start - stop - 1) / (-step_);
       offset = static_cast<size_type>(start + n * step_);
     }
