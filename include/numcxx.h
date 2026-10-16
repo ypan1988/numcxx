@@ -667,6 +667,8 @@ public:
 
 private:
   size_type calc_offset(size_type i) const noexcept {
+    if (size() == 0)
+      return 0;
     size_type offset = 0, remaining = i;
     auto process_dim = [&](rank_type r) {
       size_type dim_len = extent(r);
@@ -1429,34 +1431,13 @@ inline size_type to_submdspan_arg(index_type idx, size_type dim_len, bool &is_sl
   return static_cast<size_type>(res);
 }
 
-inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_slice, bool &flag) {
-  auto resolve_index = [dim_len](std::optional<index_type> idx_raw,
-                                 index_type default_val) {
-    index_type idx = idx_raw.has_value() ? idx_raw.value() : default_val;
-    return (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
-  };
-
+inline auto to_submdspan_arg(const slice& s, size_type dim_len, bool& is_slice, bool& reversed) {
   is_slice = true;
-  index_type step = s.step(), abs_step = std::abs(step);
-  index_type start = resolve_index(s.start(), (step > 0) ? 0 : (dim_len - 1));
-  index_type stop = resolve_index(s.stop(), (step > 0) ? dim_len : -1);
-
-  flag = (step < 0);
-  if (flag) {
-    std::swap(start, stop);
-    if (start < 0) start = 0;
-    if (stop > static_cast<index_type>(dim_len)) stop = dim_len;
-  }
-
-  index_type diff = stop - start;
-  NUMCXX_ASSERT(diff > 0 && abs_step > 0, "invalid slice");
-
-  size_type offset = static_cast<size_type>(start);
-  size_type extent = static_cast<size_type>(diff);
-  size_type stride = static_cast<size_type>(abs_step);
-
+  NUMCXX_ASSERT(s.is_valid(), "invalid slice");
+  const auto ns = s.normalize(dim_len);
+  reversed = ns.reversed;
   using strided_slice_type = ::numcxx::detail::strided_slice<size_type, size_type, size_type>;
-  return strided_slice_type{offset, extent, stride};
+  return strided_slice_type{ns.offset, ns.extent, ns.stride};
 }
 
 template <typename MdSpan, typename... Args, size_type... Is>
