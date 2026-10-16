@@ -211,6 +211,13 @@ public:
   }
 
 public:
+  // ---------------------------------------------------------------------------
+  // Internal implementation support.
+  //
+  // Exposed for testing and other numcxx internals.
+  // Not part of the stable public API and subject to change without notice.
+  // ---------------------------------------------------------------------------
+
   struct normalized_slice {
     // Equivalent forward std::strided_slice.
     size_type offset;
@@ -223,7 +230,6 @@ public:
     // std::strided_slice only represents forward slices.
     bool reversed;
   };
-
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
 };
 // clang-format on
