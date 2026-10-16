@@ -198,6 +198,7 @@ public:
       : start_(start), stop_(stop), step_(step) {
   }
 
+  [[nodiscard]] constexpr                   bool is_valid() const noexcept { return step_ != 0; }
   [[nodiscard]] constexpr std::optional<index_type> start() const noexcept { return start_; }
   [[nodiscard]] constexpr std::optional<index_type> stop () const noexcept { return stop_ ; }
   [[nodiscard]] constexpr               index_type  step () const noexcept { return step_ ; }
@@ -209,7 +210,7 @@ public:
     return !(x == y);
   }
 
-public:
+private:
   struct normalized_slice {
     // Equivalent forward std::strided_slice.
     size_type offset;
@@ -223,7 +224,6 @@ public:
     bool reversed;
   };
 
-  [[nodiscard]] constexpr bool is_valid() const noexcept { return step_ != 0; }
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
 };
 
