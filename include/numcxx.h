@@ -211,9 +211,15 @@ public:
 
 public:
   struct normalized_slice {
+    // Equivalent forward std::strided_slice.
     size_type offset;
-    size_type extent;
+    size_type extent; // Length of the interval [offset, offset + extent).
+                      // Follows std::strided_slice semantics and is not the number of
+                      // selected elements.
     size_type stride;
+
+    // True when the original NumPy slice used a negative step.
+    // std::strided_slice only represents forward slices.
     bool reversed;
   };
 
