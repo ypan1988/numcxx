@@ -212,3 +212,10 @@ TEST(SliceNormalizeTest, EmptyDimensionWithStride) {
   static_assert(ns.stride == 2);
   static_assert(ns.reversed);
 }
+
+TEST(SliceNormalizeTest, ReverseExplicitMinusOneStop) {
+  constexpr slice s({}, -1, -1);
+  constexpr auto ns = s.normalize(10);
+
+  static_assert(ns.extent == 0);
+}

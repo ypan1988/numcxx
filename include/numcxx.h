@@ -210,7 +210,7 @@ public:
     return !(x == y);
   }
 
-private:
+public:
   struct normalized_slice {
     // Equivalent forward std::strided_slice.
     size_type offset;
