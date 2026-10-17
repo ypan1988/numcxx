@@ -155,12 +155,16 @@ template <class Op, class A0, class A1> struct nc_mdspan_like< nc_binary_op<Op, 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<Tp>::value;
 template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<Tp>::value;
 
+template <typename T>                       struct is_integral_pair                  : std::false_type {};
+template <std::integral I, std::integral J> struct is_integral_pair<std::pair<I, J>> : std::true_type  {};
+template <typename T>        inline constexpr bool is_integral_pair_v = is_integral_pair<std::remove_cvref_t<T>>::value;
+
 template <class T>
 concept slice_specifier =
-    std::is_integral_v<std::remove_cvref_t<T>> ||
-    std::is_same_v<std::remove_cvref_t<T>, slice> ||
-    std::is_same_v<std::remove_cvref_t<T>, detail::full_extent_t> ||
-    std::is_same_v<std::remove_cvref_t<T>, std::pair<size_type, size_type>>;
+    std::integral<std::remove_cvref_t<T>> ||
+    std::same_as<std::remove_cvref_t<T>, slice> ||
+    std::same_as<std::remove_cvref_t<T>, detail::full_extent_t> ||
+    is_integral_pair_v<T>;
 
 template <class... Args>
 concept all_slice_specifiers = (slice_specifier<Args> && ...);
