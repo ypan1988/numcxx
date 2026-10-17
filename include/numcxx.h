@@ -155,6 +155,16 @@ template <class Op, class A0, class A1> struct nc_mdspan_like< nc_binary_op<Op, 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<Tp>::value;
 template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<Tp>::value;
 
+template <class T>
+concept index_arg =
+    std::is_integral_v<std::remove_cvref_t<T>> ||
+    std::is_same_v<std::remove_cvref_t<T>, slice> ||
+    std::is_same_v<std::remove_cvref_t<T>, detail::full_extent_t> ||
+    std::is_same_v<std::remove_cvref_t<T>, std::pair<size_type, size_type>>;
+
+template <class... Args>
+concept all_index_args = (index_arg<Args> && ...);
+
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
@@ -392,8 +402,8 @@ public:
   auto logical(size_type i) const;
 
   // subset operations (slice_view):
-  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
-  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
+  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args);
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -584,8 +594,8 @@ public:
   auto logical(size_type i) const;
 
   // subset operations (slice_view)
-  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
-  template <typename... Args> [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
+  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -1514,49 +1524,39 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
 
 } // namespace detail
 
-// clang-format off
-template <class T> struct is_slice_or_integral : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> || std::is_integral_v<std::decay_t<T>>> {};
-template <class T>       inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
-template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is_slice_or_integral_v<Args> && ...);
-// clang-format on
-
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
+  requires(all_index_args<Args...>)
 decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
   return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
+  requires(all_index_args<Args...>)
 decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
   return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
+  requires(all_index_args<Args...>)
 decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
   return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
+  requires(all_index_args<Args...>)
 decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  static_assert(are_all_slice_or_integral_v<Args...>,
-                "Each argument must be slice or an integral type");
   return detail::access_slice(to_mdspan(), std::forward<Args>(args)...);
 }
 
