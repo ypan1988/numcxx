@@ -1420,23 +1420,25 @@ auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
 }
 
 // [numcxx.slicing_with_slice]
-// clang-format off
 namespace detail {
 namespace slice_utils {
-inline size_type to_submdspan_arg(index_type idx, size_type dim_len, bool &is_slice, bool &flag) {
-  is_slice = flag = false;
+inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
+                                  bool &is_slice, bool &reversed) {
+  is_slice = reversed = false;
   index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
   NUMCXX_ASSERT(res >= 0 && static_cast<size_type>(res) < dim_len,
                 "Index out of bounds");
   return static_cast<size_type>(res);
 }
 
-inline auto to_submdspan_arg(const slice& s, size_type dim_len, bool& is_slice, bool& reversed) {
+inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_slice,
+                             bool &reversed) {
   is_slice = true;
   NUMCXX_ASSERT(s.is_valid(), "invalid slice");
   const auto ns = s.normalize(dim_len);
   reversed = ns.reversed;
-  using strided_slice_type = ::numcxx::detail::strided_slice<size_type, size_type, size_type>;
+  using strided_slice_type =
+      ::numcxx::detail::strided_slice<size_type, size_type, size_type>;
   return strided_slice_type{ns.offset, ns.extent, ns.stride};
 }
 
@@ -1446,8 +1448,9 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
   std::array<size_type, N> dims = {src.extent(Is)...};
   std::array<bool, N> is_slice_arg{};
   std::array<bool, N> reverse_full{};
-  auto sub = detail::submdspan(std::forward<MdSpan>(src),
-             to_submdspan_arg(args, dims[Is], is_slice_arg[Is], reverse_full[Is])...);
+  auto sub = detail::submdspan(
+      std::forward<MdSpan>(src),
+      to_submdspan_arg(args, dims[Is], is_slice_arg[Is], reverse_full[Is])...);
   return std::tuple{std::move(sub), is_slice_arg, reverse_full};
 }
 
@@ -1455,9 +1458,10 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 
 template <typename MdSpan, typename... Args>
 decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
-  auto [sub_mdspan, is_slice_arg, reverse_full] = detail::slice_utils::make_submdspan(
-      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
-      std::forward<Args>(args)...);
+  auto [sub_mdspan, is_slice_arg, reverse_full] =
+      detail::slice_utils::make_submdspan(std::forward<MdSpan>(src),
+                                          std::index_sequence_for<Args...>{},
+                                          std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
   if constexpr (sub_mdspan_type::rank() == 0)
@@ -1474,16 +1478,17 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
     }
     return slice_view<typename sub_mdspan_type::element_type,
                       typename sub_mdspan_type::extents_type,
-                      typename sub_mdspan_type::layout_type>(sub_mdspan, reverses);
+                      typename sub_mdspan_type::layout_type>(sub_mdspan,
+                                                             reverses);
   }
 }
 
 } // namespace detail
 
+// clang-format off
 template <class T> struct is_slice_or_integral : std::bool_constant<std::is_same_v<std::decay_t<T>, slice> || std::is_integral_v<std::decay_t<T>>> {};
 template <class T>       inline constexpr bool is_slice_or_integral_v = is_slice_or_integral<T>::value;
 template <class... Args> inline constexpr bool are_all_slice_or_integral_v = (is_slice_or_integral_v<Args> && ...);
-
 // clang-format on
 
 template <typename Tp, typename Ex, typename Lp>
