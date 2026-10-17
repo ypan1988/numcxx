@@ -99,6 +99,7 @@ namespace linalg = Kokkos::Experimental::linalg;
 using std::dextents;
 using std::extents;
 using std::full_extent;
+using std::full_extent_t;
 using std::layout_left;
 using std::layout_right;
 using std::mdarray;
