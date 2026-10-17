@@ -1472,8 +1472,8 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
 inline auto to_submdspan_arg(const std::pair<size_type, size_type> &p,
                              size_type dim_len, bool &is_index,
                              bool &reversed) {
-  NUMCXX_ASSERT(p.first < p.second, "invalid empty range");
-  NUMCXX_ASSERT(p.second <= dim_len, "range out of bounds");
+  NUMCXX_ASSERT(p.first < p.second, "Range must contain at least one element");
+  NUMCXX_ASSERT(p.second <= dim_len, "Range out of bounds");
   is_index = false;
   reversed = false;
   return p;
@@ -1482,13 +1482,13 @@ inline auto to_submdspan_arg(const std::pair<size_type, size_type> &p,
 template <typename MdSpan, typename... Args, size_type... Is>
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
   constexpr std::size_t N = sizeof...(Args);
-  std::array<size_type, N> dims = {src.extent(Is)...};
+  const std::array<size_type, N> dims = {src.extent(Is)...};
   std::array<bool, N> is_index_arr{};
   std::array<bool, N> reversed_arr{};
   auto sub = detail::submdspan(
       std::forward<MdSpan>(src),
       to_submdspan_arg(args, dims[Is], is_index_arr[Is], reversed_arr[Is])...);
-  return std::tuple{std::move(sub), is_index_arr, reversed_arr};
+  return std::tuple{sub, is_index_arr, reversed_arr};
 }
 
 } // namespace slice_utils
@@ -1501,15 +1501,15 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
                                           std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
-  if constexpr (sub_mdspan_type::rank() == 0)
+  if constexpr (sub_mdspan_type::rank() == 0) {
     // All dimensions were indexed with scalar indices.
     return sub_mdspan();
-  else {
+  } else {
     constexpr std::size_t new_rank = sub_mdspan_type::rank();
     std::array<bool, new_rank> reverses{};
     std::size_t rev_idx = 0;
     // Scalar indices remove dimensions. Keep reversal flags only for
-    // dimensions that survive in the resulting submdspan
+    // dimensions that remain in the resulting submdspan.
     for (std::size_t i = 0; i < sizeof...(Args); ++i) {
       if (!is_index_arr[i]) {
         reverses[rev_idx++] = reversed_arr[i];
