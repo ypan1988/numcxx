@@ -1446,7 +1446,7 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
 
 template <typename MdSpan, typename... Args, size_type... Is>
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
-  constexpr auto N = sizeof...(Args);
+  constexpr std::size_t N = sizeof...(Args);
   std::array<size_type, N> dims = {src.extent(Is)...};
   std::array<bool, N> is_index_arr{};
   std::array<bool, N> reversed_arr{};
