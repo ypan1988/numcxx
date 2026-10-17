@@ -1472,7 +1472,8 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
     constexpr std::size_t new_rank = sub_mdspan_type::rank();
     std::array<bool, new_rank> reverses{};
     std::size_t rev_idx = 0;
-    // Scalar indices remove dimensions.
+    // Scalar indices remove dimensions. Keep reversal flags only for
+    // dimensions that survive in the resulting submdspan
     for (std::size_t i = 0; i < sizeof...(Args); ++i) {
       if (!is_index_arr[i]) {
         reverses[rev_idx++] = reversed_arr[i];
