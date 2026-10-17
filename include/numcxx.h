@@ -1445,14 +1445,14 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_slice,
 
 template <typename MdSpan, typename... Args, size_type... Is>
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
-  constexpr size_type N = sizeof...(Args);
+  constexpr auto N = sizeof...(Args);
   std::array<size_type, N> dims = {src.extent(Is)...};
-  std::array<bool, N> is_slice_arg{};
-  std::array<bool, N> reverse_full{};
+  std::array<bool, N> is_slice{};
+  std::array<bool, N> reversed{};
   auto sub = detail::submdspan(
       std::forward<MdSpan>(src),
-      to_submdspan_arg(args, dims[Is], is_slice_arg[Is], reverse_full[Is])...);
-  return std::tuple{std::move(sub), is_slice_arg, reverse_full};
+      to_submdspan_arg(args, dims[Is], is_slice[Is], reversed[Is])...);
+  return std::tuple{std::move(sub), is_slice, reversed};
 }
 
 } // namespace slice_utils
