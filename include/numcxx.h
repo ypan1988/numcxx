@@ -87,6 +87,7 @@ namespace detail {
 using Kokkos::dextents;
 using Kokkos::extents;
 using Kokkos::full_extent;
+using Kokkos::full_extent_t;
 using Kokkos::layout_left;
 using Kokkos::layout_right;
 using Kokkos::mdspan;
@@ -1422,6 +1423,8 @@ auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
 // [numcxx.slicing_with_slice]
 namespace detail {
 namespace slice_utils {
+
+// Convert a scalar index to a submdspan index argument.
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
                                   bool &is_index, bool &reversed) {
   index_type len = static_cast<index_type>(dim_len);
@@ -1433,6 +1436,7 @@ inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
   return static_cast<size_type>(res);
 }
 
+// Convert a slice to a submdspan strided_slice argument.
 inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
                              bool &reversed) {
   NUMCXX_ASSERT(s.is_valid(), "invalid slice");
@@ -1442,6 +1446,27 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
                           // Reversal is applied by the caller when needed.
   return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
       ns.offset, ns.extent, ns.stride};
+}
+
+// Forward std::full_extent as a submdspan argument.
+inline auto to_submdspan_arg(::numcxx::detail::full_extent_t tag,
+                             size_type dim_len, bool &is_index,
+                             bool &reversed) {
+  is_index = false;
+  reversed = false;
+  return ::numcxx::detail::full_extent;
+}
+
+// Forward a std::pair range as a submdspan argument.
+inline auto to_submdspan_arg(const std::pair<size_type, size_type> &p,
+                             size_type dim_len, bool &is_index,
+                             bool &reversed) {
+  NUMCXX_ASSERT(p.first <= p.second, "invalid range");
+  NUMCXX_ASSERT(p.first >= 0 && p.second <= static_cast<index_type>(dim_len),
+                "range out of bounds");
+  is_index = false;
+  reversed = false;
+  return p;
 }
 
 template <typename MdSpan, typename... Args, size_type... Is>
