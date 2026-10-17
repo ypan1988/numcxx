@@ -156,14 +156,14 @@ template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<Tp>:
 template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<Tp>::value;
 
 template <class T>
-concept index_arg =
+concept slice_specifier =
     std::is_integral_v<std::remove_cvref_t<T>> ||
     std::is_same_v<std::remove_cvref_t<T>, slice> ||
     std::is_same_v<std::remove_cvref_t<T>, detail::full_extent_t> ||
     std::is_same_v<std::remove_cvref_t<T>, std::pair<size_type, size_type>>;
 
 template <class... Args>
-concept all_index_args = (index_arg<Args> && ...);
+concept all_slice_specifiers = (slice_specifier<Args> && ...);
 
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
@@ -402,8 +402,8 @@ public:
   auto logical(size_type i) const;
 
   // subset operations (slice_view):
-  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
-  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args);
+  template <typename... Args> requires(all_slice_specifiers<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> requires(all_slice_specifiers<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args);
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -594,8 +594,8 @@ public:
   auto logical(size_type i) const;
 
   // subset operations (slice_view)
-  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
-  template <typename... Args> requires(all_index_args<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
+  template <typename... Args> requires(all_slice_specifiers<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args) const;
+  template <typename... Args> requires(all_slice_specifiers<Args...>) [[nodiscard]] decltype(auto) operator()(Args &&...args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -1526,7 +1526,7 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_index_args<Args...>)
+  requires(all_slice_specifiers<Args...>)
 decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1535,7 +1535,7 @@ decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_index_args<Args...>)
+  requires(all_slice_specifiers<Args...>)
 decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1544,7 +1544,7 @@ decltype(auto) ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_index_args<Args...>)
+  requires(all_slice_specifiers<Args...>)
 decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1553,7 +1553,7 @@ decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_index_args<Args...>)
+  requires(all_slice_specifiers<Args...>)
 decltype(auto) slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
