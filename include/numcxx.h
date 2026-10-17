@@ -1469,14 +1469,21 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
 }
 
 // Forward a std::pair range as a submdspan argument.
-inline auto to_submdspan_arg(const std::pair<size_type, size_type> &p,
-                             size_type dim_len, bool &is_index,
-                             bool &reversed) {
+template <typename I, typename J>
+  requires std::integral<I> && std::integral<J>
+inline auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
+                             bool &is_index, bool &reversed) {
+  NUMCXX_ASSERT(p.first >= 0 && p.second >= 0,
+                "Range bounds must be non-negative");
   NUMCXX_ASSERT(p.first < p.second, "Range must contain at least one element");
-  NUMCXX_ASSERT(p.second <= dim_len, "Range out of bounds");
+  NUMCXX_ASSERT(static_cast<size_type>(p.second) <= dim_len,
+                "Range out of bounds");
+
   is_index = false;
   reversed = false;
-  return p;
+
+  return std::pair<size_type, size_type>{static_cast<size_type>(p.first),
+                                         static_cast<size_type>(p.second)};
 }
 
 template <typename MdSpan, typename... Args, size_type... Is>
