@@ -1426,6 +1426,7 @@ inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
                                   bool &is_index, bool &reversed) {
   index_type len = static_cast<index_type>(dim_len);
   index_type res = (idx < 0) ? idx + len : idx;
+  // Empty dimensions are valid for slicing but cannot be scalar-indexed.
   NUMCXX_ASSERT(res >= 0 && res < len, "Index out of bounds");
   is_index = true;
   reversed = false;
