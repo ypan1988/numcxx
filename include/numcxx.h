@@ -1449,8 +1449,8 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
 }
 
 // Forward std::full_extent as a submdspan argument.
-inline auto to_submdspan_arg(::numcxx::detail::full_extent_t tag,
-                             size_type dim_len, bool &is_index,
+inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
+                             size_type /*dim_len*/, bool &is_index,
                              bool &reversed) {
   is_index = false;
   reversed = false;
@@ -1461,8 +1461,8 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t tag,
 inline auto to_submdspan_arg(const std::pair<size_type, size_type> &p,
                              size_type dim_len, bool &is_index,
                              bool &reversed) {
-  NUMCXX_ASSERT(p.first <= p.second, "invalid range");
-  NUMCXX_ASSERT(p.first >= 0 && p.second <= static_cast<index_type>(dim_len),
+  NUMCXX_ASSERT(p.first < p.second, "invalid range");
+  NUMCXX_ASSERT(p.second <= static_cast<index_type>(dim_len),
                 "range out of bounds");
   is_index = false;
   reversed = false;
