@@ -1424,22 +1424,23 @@ namespace detail {
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
                                   bool &is_slice, bool &reversed) {
-  is_slice = reversed = false;
-  index_type res = (idx < 0) ? idx + static_cast<index_type>(dim_len) : idx;
-  NUMCXX_ASSERT(res >= 0 && static_cast<size_type>(res) < dim_len,
-                "Index out of bounds");
+  index_type len = static_cast<index_type>(dim_len);
+  index_type res = (idx < 0) ? idx + len : idx;
+  NUMCXX_ASSERT(res >= 0 && res < len, "Index out of bounds");
+  is_slice = false;
+  reversed = false;
   return static_cast<size_type>(res);
 }
 
 inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_slice,
                              bool &reversed) {
-  is_slice = true;
   NUMCXX_ASSERT(s.is_valid(), "invalid slice");
   const auto ns = s.normalize(dim_len);
-  reversed = ns.reversed;
-  using strided_slice_type =
-      ::numcxx::detail::strided_slice<size_type, size_type, size_type>;
-  return strided_slice_type{ns.offset, ns.extent, ns.stride};
+  is_slice = true;
+  reversed = ns.reversed; // std::strided_slice only represents forward slices.
+                          // Reversal is applied by the caller when needed.
+  return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
+      ns.offset, ns.extent, ns.stride};
 }
 
 template <typename MdSpan, typename... Args, size_type... Is>
