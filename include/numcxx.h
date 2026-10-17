@@ -1461,9 +1461,8 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
 inline auto to_submdspan_arg(const std::pair<size_type, size_type> &p,
                              size_type dim_len, bool &is_index,
                              bool &reversed) {
-  NUMCXX_ASSERT(p.first < p.second, "invalid range");
-  NUMCXX_ASSERT(p.second <= static_cast<index_type>(dim_len),
-                "range out of bounds");
+  NUMCXX_ASSERT(p.first < p.second, "invalid empty range");
+  NUMCXX_ASSERT(p.second <= dim_len, "range out of bounds");
   is_index = false;
   reversed = false;
   return p;
