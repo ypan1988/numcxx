@@ -1459,22 +1459,23 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 
 template <typename MdSpan, typename... Args>
 decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
-  auto [sub_mdspan, is_index_arg, reverse_full] =
+  auto [sub_mdspan, is_index_arr, reversed_arr] =
       detail::slice_utils::make_submdspan(std::forward<MdSpan>(src),
                                           std::index_sequence_for<Args...>{},
                                           std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
 
   if constexpr (sub_mdspan_type::rank() == 0)
-    // all dimensions were indexed with integral indices.
+    // All dimensions were indexed with scalar indices.
     return sub_mdspan();
   else {
     constexpr std::size_t new_rank = sub_mdspan_type::rank();
     std::array<bool, new_rank> reverses{};
     std::size_t rev_idx = 0;
+    // Scalar indices remove dimensions.
     for (std::size_t i = 0; i < sizeof...(Args); ++i) {
-      if (!is_index_arg[i]) {
-        reverses[rev_idx++] = reverse_full[i];
+      if (!is_index_arr[i]) {
+        reverses[rev_idx++] = reversed_arr[i];
       }
     }
     return slice_view<typename sub_mdspan_type::element_type,
