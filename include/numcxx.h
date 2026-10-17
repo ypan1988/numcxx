@@ -1423,20 +1423,20 @@ auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
 namespace detail {
 namespace slice_utils {
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
-                                  bool &is_slice, bool &reversed) {
+                                  bool &is_index, bool &reversed) {
   index_type len = static_cast<index_type>(dim_len);
   index_type res = (idx < 0) ? idx + len : idx;
   NUMCXX_ASSERT(res >= 0 && res < len, "Index out of bounds");
-  is_slice = false;
+  is_index = true;
   reversed = false;
   return static_cast<size_type>(res);
 }
 
-inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_slice,
+inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
                              bool &reversed) {
   NUMCXX_ASSERT(s.is_valid(), "invalid slice");
   const auto ns = s.normalize(dim_len);
-  is_slice = true;
+  is_index = false;
   reversed = ns.reversed; // std::strided_slice only represents forward slices.
                           // Reversal is applied by the caller when needed.
   return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
@@ -1447,19 +1447,19 @@ template <typename MdSpan, typename... Args, size_type... Is>
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
   constexpr auto N = sizeof...(Args);
   std::array<size_type, N> dims = {src.extent(Is)...};
-  std::array<bool, N> is_slice{};
+  std::array<bool, N> is_index{};
   std::array<bool, N> reversed{};
   auto sub = detail::submdspan(
       std::forward<MdSpan>(src),
-      to_submdspan_arg(args, dims[Is], is_slice[Is], reversed[Is])...);
-  return std::tuple{std::move(sub), is_slice, reversed};
+      to_submdspan_arg(args, dims[Is], is_index[Is], reversed[Is])...);
+  return std::tuple{std::move(sub), is_index, reversed};
 }
 
 } // namespace slice_utils
 
 template <typename MdSpan, typename... Args>
 decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
-  auto [sub_mdspan, is_slice_arg, reverse_full] =
+  auto [sub_mdspan, is_index_arg, reverse_full] =
       detail::slice_utils::make_submdspan(std::forward<MdSpan>(src),
                                           std::index_sequence_for<Args...>{},
                                           std::forward<Args>(args)...);
@@ -1473,7 +1473,7 @@ decltype(auto) access_slice(MdSpan &&src, Args &&...args) {
     std::array<bool, new_rank> reverses{};
     std::size_t rev_idx = 0;
     for (std::size_t i = 0; i < sizeof...(Args); ++i) {
-      if (is_slice_arg[i]) {
+      if (!is_index_arg[i]) {
         reverses[rev_idx++] = reverse_full[i];
       }
     }
