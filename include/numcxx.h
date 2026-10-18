@@ -408,8 +408,8 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Indices> requires (std::integral<std::remove_cvref_t<Indices>> && ...) [[nodiscard]] const_reference operator()(Indices&&... indices) const;
-  template <typename... Indices> requires (std::integral<std::remove_cvref_t<Indices>> && ...) [[nodiscard]]       reference operator()(Indices&&... indices)      ;
+  template <typename... Idxs> requires (std::integral<std::remove_cvref_t<Idxs>> && ...) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires (std::integral<std::remove_cvref_t<Idxs>> && ...) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
   template <typename... Args> requires(all_slice_specifiers<Args...> && !(std::integral<std::remove_cvref_t<Args>> && ...)) [[nodiscard]] auto operator()(Args&&... args) const;
@@ -604,8 +604,8 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Indices> requires (std::integral<std::remove_cvref_t<Indices>> && ...) [[nodiscard]] const_reference operator()(Indices&&... indices) const;
-  template <typename... Indices> requires (std::integral<std::remove_cvref_t<Indices>> && ...) [[nodiscard]]       reference operator()(Indices&&... indices)      ;
+  template <typename... Idxs> requires (std::integral<std::remove_cvref_t<Idxs>> && ...) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires (std::integral<std::remove_cvref_t<Idxs>> && ...) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
   template <typename... Args   > requires (all_slice_specifiers<Args...> && !(std::integral<std::remove_cvref_t<Args>> && ...)) [[nodiscard]] auto operator()(Args&&... args) const;
@@ -751,7 +751,7 @@ public:
   using offset_policy    = index_accessor;
 
            index_accessor() = default;
-  explicit index_accessor(const std::vector<size_type> &indices) : indices_(indices) {}
+  explicit index_accessor(const std::vector<size_type> &idxs) : indices_(idxs) {}
 
   reference access(const data_handle_type p, const size_type i) const noexcept {
     NUMCXX_ASSERT(i < indices_.size(), "index_accessor::access: index out of bounds");
@@ -1433,7 +1433,7 @@ auto ndarray<Tp, Ex, Lp>::logical(size_type i) const {
 
   const auto &mapping = elem_.mapping();
   return std::apply(
-      [&](auto... indices) { return data()[mapping(indices...)]; }, idx);
+      [&](auto... idxs) { return data()[mapping(idxs...)]; }, idx);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1442,7 +1442,7 @@ auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
     return operator[](i);
   auto idx = unravel_index<default_layout>(i, extents());
 
-  return std::apply([this](auto... indices) { return span_(indices...); }, idx);
+  return std::apply([this](auto... idxs) { return span_(idxs...); }, idx);
 }
 
 // [numcxx.slicing_with_slice]
@@ -1456,13 +1456,13 @@ inline size_type normalize_index(index_type idx, size_type dim_len) {
   return static_cast<size_type>(res);
 }
 
-template <typename MdSpan, typename... Indices, std::size_t... Is>
-  requires(std::integral<std::remove_cvref_t<Indices>> && ...)
+template <typename MdSpan, typename... Idxs, std::size_t... Is>
+  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
 [[nodiscard]]
 decltype(auto) get_element_impl(MdSpan &&src, std::index_sequence<Is...>,
-                                Indices &&...indices) {
+                                Idxs &&...idxs) {
   return std::forward<MdSpan>(src)(
-      normalize_index(static_cast<index_type>(indices), src.extent(Is))...);
+      normalize_index(static_cast<index_type>(idxs), src.extent(Is))...);
 }
 } // namespace index_utils
 
@@ -1535,14 +1535,14 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 }
 } // namespace slice_utils
 
-template <typename MdSpan, typename... Indices>
-  requires(std::integral<std::remove_cvref_t<Indices>> && ...)
-decltype(auto) get_element(MdSpan &&src, Indices &&...indices) {
-  constexpr auto N = sizeof...(Indices);
+template <typename MdSpan, typename... Idxs>
+  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
+decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
+  constexpr auto N = sizeof...(Idxs);
 
   return detail::index_utils::get_element_impl(
       std::forward<MdSpan>(src), std::make_index_sequence<N>{},
-      std::forward<Indices>(indices)...);
+      std::forward<Idxs>(idxs)...);
 }
 
 template <typename MdSpan, typename... Args>
@@ -1571,45 +1571,45 @@ decltype(auto) make_slice_view(MdSpan &&src, Args &&...args) {
 } // namespace detail
 
 template <typename Tp, typename Ex, typename Lp>
-template <typename... Indices>
-  requires(std::integral<std::remove_cvref_t<Indices>> && ...)
+template <typename... Idxs>
+  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
 [[nodiscard]]
-auto ndarray<Tp, Ex, Lp>::operator()(Indices &&...indices) const
+auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
-  static_assert(sizeof...(Indices) == extents_type::rank(),
+  static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Indices>(indices)...);
+  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
-template <typename... Indices>
-  requires(std::integral<std::remove_cvref_t<Indices>> && ...)
+template <typename... Idxs>
+  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
 [[nodiscard]]
-auto ndarray<Tp, Ex, Lp>::operator()(Indices &&...indices) -> reference {
-  static_assert(sizeof...(Indices) == extents_type::rank(),
+auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
+  static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Indices>(indices)...);
+  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
-template <typename... Indices>
-  requires(std::integral<std::remove_cvref_t<Indices>> && ...)
+template <typename... Idxs>
+  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
 [[nodiscard]]
-auto slice_view<Tp, Ex, Lp>::operator()(Indices &&...indices) const
+auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
-  static_assert(sizeof...(Indices) == extents_type::rank(),
+  static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Indices>(indices)...);
+  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
-template <typename... Indices>
-  requires(std::integral<std::remove_cvref_t<Indices>> && ...)
+template <typename... Idxs>
+  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
 [[nodiscard]]
-auto slice_view<Tp, Ex, Lp>::operator()(Indices &&...indices) -> reference {
-  static_assert(sizeof...(Indices) == extents_type::rank(),
+auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
+  static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Indices>(indices)...);
+  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
