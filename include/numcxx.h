@@ -157,6 +157,10 @@ template <class Op, class A0, class A1> struct nc_mdspan_like< nc_binary_op<Op, 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<Tp>::value;
 template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<Tp>::value;
 
+// Type traits and concepts used to distinguish scalar indexing from
+// slicing operations. A slice specifier is any argument accepted by
+// ndarray slicing (index, slice, full_extent, or integral pair range).
+
 template <typename T>                       struct is_integral_pair                  : std::false_type {};
 template <std::integral I, std::integral J> struct is_integral_pair<std::pair<I, J>> : std::true_type  {};
 template <typename T>        inline constexpr bool is_integral_pair_v = is_integral_pair<std::remove_cvref_t<T>>::value;
