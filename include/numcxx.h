@@ -1454,10 +1454,9 @@ auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
   return std::apply([this](auto... idxs) { return span_(idxs...); }, idx);
 }
 
-// [numcxx.slicing_with_slice]
+// [numcxx.indexing_and_slicing]
 namespace detail {
 namespace index_utils {
-// Convert a scalar index to a submdspan index argument.
 inline size_type normalize_index(index_type idx, size_type dim_len) {
   index_type len = static_cast<index_type>(dim_len);
   index_type res = (idx < 0) ? idx + len : idx;
@@ -1466,7 +1465,7 @@ inline size_type normalize_index(index_type idx, size_type dim_len) {
 }
 
 template <typename MdSpan, typename... Idxs, std::size_t... Is>
-  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
+  requires all_scalar_indices<Idxs...>
 [[nodiscard]]
 decltype(auto) get_element_impl(MdSpan &&src, std::index_sequence<Is...>,
                                 Idxs &&...idxs) {
@@ -1545,7 +1544,7 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 } // namespace slice_utils
 
 template <typename MdSpan, typename... Idxs>
-  requires(std::integral<std::remove_cvref_t<Idxs>> && ...)
+  requires all_scalar_indices<Idxs...>
 decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
   constexpr auto N = sizeof...(Idxs);
 
@@ -1581,7 +1580,7 @@ decltype(auto) make_slice_view(MdSpan &&src, Args &&...args) {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_scalar_indices<Idxs...>)
+  requires all_scalar_indices<Idxs...>
 [[nodiscard]]
 auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const -> const_reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
@@ -1591,7 +1590,7 @@ auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const -> const_reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_scalar_indices<Idxs...>)
+  requires all_scalar_indices<Idxs...>
 [[nodiscard]]
 auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
@@ -1601,7 +1600,7 @@ auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_scalar_indices<Idxs...>)
+  requires all_scalar_indices<Idxs...>
 [[nodiscard]]
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
@@ -1612,7 +1611,7 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_scalar_indices<Idxs...>)
+  requires all_scalar_indices<Idxs...>
 [[nodiscard]]
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
@@ -1622,7 +1621,7 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(slice_view_arguments<Args...>)
+  requires slice_view_arguments<Args...>
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1631,7 +1630,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(slice_view_arguments<Args...>)
+  requires slice_view_arguments<Args...>
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1640,7 +1639,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(slice_view_arguments<Args...>)
+  requires slice_view_arguments<Args...>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1649,7 +1648,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(slice_view_arguments<Args...>)
+  requires slice_view_arguments<Args...>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
