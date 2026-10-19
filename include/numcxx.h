@@ -167,7 +167,7 @@ template <typename T>        inline constexpr bool is_integral_pair_v = is_integ
 
 
 template <class T>
-concept integral_index = std::integral<std::remove_cvref_t<T>>;
+concept scalar_index = std::integral<std::remove_cvref_t<T>>;
 
 template <class T>
 concept slice_specifier =
@@ -176,9 +176,9 @@ concept slice_specifier =
     std::same_as<std::remove_cvref_t<T>, detail::full_extent_t> ||
     is_integral_pair_v<T>;
 
-template <class... Idxs> concept all_integral_indices = (integral_index<Idxs>  && ...);
+template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
-template <class... Args> concept slice_view_arguments = all_slice_specifiers<Args...> && !all_integral_indices<Args...>;
+template <class... Args> concept slice_view_arguments = all_slice_specifiers<Args...> && !all_scalar_indices<Args...>;
 
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
@@ -417,12 +417,12 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Idxs> requires (all_integral_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires (all_integral_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
-  template <typename... Args> requires(all_slice_specifiers<Args...> && !(all_integral_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires(all_slice_specifiers<Args...> && !(all_integral_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args> requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -613,12 +613,12 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Idxs> requires (all_integral_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires (all_integral_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
-  template <typename... Args   > requires (all_slice_specifiers<Args...> && !(all_integral_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args   > requires (all_slice_specifiers<Args...> && !(all_integral_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args   > requires (all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args   > requires (all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -1581,7 +1581,7 @@ decltype(auto) make_slice_view(MdSpan &&src, Args &&...args) {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_integral_indices<Idxs...>)
+  requires(all_scalar_indices<Idxs...>)
 [[nodiscard]]
 auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const -> const_reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
@@ -1591,7 +1591,7 @@ auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const -> const_reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_integral_indices<Idxs...>)
+  requires(all_scalar_indices<Idxs...>)
 [[nodiscard]]
 auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
@@ -1601,7 +1601,7 @@ auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_integral_indices<Idxs...>)
+  requires(all_scalar_indices<Idxs...>)
 [[nodiscard]]
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
@@ -1612,7 +1612,7 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires(all_integral_indices<Idxs...>)
+  requires(all_scalar_indices<Idxs...>)
 [[nodiscard]]
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
@@ -1622,7 +1622,7 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_integral_indices<Args...>))
+  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1631,7 +1631,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_integral_indices<Args...>))
+  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1640,7 +1640,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_integral_indices<Args...>))
+  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1649,7 +1649,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_integral_indices<Args...>))
+  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
