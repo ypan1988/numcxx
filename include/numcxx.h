@@ -417,12 +417,12 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
-  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -613,12 +613,12 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
-  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
