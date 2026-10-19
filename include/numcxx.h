@@ -159,22 +159,22 @@ template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<Tp>:
 
 // Type traits and concepts used to distinguish scalar indexing from
 // slicing operations. A slice specifier is any argument accepted by
-// ndarray slicing (index, slice, full_extent, or integral pair range).
+// ndarray slicing (scalar index, slice, full_extent, or integral pair
+// range).
 
-template <typename T>                       struct is_integral_pair                  : std::false_type {};
+template <class T>                          struct is_integral_pair                  : std::false_type {};
 template <std::integral I, std::integral J> struct is_integral_pair<std::pair<I, J>> : std::true_type  {};
-template <typename T>        inline constexpr bool is_integral_pair_v = is_integral_pair<std::remove_cvref_t<T>>::value;
-
+template <class T>                         concept    integral_pair = is_integral_pair<std::remove_cvref_t<T>>::value;
 
 template <class T>
 concept scalar_index = std::integral<std::remove_cvref_t<T>>;
 
 template <class T>
 concept slice_specifier =
-    std::integral<std::remove_cvref_t<T>> ||
+    scalar_index<T> ||
     std::same_as<std::remove_cvref_t<T>, slice> ||
     std::same_as<std::remove_cvref_t<T>, detail::full_extent_t> ||
-    is_integral_pair_v<T>;
+    integral_pair<T>;
 
 template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
