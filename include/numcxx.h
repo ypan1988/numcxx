@@ -417,12 +417,12 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
-  template <typename... Args> requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -613,12 +613,12 @@ public:
   auto logical(size_type i) const;
 
   // element access
-  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires (all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires(all_scalar_indices<Idxs...>) [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
-  template <typename... Args   > requires (all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args   > requires (all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>)) [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires(slice_view_arguments<Args...>) [[nodiscard]] auto operator()(Args&&... args)      ;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -1622,7 +1622,7 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
+  requires(slice_view_arguments<Args...>)
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1631,7 +1631,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
+  requires(slice_view_arguments<Args...>)
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1640,7 +1640,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
+  requires(slice_view_arguments<Args...>)
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
@@ -1649,7 +1649,7 @@ template <typename... Args>
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires(all_slice_specifiers<Args...> && !(all_scalar_indices<Args...>))
+  requires(slice_view_arguments<Args...>)
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
