@@ -178,6 +178,7 @@ concept slice_specifier =
 
 template <class... Idxs> concept all_integral_indices = (integral_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
+template <class... Args> concept slice_view_arguments = all_slice_specifiers<Args...> && !all_integral_indices<Args...>;
 
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
