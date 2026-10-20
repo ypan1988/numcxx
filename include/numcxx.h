@@ -1475,8 +1475,9 @@ decltype(auto) get_element_impl(MdSpan &&src, std::index_sequence<Is...>,
 
 template <typename MdSpan, typename... Idxs>
   requires all_scalar_indices<Idxs...>
+[[nodiscard]]
 decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
-  constexpr auto N = sizeof...(Idxs);
+  constexpr std::size_t N = sizeof...(Idxs);
 
   return get_element_impl(std::forward<MdSpan>(src),
                           std::make_index_sequence<N>{},
@@ -1521,8 +1522,8 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
 // Forward a std::pair range as a submdspan argument.
 template <typename I, typename J>
   requires std::integral<I> && std::integral<J>
-inline auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
-                             bool &is_index, bool &reversed) {
+auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
+                      bool &is_index, bool &reversed) {
   if constexpr (std::signed_integral<I>)
     NUMCXX_ASSERT(p.first >= 0, "Range start must be non-negative");
   if constexpr (std::signed_integral<J>)
@@ -1551,6 +1552,7 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
       to_submdspan_arg(args, dims[Is], is_index_arr[Is], reversed_arr[Is])...);
   return std::tuple{sub, is_index_arr, reversed_arr};
 }
+
 template <typename MdSpan, typename... Args>
 auto make_slice_view(MdSpan &&src, Args &&...args) {
   auto [sub_mdspan, is_index_arr, reversed_arr] = make_submdspan(
