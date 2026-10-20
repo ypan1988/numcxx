@@ -1467,8 +1467,8 @@ inline size_type normalize_index(index_type idx, size_type dim_len) {
 template <typename MdSpan, typename... Idxs, std::size_t... Is>
   requires all_scalar_indices<Idxs...>
 [[nodiscard]]
-decltype(auto) get_element_impl(MdSpan &&src, std::index_sequence<Is...>,
-                                Idxs &&...idxs) {
+auto get_element_impl(MdSpan &&src, std::index_sequence<Is...>,
+                      Idxs &&...idxs) {
   return std::forward<MdSpan>(src)(
       normalize_index(static_cast<index_type>(idxs), src.extent(Is))...);
 }
@@ -1545,7 +1545,7 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 
 template <typename MdSpan, typename... Idxs>
   requires all_scalar_indices<Idxs...>
-decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
+auto get_element(MdSpan &&src, Idxs &&...idxs) {
   constexpr auto N = sizeof...(Idxs);
 
   return detail::index_utils::get_element_impl(std::forward<MdSpan>(src),
@@ -1554,7 +1554,7 @@ decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
 }
 
 template <typename MdSpan, typename... Args>
-decltype(auto) make_slice_view(MdSpan &&src, Args &&...args) {
+auto make_slice_view(MdSpan &&src, Args &&...args) {
   auto [sub_mdspan, is_index_arr, reversed_arr] =
       detail::slice_utils::make_submdspan(std::forward<MdSpan>(src),
                                           std::index_sequence_for<Args...>{},
