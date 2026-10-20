@@ -1468,9 +1468,19 @@ template <typename MdSpan, typename... Idxs, std::size_t... Is>
   requires all_scalar_indices<Idxs...>
 [[nodiscard]]
 decltype(auto) get_element_impl(MdSpan &&src, std::index_sequence<Is...>,
-                      Idxs &&...idxs) {
+                                Idxs &&...idxs) {
   return std::forward<MdSpan>(src)(
       normalize_index(static_cast<index_type>(idxs), src.extent(Is))...);
+}
+
+template <typename MdSpan, typename... Idxs>
+  requires all_scalar_indices<Idxs...>
+decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
+  constexpr auto N = sizeof...(Idxs);
+
+  return get_element_impl(std::forward<MdSpan>(src),
+                          std::make_index_sequence<N>{},
+                          std::forward<Idxs>(idxs)...);
 }
 } // namespace index_utils
 
@@ -1541,24 +1551,11 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
       to_submdspan_arg(args, dims[Is], is_index_arr[Is], reversed_arr[Is])...);
   return std::tuple{sub, is_index_arr, reversed_arr};
 }
-} // namespace slice_utils
-
-template <typename MdSpan, typename... Idxs>
-  requires all_scalar_indices<Idxs...>
-decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
-  constexpr auto N = sizeof...(Idxs);
-
-  return detail::index_utils::get_element_impl(std::forward<MdSpan>(src),
-                                               std::make_index_sequence<N>{},
-                                               std::forward<Idxs>(idxs)...);
-}
-
 template <typename MdSpan, typename... Args>
 auto make_slice_view(MdSpan &&src, Args &&...args) {
-  auto [sub_mdspan, is_index_arr, reversed_arr] =
-      detail::slice_utils::make_submdspan(std::forward<MdSpan>(src),
-                                          std::index_sequence_for<Args...>{},
-                                          std::forward<Args>(args)...);
+  auto [sub_mdspan, is_index_arr, reversed_arr] = make_submdspan(
+      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
+      std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
   constexpr std::size_t new_rank = sub_mdspan_type::rank();
   std::array<bool, new_rank> reverses{};
@@ -1575,7 +1572,7 @@ auto make_slice_view(MdSpan &&src, Args &&...args) {
                     typename sub_mdspan_type::layout_type>(sub_mdspan,
                                                            reverses);
 }
-
+} // namespace slice_utils
 } // namespace detail
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1585,7 +1582,8 @@ template <typename... Idxs>
 auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const -> const_reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
+  return detail::index_utils::get_element(to_mdspan(),
+                                          std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1595,7 +1593,8 @@ template <typename... Idxs>
 auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
+  return detail::index_utils::get_element(to_mdspan(),
+                                          std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1606,7 +1605,8 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
+  return detail::index_utils::get_element(to_mdspan(),
+                                          std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1616,7 +1616,8 @@ template <typename... Idxs>
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
+  return detail::index_utils::get_element(to_mdspan(),
+                                          std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1625,7 +1626,8 @@ template <typename... Args>
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::make_slice_view(to_mdspan(), std::forward<Args>(args)...);
+  return detail::slice_utils::make_slice_view(to_mdspan(),
+                                              std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1634,7 +1636,8 @@ template <typename... Args>
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::make_slice_view(to_mdspan(), std::forward<Args>(args)...);
+  return detail::slice_utils::make_slice_view(to_mdspan(),
+                                              std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1643,7 +1646,8 @@ template <typename... Args>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::make_slice_view(to_mdspan(), std::forward<Args>(args)...);
+  return detail::slice_utils::make_slice_view(to_mdspan(),
+                                              std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1652,7 +1656,8 @@ template <typename... Args>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::make_slice_view(to_mdspan(), std::forward<Args>(args)...);
+  return detail::slice_utils::make_slice_view(to_mdspan(),
+                                              std::forward<Args>(args)...);
 }
 
 // [numcxx.expression_template]
