@@ -1542,6 +1542,7 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
 }
 
 template <typename MdSpan, typename... Args, size_type... Is>
+[[nodiscard]]
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
   constexpr std::size_t N = sizeof...(Args);
   const std::array<size_type, N> dims = {src.extent(Is)...};
@@ -1554,6 +1555,7 @@ auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
 }
 
 template <typename MdSpan, typename... Args>
+[[nodiscard]]
 auto make_slice_view(MdSpan &&src, Args &&...args) {
   auto [sub_mdspan, is_index_arr, reversed_arr] = make_submdspan(
       std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
