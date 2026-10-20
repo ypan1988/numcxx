@@ -1541,7 +1541,7 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
   return std::pair<size_type, size_type>{first, second};
 }
 
-template <typename MdSpan, typename... Args, size_type... Is>
+template <typename MdSpan, typename... Args, std::size_t... Is>
 [[nodiscard]]
 auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
   constexpr std::size_t N = sizeof...(Args);
