@@ -598,7 +598,9 @@ public:
   slice_view() = delete;
   slice_view(const slice_view &) = default;
   slice_view(slice_view &&) noexcept = default;
-  explicit slice_view(mdspan_type span, std::array<bool, extents_type::rank()> reverse = {}) : span_(span), reverse_dims_(reverse) {}
+  explicit slice_view(mdspan_type span, std::array<bool, extents_type::rank()> reverse = {})
+    : span_(span), reverse_dims_(reverse),
+      has_reversed_dim_(std::any_of(reverse.begin(), reverse.end(), [](bool b) { return b; })) {}
   ~slice_view() = default;
 
   // assignment:
@@ -747,6 +749,7 @@ private:
 private:
   mdspan_type span_;
   std::array<bool, extents_type::rank()> reverse_dims_{};
+  const bool has_reversed_dim_;
   // std::vector<size_type> logical_offset_;
 };
 
