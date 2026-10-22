@@ -1480,7 +1480,7 @@ template <class MdSpan, class... Idxs>
 [[nodiscard]] decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
   auto helper =
       [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
-    const std::array dims = {src.extent(Is)...};
+    const std::array<size_type, sizeof...(Idxs)> dims = {src.extent(Is)...};
     return std::forward<MdSpan>(src)(
         normalize_index(static_cast<index_type>(idxs), dims[Is])...);
   };
@@ -1497,7 +1497,7 @@ get_element(MdSpan &&src,
             Idxs &&...idxs) {
   auto helper =
       [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
-    const std::array dims = {src.extent(Is)...};
+    const std::array<size_type, sizeof...(Idxs)> dims = {src.extent(Is)...};
     return std::forward<MdSpan>(src)(normalize_and_reverse_index(
         static_cast<index_type>(idxs), dims[Is], reversed_dims[Is])...);
   };
