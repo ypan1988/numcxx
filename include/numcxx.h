@@ -1468,6 +1468,12 @@ inline size_type normalize_index(index_type idx, size_type dim_len) {
   return static_cast<size_type>(res);
 }
 
+inline size_type normalize_and_reverse_index(index_type idx, size_type dim_len,
+                                             bool reversed) {
+  const size_type n = normalize_index(idx, dim_len);
+  return reversed ? dim_len - 1 - n : n;
+}
+
 template <typename MdSpan, typename... Idxs, std::size_t... Is>
   requires all_scalar_indices<Idxs...>
 [[nodiscard]]
