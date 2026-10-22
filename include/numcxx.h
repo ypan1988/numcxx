@@ -1628,8 +1628,11 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::index_utils::get_element(to_mdspan(),
-                                          std::forward<Idxs>(idxs)...);
+  return has_reversed_dim_
+             ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
+                                                std::forward<Idxs>(idxs)...)
+             : detail::index_utils::get_element(to_mdspan(),
+                                                std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1639,8 +1642,11 @@ template <typename... Idxs>
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
   static_assert(sizeof...(Idxs) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::index_utils::get_element(to_mdspan(),
-                                          std::forward<Idxs>(idxs)...);
+  return has_reversed_dim_
+             ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
+                                                std::forward<Idxs>(idxs)...)
+             : detail::index_utils::get_element(to_mdspan(),
+                                                std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
