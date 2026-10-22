@@ -1474,24 +1474,35 @@ inline size_type normalize_and_reverse_index(index_type idx, size_type dim_len,
   return reversed ? dim_len - 1 - n : n;
 }
 
-template <typename MdSpan, typename... Idxs, std::size_t... Is>
+// Element access for normal ndarray/slice_view.
+template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
-[[nodiscard]]
-decltype(auto) get_element_impl(MdSpan &&src, std::index_sequence<Is...>,
-                                Idxs &&...idxs) {
-  return std::forward<MdSpan>(src)(
-      normalize_index(static_cast<index_type>(idxs), src.extent(Is))...);
+[[nodiscard]] decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
+  auto helper =
+      [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
+    const std::array dims = {src.extent(Is)...};
+    return std::forward<MdSpan>(src)(
+        normalize_index(static_cast<index_type>(idxs), dims[Is])...);
+  };
+
+  return helper(std::make_index_sequence<sizeof...(Idxs)>{});
 }
 
-template <typename MdSpan, typename... Idxs>
+// Element access for slice views with reversed dimensions.
+template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
-[[nodiscard]]
-decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
-  constexpr std::size_t N = sizeof...(Idxs);
+[[nodiscard]] decltype(auto)
+get_element(MdSpan &&src,
+            const std::array<bool, sizeof...(Idxs)> &reversed_dims,
+            Idxs &&...idxs) {
+  auto helper =
+      [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
+    const std::array dims = {src.extent(Is)...};
+    return std::forward<MdSpan>(src)(normalize_and_reverse_index(
+        static_cast<index_type>(idxs), dims[Is], reversed_dims[Is])...);
+  };
 
-  return get_element_impl(std::forward<MdSpan>(src),
-                          std::make_index_sequence<N>{},
-                          std::forward<Idxs>(idxs)...);
+  return helper(std::make_index_sequence<sizeof...(Idxs)>{});
 }
 } // namespace index_utils
 
