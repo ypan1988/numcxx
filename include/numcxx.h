@@ -1525,16 +1525,27 @@ inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
   return to_submdspan_arg(idx, dim_len, is_index, reversed, false);
 }
 
-// Convert a slice to a submdspan strided_slice argument.
+// Convert a slice to a submdspan strided_slice argument
 inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
-                             bool &reversed) {
+                             bool &reversed, bool src_reversed = false) {
   NUMCXX_ASSERT(s.is_valid(), "invalid slice");
   const auto ns = s.normalize(dim_len);
   is_index = false;
-  reversed = ns.reversed; // std::strided_slice only represents forward slices.
-                          // Reversal is applied by the caller when needed.
+  // std::strided_slice only represents forward slices.
+  // The resulting dimension is reversed iff exactly one of the
+  // normalized slice or source dimension is reversed.
+  reversed = ns.reversed != src_reversed;
+  size_type offset = ns.offset;
+  if (src_reversed && ns.extent != 0) {
+    // Reflect the last selected index into the underlying forward
+    // coordinate system. This becomes the offset of the equivalent
+    // forward std::strided_slice.
+    const size_type steps = (ns.extent - 1) / ns.stride;
+    const size_type last = ns.offset + steps * ns.stride;
+    offset = (dim_len - 1) - last;
+  }
   return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
-      ns.offset, ns.extent, ns.stride};
+      offset, ns.extent, ns.stride};
 }
 
 // Forward std::full_extent as a submdspan argument.
