@@ -1509,12 +1509,20 @@ get_element(MdSpan &&src,
 } // namespace index_utils
 
 namespace slice_utils {
-// Convert a scalar index to a submdspan index argument.
+
+// Convert a scalar index to a submdspan index argument for slice_view.
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
-                                  bool &is_index, bool &reversed) {
+                                  bool &is_index, bool &reversed,
+                                  bool src_reversed) {
   is_index = true;
   reversed = false;
-  return index_utils::normalize_index(idx, dim_len);
+  return index_utils::normalize_and_reverse_index(idx, dim_len, src_reversed);
+}
+
+// Convert a scalar index to a submdspan index argument for ndarray.
+inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
+                                  bool &is_index, bool &reversed) {
+  return to_submdspan_arg(idx, dim_len, is_index, reversed, false);
 }
 
 // Convert a slice to a submdspan strided_slice argument.
