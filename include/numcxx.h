@@ -1545,9 +1545,9 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
 // Forward std::full_extent as a submdspan argument.
 inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
                              size_type /*dim_len*/, bool &is_index,
-                             bool &reversed) {
+                             bool &reversed, bool src_reversed = false) {
   is_index = false;
-  reversed = false;
+  reversed = src_reversed;
   return ::numcxx::detail::full_extent;
 }
 
@@ -1555,7 +1555,8 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
 template <typename I, typename J>
   requires std::integral<I> && std::integral<J>
 auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
-                      bool &is_index, bool &reversed) {
+                      bool &is_index, bool &reversed,
+                      bool src_reversed = false) {
   if constexpr (std::signed_integral<I>)
     NUMCXX_ASSERT(p.first >= 0, "Range start must be non-negative");
   if constexpr (std::signed_integral<J>)
@@ -1568,7 +1569,7 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
   NUMCXX_ASSERT(second <= dim_len, "Range out of bounds");
 
   is_index = false;
-  reversed = false;
+  reversed = src_reversed;
 
   return std::pair<size_type, size_type>{first, second};
 }
