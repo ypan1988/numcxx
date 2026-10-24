@@ -1619,6 +1619,24 @@ auto make_submdspan_from_view(MdSpan &&src,
                              std::forward<Args>(args)...);
 }
 
+template <std::size_t NewRank, std::size_t N>
+[[nodiscard]]
+auto make_reverse_dims(const std::array<bool, N> &is_index_arr,
+                       const std::array<bool, N> &reversed_arr) {
+  static_assert(NewRank <= N, "Result rank cannot exceed source rank");
+  std::array<bool, NewRank> reverse_dims{};
+  std::size_t rev_idx = 0;
+  // Scalar indices remove dimensions. Keep reversal flags only for
+  // dimensions that remain in the resulting submdspan.
+  for (std::size_t i = 0; i < N; ++i) {
+    if (!is_index_arr[i]) {
+      reverse_dims[rev_idx++] = reversed_arr[i];
+    }
+  }
+
+  return reverse_dims;
+}
+
 template <typename MdSpan, typename... Args>
 [[nodiscard]]
 auto make_slice_view(MdSpan &&src, Args &&...args) {
@@ -1626,19 +1644,12 @@ auto make_slice_view(MdSpan &&src, Args &&...args) {
       make_submdspan(std::forward<MdSpan>(src), std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
   constexpr std::size_t new_rank = sub_mdspan_type::rank();
-  std::array<bool, new_rank> reverses{};
-  std::size_t rev_idx = 0;
-  // Scalar indices remove dimensions. Keep reversal flags only for
-  // dimensions that remain in the resulting submdspan.
-  for (std::size_t i = 0; i < sizeof...(Args); ++i) {
-    if (!is_index_arr[i]) {
-      reverses[rev_idx++] = reversed_arr[i];
-    }
-  }
+  const auto reverse_dims =
+      make_reverse_dims<new_rank>(is_index_arr, reversed_arr);
   return slice_view<typename sub_mdspan_type::element_type,
                     typename sub_mdspan_type::extents_type,
                     typename sub_mdspan_type::layout_type>(sub_mdspan,
-                                                           reverses);
+                                                           reverse_dims);
 }
 } // namespace slice_utils
 } // namespace detail
