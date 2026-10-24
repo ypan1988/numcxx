@@ -1571,7 +1571,9 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
   is_index = false;
   reversed = src_reversed;
 
-  return std::pair<size_type, size_type>{first, second};
+  return src_reversed ? std::pair<size_type, size_type>{dim_len - second,
+                                                        dim_len - first}
+                      : std::pair<size_type, size_type>{first, second};
 }
 
 template <typename MdSpan, typename... Args, std::size_t... Is>
