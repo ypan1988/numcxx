@@ -1733,8 +1733,11 @@ template <typename... Args>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::slice_utils::make_slice_view(to_mdspan(),
-                                              std::forward<Args>(args)...);
+  return has_reversed_dim_
+             ? detail::slice_utils::make_slice_view_with_reverse_dims(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::slice_utils::make_slice_view(
+                   to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -1743,8 +1746,11 @@ template <typename... Args>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
   static_assert(sizeof...(Args) == extents_type::rank(),
                 "Number of arguments must match array rank");
-  return detail::slice_utils::make_slice_view(to_mdspan(),
-                                              std::forward<Args>(args)...);
+  return has_reversed_dim_
+             ? detail::slice_utils::make_slice_view_with_reverse_dims(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::slice_utils::make_slice_view(
+                   to_mdspan(), std::forward<Args>(args)...);
 }
 
 // [numcxx.expression_template]
