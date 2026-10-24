@@ -1580,10 +1580,10 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
 auto make_submdspan_impl(MdSpan &&src,
-                         const std::array<bool, N> &src_reversed_arr,
+                         const std::array<bool, N> &src_reverse_dims,
                          Args &&...args) {
   static_assert(N == sizeof...(Args),
-                "src_reversed_arr must have one entry per argument");
+                "src_reverse_dims must have one entry per argument");
 
   std::array<bool, N> is_index_arr{};
   std::array<bool, N> reversed_arr{};
@@ -1594,7 +1594,7 @@ auto make_submdspan_impl(MdSpan &&src,
     return detail::submdspan(std::forward<MdSpan>(src),
                              to_submdspan_arg(args, dims[Is], is_index_arr[Is],
                                               reversed_arr[Is],
-                                              src_reversed_arr[Is])...);
+                                              src_reverse_dims[Is])...);
   };
   auto sub = helper(std::index_sequence_for<Args...>{});
   return std::tuple{sub, is_index_arr, reversed_arr};
@@ -1621,10 +1621,10 @@ auto make_reverse_dims(const std::array<bool, N> &is_index_arr,
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
 auto make_slice_view_impl(MdSpan &&src,
-                          const std::array<bool, N> &src_reversed_arr,
+                          const std::array<bool, N> &src_reverse_dims,
                           Args &&...args) {
   auto [sub_mdspan, is_index_arr, reversed_arr] = make_submdspan_impl(
-      std::forward<MdSpan>(src), src_reversed_arr, std::forward<Args>(args)...);
+      std::forward<MdSpan>(src), src_reverse_dims, std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
   constexpr std::size_t new_rank = sub_mdspan_type::rank();
   const auto reverse_dims =
@@ -1648,8 +1648,8 @@ auto make_slice_view(MdSpan &&src, Args &&...args) {
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
 auto make_slice_view_with_reverse_dims(
-    MdSpan &&src, const std::array<bool, N> &src_reversed_arr, Args &&...args) {
-  return make_slice_view_impl(std::forward<MdSpan>(src), src_reversed_arr,
+    MdSpan &&src, const std::array<bool, N> &src_reverse_dims, Args &&...args) {
+  return make_slice_view_impl(std::forward<MdSpan>(src), src_reverse_dims,
                               std::forward<Args>(args)...);
 }
 
