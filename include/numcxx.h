@@ -1494,14 +1494,14 @@ template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
 [[nodiscard]] decltype(auto)
 get_element(MdSpan &&src,
-            const std::array<bool, sizeof...(Idxs)> &reversed_dims,
+            const std::array<bool, sizeof...(Idxs)> &reverse_dims,
             Idxs &&...idxs) {
   auto helper =
       [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
     const std::array<size_type, sizeof...(Idxs)> dims = {
         static_cast<size_type>(src.extent(Is))...};
     return std::forward<MdSpan>(src)(normalize_and_reverse_index(
-        static_cast<index_type>(idxs), dims[Is], reversed_dims[Is])...);
+        static_cast<index_type>(idxs), dims[Is], reverse_dims[Is])...);
   };
 
   return helper(std::make_index_sequence<sizeof...(Idxs)>{});
@@ -1640,8 +1640,8 @@ template <typename MdSpan, typename... Args>
 auto make_slice_view(MdSpan &&src, Args &&...args) {
   // ndarray (or slice_view with has_reversed_dim_ == false)
   // has no inherited reversed dimensions.
-  const std::array<bool, sizeof...(Args)> no_reversed_dims{};
-  return make_slice_view_impl(std::forward<MdSpan>(src), no_reversed_dims,
+  const std::array<bool, sizeof...(Args)> no_reverse_dims{};
+  return make_slice_view_impl(std::forward<MdSpan>(src), no_reverse_dims,
                               std::forward<Args>(args)...);
 }
 
