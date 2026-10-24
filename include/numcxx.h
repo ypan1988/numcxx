@@ -1577,23 +1577,46 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
                       : std::pair<size_type, size_type>{first, second};
 }
 
-template <typename MdSpan, typename... Args>
+template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_submdspan(MdSpan &&src, Args &&...args) {
-  constexpr std::size_t N = sizeof...(Args);
+auto make_submdspan_impl(MdSpan &&src,
+                         const std::array<bool, N> &src_reversed_arr,
+                         Args &&...args) {
+  static_assert(N == sizeof...(Args),
+                "src_reversed_arr must have one entry per argument");
 
   std::array<bool, N> is_index_arr{};
   std::array<bool, N> reversed_arr{};
 
   auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
     const std::array<size_type, N> dims = {
-        static_cast<size_t>(src.extent(Is))...};
+        static_cast<size_type>(src.extent(Is))...};
     return detail::submdspan(std::forward<MdSpan>(src),
                              to_submdspan_arg(args, dims[Is], is_index_arr[Is],
-                                              reversed_arr[Is])...);
+                                              reversed_arr[Is],
+                                              src_reversed_arr[Is])...);
   };
   auto sub = helper(std::index_sequence_for<Args...>{});
   return std::tuple{sub, is_index_arr, reversed_arr};
+}
+
+template <typename MdSpan, typename... Args>
+[[nodiscard]]
+auto make_submdspan(MdSpan &&src, Args &&...args) {
+  // ndarray (or slice_view with has_reversed_dim_ == false)
+  // has no inherited reversed dimensions.
+  const std::array<bool, sizeof...(Args)> no_reversed_dims{};
+  return make_submdspan_impl(std::forward<MdSpan>(src), no_reversed_dims,
+                             std::forward<Args>(args)...);
+}
+
+template <typename MdSpan, std::size_t N, typename... Args>
+[[nodiscard]]
+auto make_submdspan_from_view(MdSpan &&src,
+                              const std::array<bool, N> &src_reversed_arr,
+                              Args &&...args) {
+  return make_submdspan_impl(std::forward<MdSpan>(src), src_reversed_arr,
+                             std::forward<Args>(args)...);
 }
 
 template <typename MdSpan, typename... Args>
