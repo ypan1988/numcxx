@@ -1577,25 +1577,29 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
                       : std::pair<size_type, size_type>{first, second};
 }
 
-template <typename MdSpan, typename... Args, std::size_t... Is>
+template <typename MdSpan, typename... Args>
 [[nodiscard]]
-auto make_submdspan(MdSpan &&src, std::index_sequence<Is...>, Args &&...args) {
+auto make_submdspan(MdSpan &&src, Args &&...args) {
   constexpr std::size_t N = sizeof...(Args);
-  const std::array<size_type, N> dims = {src.extent(Is)...};
+
   std::array<bool, N> is_index_arr{};
   std::array<bool, N> reversed_arr{};
-  auto sub = detail::submdspan(
-      std::forward<MdSpan>(src),
-      to_submdspan_arg(args, dims[Is], is_index_arr[Is], reversed_arr[Is])...);
+
+  auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+    const std::array<size_type, N> dims = {src.extent(Is)...};
+    return detail::submdspan(src,
+                             to_submdspan_arg(args, dims[Is], is_index_arr[Is],
+                                              reversed_arr[Is])...);
+  };
+  auto sub = helper(std::index_sequence_for<Args...>{});
   return std::tuple{sub, is_index_arr, reversed_arr};
 }
 
 template <typename MdSpan, typename... Args>
 [[nodiscard]]
 auto make_slice_view(MdSpan &&src, Args &&...args) {
-  auto [sub_mdspan, is_index_arr, reversed_arr] = make_submdspan(
-      std::forward<MdSpan>(src), std::index_sequence_for<Args...>{},
-      std::forward<Args>(args)...);
+  auto [sub_mdspan, is_index_arr, reversed_arr] =
+      make_submdspan(std::forward<MdSpan>(src), std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
   constexpr std::size_t new_rank = sub_mdspan_type::rank();
   std::array<bool, new_rank> reverses{};
