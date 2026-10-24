@@ -1566,7 +1566,7 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
   const size_type first = static_cast<size_type>(p.first);
   const size_type second = static_cast<size_type>(p.second);
 
-  NUMCXX_ASSERT(first < second, "Range must contain at least one element");
+  NUMCXX_ASSERT(first <= second, "Range start must not exceed range end");
   NUMCXX_ASSERT(second <= dim_len, "Range out of bounds");
 
   is_index = false;
