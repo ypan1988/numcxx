@@ -1586,8 +1586,9 @@ auto make_submdspan(MdSpan &&src, Args &&...args) {
   std::array<bool, N> reversed_arr{};
 
   auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    const std::array<size_type, N> dims = {src.extent(Is)...};
-    return detail::submdspan(src,
+    const std::array<size_type, N> dims = {
+        static_cast<size_t>(src.extent(Is))...};
+    return detail::submdspan(std::forward<MdSpan>(src),
                              to_submdspan_arg(args, dims[Is], is_index_arr[Is],
                                               reversed_arr[Is])...);
   };
