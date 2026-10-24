@@ -1474,7 +1474,7 @@ inline size_type normalize_and_reverse_index(index_type idx, size_type dim_len,
   return reversed ? dim_len - 1 - n : n;
 }
 
-// Element access for normal ndarray/slice_view.
+// Element access with no reversed source dimensions.
 template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
 [[nodiscard]] decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
@@ -1489,12 +1489,11 @@ template <class MdSpan, class... Idxs>
   return helper(std::make_index_sequence<sizeof...(Idxs)>{});
 }
 
-// Element access for slice views with reversed dimensions.
+// Element access with reversed source dimensions.
 template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
 [[nodiscard]] decltype(auto)
-get_element(MdSpan &&src,
-            const std::array<bool, sizeof...(Idxs)> &reverse_dims,
+get_element(MdSpan &&src, const std::array<bool, sizeof...(Idxs)> &reverse_dims,
             Idxs &&...idxs) {
   auto helper =
       [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
