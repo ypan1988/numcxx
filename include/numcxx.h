@@ -1542,7 +1542,7 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
       offset, ns.extent, ns.stride};
 }
 
-// Forward std::full_extent as a submdspan argument.
+// Forward std::full_extent for std::submdspan compatibility.
 inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
                              size_type /*dim_len*/, bool &is_index,
                              bool &reversed, bool src_reversed = false) {
@@ -1551,7 +1551,8 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
   return ::numcxx::detail::full_extent;
 }
 
-// Forward a std::pair range as a submdspan argument.
+// Forward a std::pair range [first, second) for std::submdspan compatibility.
+// The range is interpreted in the logical coordinate system of the current view.
 template <typename I, typename J>
   requires std::integral<I> && std::integral<J>
 auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
