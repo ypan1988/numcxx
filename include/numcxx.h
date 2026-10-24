@@ -749,7 +749,7 @@ private:
 private:
   mdspan_type span_;
   std::array<bool, extents_type::rank()> reverse_dims_{};
-  const bool has_reversed_dim_;
+  bool has_reversed_dim_;
   // std::vector<size_type> logical_offset_;
 };
 
