@@ -1800,10 +1800,10 @@ public:
   auto eval() const {
     static_assert(nc_mdspan_like_v<ValExpr>,
                   "Cannot eval() a scalar-only expression (no extents)");
-    ndarray<value_type, decltype(expr_.extents()), default_layout> res(
-        expr_.extents());
-    for (size_type i = 0; i < res.size(); ++i) {
-      res[i] = expr_.logical(i);
+    ndarray<value_type, decltype(extents()), default_layout> res(extents());
+    const size_type n = res.size();
+    for (size_type i = 0; i < n; ++i) {
+      res[i] = logical(i);
     }
     return res;
   }
