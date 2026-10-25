@@ -26,6 +26,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <random>
 #include <source_location>
