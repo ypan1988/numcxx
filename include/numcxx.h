@@ -1454,6 +1454,12 @@ auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
     return operator[](i);
   auto idx = unravel_index<default_layout>(i, extents());
 
+  // Convert logical view indices to span_ indices.
+  for (rank_type r = 0; r < rank(); ++r) {
+    if (reverse_dims_[r])
+      idx[r] = extent(r) - 1 - idx[r];
+  }
+
   return std::apply([this](auto... idxs) { return span_(idxs...); }, idx);
 }
 
