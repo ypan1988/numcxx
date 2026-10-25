@@ -1753,6 +1753,12 @@ template <typename... Args>
 }
 
 // [numcxx.expression_template]
+
+// Expression nodes are evaluated in logical default_layout order.
+//
+// logical(i) accesses the element at linear index i as if the expression
+// used default_layout, independent of each operand's physical layout.
+
 template <class ValExpr> class nc_val_expr {
   typedef std::remove_reference_t<ValExpr> RmExpr;
 
