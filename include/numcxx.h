@@ -408,16 +408,17 @@ public:
   constexpr ndarray &operator=(ndarray &&v) noexcept = default;
   ndarray& operator=(detail::nested_initializer_list_t<value_type, extents_type::rank()> list);
 
-  // element access (flattened)
+  // element access using N-dimensional indices.
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+
+  // flattened element access using the underlying physical storage order.
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
 
-  // Internal: interpret i as a linear index in default_layout, regardless of the actual storage layout.
+  // Internal: element access using a linear index in default_layout order,
+  // independent of the actual storage layout.
   auto logical(size_type i) const;
-
-  // element access
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
@@ -605,16 +606,17 @@ public:
   slice_view &operator=(const slice_view &) = default;
   slice_view &operator=(slice_view &&) noexcept = default;
 
-  // element access (flattened)
+  // element access using N-dimensional indices.
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+
+  // flattened element access using the underlying physical storage order.
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
 
-  // Internal: interpret `i` as a linear index in default_layout, regardless of the actual storage layout.
+  // Internal: element access using a linear index in default_layout order,
+  // independent of the actual storage layout.
   auto logical(size_type i) const;
-
-  // element access
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
