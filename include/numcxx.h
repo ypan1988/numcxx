@@ -1765,36 +1765,22 @@ template <typename... Args>
 // logical(i) accesses the element at linear index i as if the expression
 // used default_layout, independent of each operand's physical layout.
 
+// Wraps an expression node and provides evaluation and reduction APIs.
 template <class ValExpr> class nc_val_expr {
-  typedef std::remove_reference_t<ValExpr> RmExpr;
-
+  using RmExpr = std::remove_reference_t<ValExpr>;
   ValExpr expr_;
 
 public:
-  typedef typename RmExpr::value_type value_type;
+  using value_type = typename RmExpr::value_type;
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  value_type logical(size_type i) const { return expr_.logical(i); }
+  [[nodiscard]] value_type logical(size_type i) const { return expr_.logical(i); }
 
-  // nc_val_expr<__slice_expr<ValExpr> > operator[](slice s) const {
-  //     typedef __slice_expr<ValExpr> NewExpr;
-  //     return nc_val_expr< NewExpr >(NewExpr(s, expr_));
-  // }
-
-  // template <class Ex, class Lp>
-  // nc_val_expr<__mask_expr<ValExpr> > operator[](const ndarray<bool, Ex, Lp>&
-  // __vb) const {
-  //     typedef __mask_expr<ValExpr> NewExpr;
-  //     return nc_val_expr< NewExpr >(NewExpr(__vb, expr_));
-  // }
-
-  // template <class Ex, class Lp>
-  // nc_val_expr<__indirect_expr<ValExpr> > operator[](const ndarray<size_type, Ex,
-  // Lp>& __vs) const {
-  //     typedef __indirect_expr<ValExpr> NewExpr;
-  //     return nc_val_expr< NewExpr >(NewExpr(__vs, expr_));
-  // }
+  // TODO:
+  // - Support lazy slicing of expressions, e.g. (a + b)(slice(...)).
+  // - Support lazy mask-based selection of expressions.
+  // - Support lazy indirect indexing of expressions.
 
   // clang-format off
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -1803,7 +1789,7 @@ public:
   auto operator!() const { return apply_unary_op<std::logical_not>     (); }
   // clang-format on
 
-  auto eval() const {
+  [[nodiscard]] auto eval() const {
     static_assert(nc_mdspan_like_v<ValExpr>,
                   "Cannot eval() a scalar-only expression (no extents)");
     ndarray<value_type, decltype(extents()), default_layout> res(extents());
@@ -1814,11 +1800,11 @@ public:
     return res;
   }
 
-  size_type size() const { return expr_.size(); }
-  auto extents() const { return expr_.extents(); }
+  [[nodiscard]] size_type size() const { return expr_.size(); }
+  [[nodiscard]] auto extents() const { return expr_.extents(); }
 
   value_type sum() const {
-    size_type n = expr_.size();
+    const size_type n = size();
     value_type r = n ? logical(0) : value_type();
     for (size_type i = 1; i < n; ++i)
       r += logical(i);
@@ -1826,10 +1812,10 @@ public:
   }
 
   value_type min() const {
-    size_type n = size();
+    const size_type n = size();
     value_type r = n ? logical(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      value_type x = logical(i);
+      const value_type x = logical(i);
       if (x < r)
         r = x;
     }
@@ -1837,10 +1823,10 @@ public:
   }
 
   value_type max() const {
-    size_type n = size();
+    const size_type n = size();
     value_type r = n ? logical(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      value_type x = logical(i);
+      const value_type x = logical(i);
       if (r < x)
         r = x;
     }
