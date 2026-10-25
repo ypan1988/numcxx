@@ -1813,17 +1813,17 @@ public:
 
   value_type sum() const {
     size_type n = expr_.size();
-    value_type r = n ? expr_.logical(0) : value_type();
+    value_type r = n ? logical(0) : value_type();
     for (size_type i = 1; i < n; ++i)
-      r += expr_.logical(i);
+      r += logical(i);
     return r;
   }
 
   value_type min() const {
     size_type n = size();
-    value_type r = n ? (*this)[0] : value_type();
+    value_type r = n ? logical(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      value_type x = expr_.logical(i);
+      value_type x = logical(i);
       if (x < r)
         r = x;
     }
@@ -1832,9 +1832,9 @@ public:
 
   value_type max() const {
     size_type n = size();
-    value_type r = n ? (*this)[0] : value_type();
+    value_type r = n ? logical(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      value_type x = expr_.logical(i);
+      value_type x = logical(i);
       if (r < x)
         r = x;
     }
