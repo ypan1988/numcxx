@@ -366,8 +366,7 @@ template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = type
 // clang-format on
 
 // [numcxx.ndarray]
-template <class ElementType, class Extents,
-          class LayoutPolicy = detail::layout_right>
+template <class ElementType, class Extents, class LayoutPolicy = default_layout>
 class ndarray {
 public:
   // clang-format off
@@ -570,8 +569,7 @@ private:
 // extern template void ndarray<size_type>::resize(size_type, size_type);
 
 // [numcxx.slice_view]
-template <class ElementType, class Extents,
-          class LayoutPolicy = detail::layout_right>
+template <class ElementType, class Extents, class LayoutPolicy = default_layout>
 class slice_view {
 public:
   // clang-format off
@@ -1794,7 +1792,7 @@ public:
   auto eval() const {
     static_assert(nc_mdspan_like_v<ValExpr>,
                   "Cannot eval() a scalar-only expression (no extents)");
-    ndarray<value_type, decltype(expr_.extents()), layout_right> res(
+    ndarray<value_type, decltype(expr_.extents()), default_layout> res(
         expr_.extents());
     for (size_type i = 0; i < res.size(); ++i) {
       res[i] = expr_.logical(i);
