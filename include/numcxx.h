@@ -52,7 +52,11 @@
 #endif
 // clang-format on
 
-// [numcxx.user_config]
+// [numcxx.configuration]
+
+//===----------------------------------------------------------------------===//
+// User Configuration
+//===----------------------------------------------------------------------===//
 #ifndef NUMCXX_SIZE_TYPE
 // Unsigned integer type for sizes and extents (maximum size of any theoretically possible object)
 #define NUMCXX_SIZE_TYPE std::size_t
@@ -69,6 +73,9 @@
 // #define NUMCXX_DEFAULT_LAYOUT_LEFT
 #endif
 
+//===----------------------------------------------------------------------===//
+// Error Handling Configuration
+//===----------------------------------------------------------------------===//
 #ifndef NUMCXX_NO_DEBUG
 #define NUMCXX_ASSERT(expr, msg)                                               \
   ((expr) ? (void)0                                                            \
@@ -81,10 +88,31 @@
   ::numcxx::detail::throw_exception<exception_type>((msg))
 
 namespace numcxx {
-
-// [numcxx::backend_config]
 namespace detail {
-// Internal: generalize the backend for mdspan / submdspan / mdarray / linalg.
+[[noreturn]]
+inline void
+fail(const char *kind, const char *msg,
+     std::source_location loc = std::source_location::current()) noexcept {
+  std::fprintf(stderr, "numcxx:%s:%u: %s: %s: %s\n", loc.file_name(),
+               loc.line(), loc.function_name(), kind, msg);
+  std::fflush(stderr);
+  std::abort();
+}
+
+template <class Exception>
+[[noreturn]]
+inline void throw_exception(const char *msg) {
+#ifdef NUMCXX_NO_EXCEPTIONS
+  fail("Exception", msg);
+#else
+  throw Exception(msg);
+#endif
+}
+
+//===----------------------------------------------------------------------===//
+// Backend Configuration
+//===----------------------------------------------------------------------===//
+// Internal: abstract the backend for mdspan, submdspan, mdarray, and linalg.
 #ifdef NUMCXX_KOKKOS_MDSPAN_BACKEND
 using Kokkos::dextents;
 using Kokkos::extents;
@@ -178,30 +206,6 @@ template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *end  (      ndarray<Tp, Ex, Lp> &v);
-
-namespace detail {
-
-[[noreturn]]
-inline void
-fail(const char *kind, const char *msg,
-     std::source_location loc = std::source_location::current()) noexcept {
-  std::fprintf(stderr, "numcxx:%s:%u: %s: %s: %s\n", loc.file_name(),
-               loc.line(), loc.function_name(), kind, msg);
-  std::fflush(stderr);
-  std::abort();
-}
-
-template <class Exception>
-[[noreturn]]
-inline void throw_exception(const char *msg) {
-#ifdef NUMCXX_NO_EXCEPTIONS
-  fail("Exception", msg);
-#else
-  throw Exception(msg);
-#endif
-}
-
-} // namespace detail
 
 // [numcxx.slice]
 /// A NumPy-style slice `start:stop:step`
