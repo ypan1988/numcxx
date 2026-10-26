@@ -113,7 +113,7 @@ namespace linalg = std::linalg;
 } // namespace detail
 
 // clang-format off
-// [numcxx.public_api]
+// [numcxx.declarations]
 using  size_type = NUMCXX_SIZE_TYPE;
 using index_type = NUMCXX_INDEX_TYPE;
 
@@ -138,6 +138,7 @@ template <class ValExpr>                class  nc_val_expr ;
 template <class Op, class A0>           struct nc_unary_op ;
 template <class Op, class A0, class A1> struct nc_binary_op;
 
+// Value-expression types participate in NumCxx expression evaluation.
 template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
@@ -145,37 +146,29 @@ template <class Tp>                     struct nc_is_val_expr<    mask_view<Tp> 
 template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp>        > : std::true_type  {};
 template <class ValExpr>                struct nc_is_val_expr<  nc_val_expr<ValExpr   >> : std::true_type  {};
 
-// mdspan-like types are ultimately backed by mdarray/mdspan and provide extents and layout semantics.
+// mdspan-like types provide extents and layout semantics, either directly or through an mdspan-like operand.
 template <class Tp>                     struct nc_mdspan_like                            : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_mdspan_like<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp, class Ex, class Lp> struct nc_mdspan_like<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_mdspan_like<    mask_view<Tp>        > : std::true_type  {};
 template <class Tp>                     struct nc_mdspan_like<indirect_view<Tp>        > : std::true_type  {};
-template <class Op, class A0>           struct nc_mdspan_like<  nc_unary_op<Op, A0>    > : nc_mdspan_like<std::decay_t<A0>> {};
-template <class Op, class A0, class A1> struct nc_mdspan_like< nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_mdspan_like<std::decay_t<A0>>::value  ||
-                                                                                                              nc_mdspan_like<std::decay_t<A1>>::value> {};
+template <class Op, class A0>           struct nc_mdspan_like<  nc_unary_op<Op, A0>    > : nc_mdspan_like<std::remove_cvref_t<A0>> {};
+template <class Op, class A0, class A1> struct nc_mdspan_like< nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_mdspan_like<std::remove_cvref_t<A0>>::value  ||
+                                                                                                              nc_mdspan_like<std::remove_cvref_t<A1>>::value> {};
 
-template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<Tp>::value;
-template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<Tp>::value;
+template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<std::remove_cvref_t<Tp>>::value;
+template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<std::remove_cvref_t<Tp>>::value;
 
-// Type traits and concepts used to distinguish scalar indexing from
-// slicing operations. A slice specifier is any argument accepted by
-// ndarray slicing (scalar index, slice, full_extent, or integral pair
-// range).
+// Type traits and concepts used to distinguish scalar indexing from slicing operations.
+// A slice specifier is scalar index, slice, full_extent, or integral pair range.
+template <class Tp>                         concept     scalar_index = std::integral<std::remove_cvref_t<Tp>>;
 
-template <class T>                          struct is_integral_pair                  : std::false_type {};
-template <std::integral I, std::integral J> struct is_integral_pair<std::pair<I, J>> : std::true_type  {};
-template <class T>                         concept    integral_pair = is_integral_pair<std::remove_cvref_t<T>>::value;
+template <class Tp>                          struct is_integral_pair                  : std::false_type {};
+template <std::integral I, std::integral J>  struct is_integral_pair<std::pair<I, J>> : std::true_type  {};
+template <class Tp>                         concept    integral_pair = is_integral_pair<std::remove_cvref_t<Tp>>::value;
 
-template <class T>
-concept scalar_index = std::integral<std::remove_cvref_t<T>>;
-
-template <class T>
-concept slice_specifier =
-    scalar_index<T> ||
-    std::same_as<std::remove_cvref_t<T>, slice> ||
-    std::same_as<std::remove_cvref_t<T>, detail::full_extent_t> ||
-    integral_pair<T>;
+template <class Tp> concept slice_specifier = scalar_index<Tp> || std::same_as<std::remove_cvref_t<Tp>, slice> ||
+                                              std::same_as<std::remove_cvref_t<Tp>, detail::full_extent_t> || integral_pair<Tp>;
 
 template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
@@ -1776,7 +1769,9 @@ public:
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  [[nodiscard]] value_type logical(size_type i) const { return expr_.logical(i); }
+  [[nodiscard]] value_type logical(size_type i) const {
+    return expr_.logical(i);
+  }
 
   // TODO:
   // - Support lazy slicing of expressions, e.g. (a + b)(slice(...)).
