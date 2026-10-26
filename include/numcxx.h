@@ -188,6 +188,7 @@ template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<std:
 template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<std::remove_cvref_t<Tp>>::value;
 
 template <class Tp> concept value_expression = nc_is_val_expr_v<Tp>;
+template <class Tp> concept array_expression = nc_mdspan_like_v<Tp>;
 
 // Type traits and concepts used to distinguish scalar indexing from slicing operations.
 // A slice specifier is scalar index, slice, full_extent, or integral pair range.
@@ -2138,7 +2139,7 @@ void print_recursive(const M &arr, FILE *file, size_type dim_idx,
 
 } // namespace detail
 
-template <class M, std::enable_if_t<nc_mdspan_like_v<M>, int> = 0>
+template <array_expression M>
 void print(const M &arr, FILE *file = stdout) {
   constexpr auto R = std::decay_t<M>::rank();
   if constexpr (R == 0) {
