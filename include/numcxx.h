@@ -202,6 +202,33 @@ template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && 
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
 template <class... Args> concept slice_view_arguments = all_slice_specifiers<Args...> && !all_scalar_indices<Args...>;
 
+namespace detail {
+
+template <class Ex, class = void> inline constexpr bool is_static_extents_v = false;
+template <class Ex   >            inline constexpr bool is_static_extents_v<Ex, std::void_t<decltype(Ex::rank_dynamic())>> = (Ex::rank_dynamic() == 0);
+template <class Array>            inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
+
+template <class Ex>          struct static_extents_size;
+template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
+
+template <class Tp, class Ex, bool IsStaticExtents = is_static_extents_v<Ex>> struct mdarray_container_selector;
+template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > { using type = std::array <Tp, static_extents_size<Ex>::value>; };
+template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
+template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
+
+template <class T, class = void> struct is_boolean_expr                                                                                              : std::false_type {};
+template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>().logical(size_type{})))>> : std::true_type  {};
+
+template <class Op, class Expr> auto make_unary_op(const Expr &);
+template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
+template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
+
+template <typename Tp, std::size_t Rank> struct nested_initializer_list        { using type = std::initializer_list<typename nested_initializer_list<Tp, Rank - 1>::type>; };
+template <typename Tp                  > struct nested_initializer_list<Tp, 1> { using type = std::initializer_list<Tp>;                                                   };
+template <typename Tp                  > struct nested_initializer_list<Tp, 0>; // undefined on purpose
+template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
+} // namespace detail
+
 template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
 template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
@@ -333,35 +360,6 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept
 
   return {offset, extent, stride, reversed};
 }
-
-// clang-format off
-namespace detail {
-
-template <class Ex, class = void> inline constexpr bool is_static_extents_v = false;
-template <class Ex   >            inline constexpr bool is_static_extents_v<Ex, std::void_t<decltype(Ex::rank_dynamic())>> = (Ex::rank_dynamic() == 0);
-template <class Array>            inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
-
-template <class Ex>          struct static_extents_size;
-template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
-
-template <class Tp, class Ex, bool IsStaticExtents = is_static_extents_v<Ex>> struct mdarray_container_selector;
-template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > { using type = std::array <Tp, static_extents_size<Ex>::value>; };
-template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
-template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
-
-template <class T, class = void> struct is_boolean_expr                                                                                              : std::false_type {};
-template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>().logical(size_type{})))>> : std::true_type  {};
-
-template <class Op, class Expr> auto make_unary_op(const Expr &);
-template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
-template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
-
-template <typename Tp, std::size_t Rank> struct nested_initializer_list        { using type = std::initializer_list<typename nested_initializer_list<Tp, Rank - 1>::type>; };
-template <typename Tp                  > struct nested_initializer_list<Tp, 1> { using type = std::initializer_list<Tp>;                                                   };
-template <typename Tp                  > struct nested_initializer_list<Tp, 0>; // undefined on purpose
-template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
-} // namespace detail
-// clang-format on
 
 // [numcxx.ndarray]
 template <class ElementType, class Extents, class LayoutPolicy = default_layout>
