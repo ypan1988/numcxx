@@ -229,11 +229,6 @@ template <typename Tp                  > struct nested_initializer_list<Tp, 0>; 
 template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
 } // namespace detail
 
-template <class Tp, class Ex, class Lp> const Tp *begin(const ndarray<Tp, Ex, Lp> &v);
-template <class Tp, class Ex, class Lp>       Tp *begin(      ndarray<Tp, Ex, Lp> &v);
-template <class Tp, class Ex, class Lp> const Tp *end  (const ndarray<Tp, Ex, Lp> &v);
-template <class Tp, class Ex, class Lp>       Tp *end  (      ndarray<Tp, Ex, Lp> &v);
-
 // [numcxx.slice]
 /// A NumPy-style slice `start:stop:step`
 class slice {
@@ -500,35 +495,21 @@ public:
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return elem_.to_mdspan(); }
          constexpr        mdspan_type                to_mdspan()       noexcept { return elem_.to_mdspan(); }
 
-  // clang-format on
-
   // member functions:
   void swap(ndarray &v) noexcept;
 
-  [[nodiscard]] value_type sum() const {
-    return std::accumulate(data(), data() + size(), value_type{});
-  }
-  [[nodiscard]] value_type min() const {
-    return empty() ? value_type{} : *std::min_element(data(), data() + size());
-  }
-  [[nodiscard]] value_type max() const {
-    return empty() ? value_type{} : *std::max_element(data(), data() + size());
-  }
+  [[nodiscard]] value_type sum() const { return std::accumulate(data(), data() + size(), value_type{})             ; }
+  [[nodiscard]] value_type min() const { return empty() ? value_type{} : *std::min_element(data(), data() + size()); }
+  [[nodiscard]] value_type max() const { return empty() ? value_type{} : *std::max_element(data(), data() + size()); }
 
   // void resize(size_type n, value_type x = value_type());
 
 private:
-  // clang-format off
   template <class, class, class> friend class       ndarray;
   template <class, class, class> friend class    slice_view;
   template <class>               friend class     mask_view;
   template <class>               friend class indirect_view;
   template <class>               friend class   nc_val_expr;
-
-  template <class Up, class Ex, class Lp> friend const Up* begin(const ndarray<Up, Ex, Lp> &v);
-  template <class Up, class Ex, class Lp> friend       Up* begin(      ndarray<Up, Ex, Lp> &v);
-  template <class Up, class Ex, class Lp> friend const Up* end  (const ndarray<Up, Ex, Lp> &v);
-  template <class Up, class Ex, class Lp> friend       Up* end  (      ndarray<Up, Ex, Lp> &v);
   // clang-format on
 
   template <template <class> class Op> auto apply_unary_op() const {
@@ -2061,11 +2042,6 @@ NUMCXX_MAKE_BINARY_FN(atan2, nc_atan2_expr)
 NUMCXX_MAKE_UNARY_FN(sinh, nc_sinh_expr)
 NUMCXX_MAKE_UNARY_FN(cosh, nc_cosh_expr)
 NUMCXX_MAKE_UNARY_FN(tanh, nc_tanh_expr)
-
-template <class Tp, class Ex, class Lp> [[nodiscard]] inline const Tp *begin(const ndarray<Tp, Ex, Lp> &v) { return v.data()           ; }
-template <class Tp, class Ex, class Lp> [[nodiscard]] inline       Tp *begin(      ndarray<Tp, Ex, Lp> &v) { return v.data()           ; }
-template <class Tp, class Ex, class Lp> [[nodiscard]] inline const Tp *end  (const ndarray<Tp, Ex, Lp> &v) { return v.data() + v.size(); }
-template <class Tp, class Ex, class Lp> [[nodiscard]] inline       Tp *end  (      ndarray<Tp, Ex, Lp> &v) { return v.data() + v.size(); }
 // clang-format on
 
 // [numcxx.print]
