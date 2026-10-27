@@ -410,8 +410,7 @@ public:
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
 
-  // Internal: element access using a linear index in default_layout order,
-  // independent of the actual storage layout.
+  // flattened element access using the default_layout order, independent of the actual storage layout.
   auto logical(size_type i) const;
 
   // subset operations (slice_view)
@@ -594,8 +593,7 @@ public:
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
 
-  // Internal: element access using a linear index in default_layout order,
-  // independent of the actual storage layout.
+  // flattened element access using the default_layout order, independent of the actual storage layout.
   auto logical(size_type i) const;
 
   // subset operations (slice_view)
@@ -794,7 +792,7 @@ public:
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
 
-  // Intenal: Interpret `i` as a linear index in default_layout, regardless of the actual storage layout.
+  // flattened element access using the default_layout order, independent of the actual storage layout.
   auto logical(size_type i) const { return (*this)[i]; }
 
   // unary operators:
@@ -917,7 +915,7 @@ public:
   [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
 
-  // intenal: Interpret `i` as a linear index in default_layout, regardless of the actual storage layout.
+  // flattened element access using the default_layout order, independent of the actual storage layout.
   auto logical(size_type i) const { return (*this)[i]; }
 
   // unary operators:
