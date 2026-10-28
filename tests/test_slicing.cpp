@@ -241,9 +241,15 @@ TEST_F(SlicingTest, RankReductionAllDimensions) {
 TEST_F(SlicingTest, ReverseColumnsLinearAccess) {
   auto v = a(full_extent, slice({}, {}, -1));
 
-  EXPECT_EQ(v.logical(0), 4);
-  EXPECT_EQ(v.logical(1), 3);
-  EXPECT_EQ(v.logical(2), 2);
-  EXPECT_EQ(v.logical(3), 1);
-  EXPECT_EQ(v.logical(4), 0);
+  EXPECT_EQ(v.flat(0), 4);
+  EXPECT_EQ(v.flat(1), 3);
+  EXPECT_EQ(v.flat(2), 2);
+  EXPECT_EQ(v.flat(3), 1);
+  EXPECT_EQ(v.flat(4), 0);
+
+  v.flat(0) = 40;
+  EXPECT_EQ(a(0, 4), 40);
+
+  const auto &const_view = v;
+  EXPECT_EQ(const_view.flat(0), 40);
 }

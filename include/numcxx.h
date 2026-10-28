@@ -219,8 +219,8 @@ template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > {
 template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
 template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
 
-template <class T, class = void> struct is_boolean_expr                                                                                              : std::false_type {};
-template <class T>               struct is_boolean_expr<T, std::void_t<decltype(static_cast<bool>(std::declval<const T &>().logical(size_type{})))>> : std::true_type  {};
+template <class T> struct is_boolean_expr : std::bool_constant<
+    requires(const T &expr) { static_cast<bool>(expr.flat(size_type{})); }> {};
 
 template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
@@ -411,7 +411,8 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
-  auto logical(size_type i) const;
+  [[nodiscard]] const_reference flat(size_type i) const;
+  [[nodiscard]]       reference flat(size_type i);
 
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
@@ -534,7 +535,7 @@ private:
     const size_type n = size();
 #pragma omp simd
     for (size_type i = 0; i < n; ++i)
-      op(ptr[i], expr.logical(i));
+      op(ptr[i], expr.flat(i));
     return *this;
   }
 
@@ -594,7 +595,8 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
-  auto logical(size_type i) const;
+  [[nodiscard]] const_reference flat(size_type i) const;
+  [[nodiscard]]       reference flat(size_type i);
 
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
@@ -720,7 +722,7 @@ private:
   slice_view &apply_expr_op(Op &&op, const Expr &expr) {
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr.logical(i));
+      op((*this)[i], expr.flat(i));
     return *this;
   }
 
@@ -793,7 +795,8 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
-  auto logical(size_type i) const { return (*this)[i]; }
+  [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
+  [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -848,7 +851,7 @@ private:
 
     const auto &mapping = data_span.mapping();
     for (size_type i = 0; i < expr.size(); ++i) {
-      if (static_cast<bool>(expr.logical(i)))
+      if (static_cast<bool>(expr.flat(i)))
         offsets.push_back(mapping(i));
     }
 
@@ -872,7 +875,7 @@ private:
   template <class Op, class Expr>
   mask_view &apply_expr_op(Op &&op, const Expr &expr) {
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr.logical(i));
+      op((*this)[i], expr.flat(i));
     return *this;
   }
 
@@ -916,7 +919,8 @@ public:
   [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
-  auto logical(size_type i) const { return (*this)[i]; }
+  [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
+  [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -987,7 +991,7 @@ private:
   template <class Op, class Expr>
   indirect_view &apply_expr_op(Op &&op, const Expr &expr) {
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr.logical(i));
+      op((*this)[i], expr.flat(i));
     return *this;
   }
 
@@ -1416,29 +1420,76 @@ auto unravel_index(size_type i, const Extents &extents) {
 }
 
 template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::logical(size_type i) const {
+typename ndarray<Tp, Ex, Lp>::const_reference
+ndarray<Tp, Ex, Lp>::flat(size_type i) const {
+  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
   if constexpr (std::is_same_v<layout_type, default_layout>)
-    return data()[i];
-  auto idx = unravel_index<default_layout>(i, extents());
+    return (*this)[i];
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
 
-  const auto &mapping = elem_.mapping();
-  return std::apply([&](auto... idxs) { return data()[mapping(idxs...)]; },
-                    idx);
+    const auto &mapping = elem_.mapping();
+    return std::apply(
+        [&](auto... idxs) -> decltype(auto) {
+          return data()[mapping(idxs...)];
+        },
+        idx);
+  }
 }
 
 template <typename Tp, typename Ex, typename Lp>
-auto slice_view<Tp, Ex, Lp>::logical(size_type i) const {
+typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat(size_type i) {
+  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return (*this)[i];
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
+
+    const auto &mapping = elem_.mapping();
+    return std::apply(
+        [&](auto... idxs) -> decltype(auto) {
+          return data()[mapping(idxs...)];
+        },
+        idx);
+  }
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename slice_view<Tp, Ex, Lp>::const_reference
+slice_view<Tp, Ex, Lp>::flat(size_type i) const {
+  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
   if constexpr (std::is_same_v<layout_type, default_layout>)
     return operator[](i);
-  auto idx = unravel_index<default_layout>(i, extents());
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
 
-  // Convert logical view indices to span_ indices.
-  for (rank_type r = 0; r < rank(); ++r) {
-    if (reverse_dims_[r])
-      idx[r] = extent(r) - 1 - idx[r];
+    for (rank_type r = 0; r < rank(); ++r) {
+      if (reverse_dims_[r])
+        idx[r] = extent(r) - 1 - idx[r];
+    }
+
+    return std::apply(
+        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
   }
+}
 
-  return std::apply([this](auto... idxs) { return span_(idxs...); }, idx);
+template <typename Tp, typename Ex, typename Lp>
+typename slice_view<Tp, Ex, Lp>::reference
+slice_view<Tp, Ex, Lp>::flat(size_type i) {
+  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return operator[](i);
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
+
+    for (rank_type r = 0; r < rank(); ++r) {
+      if (reverse_dims_[r])
+        idx[r] = extent(r) - 1 - idx[r];
+    }
+
+    return std::apply(
+        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
+  }
 }
 
 // [numcxx.indexing_and_slicing]
@@ -1738,9 +1789,9 @@ template <typename... Args>
 
 // [numcxx.expression_template]
 
-// Expression nodes are evaluated in logical default_layout order.
+// Expression nodes are evaluated in flat default_layout order.
 //
-// logical(i) accesses the element at linear index i as if the expression
+// flat(i) accesses the element at linear index i as if the expression
 // used default_layout, independent of each operand's physical layout.
 
 // Wraps an expression node and provides evaluation and reduction APIs.
@@ -1753,9 +1804,7 @@ public:
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  [[nodiscard]] value_type logical(size_type i) const {
-    return expr_.logical(i);
-  }
+  [[nodiscard]] value_type flat(size_type i) const { return expr_.flat(i); }
 
   // TODO:
   // - Support lazy slicing of expressions, e.g. (a + b)(slice(...)).
@@ -1775,7 +1824,7 @@ public:
     ndarray<value_type, decltype(extents()), default_layout> res(extents());
     const size_type n = res.size();
     for (size_type i = 0; i < n; ++i) {
-      res[i] = logical(i);
+      res[i] = flat(i);
     }
     return res;
   }
@@ -1785,17 +1834,17 @@ public:
 
   value_type sum() const {
     const size_type n = size();
-    value_type r = n ? logical(0) : value_type();
+    value_type r = n ? flat(0) : value_type();
     for (size_type i = 1; i < n; ++i)
-      r += logical(i);
+      r += flat(i);
     return r;
   }
 
   value_type min() const {
     const size_type n = size();
-    value_type r = n ? logical(0) : value_type();
+    value_type r = n ? flat(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      const value_type x = logical(i);
+      const value_type x = flat(i);
       if (x < r)
         r = x;
     }
@@ -1804,9 +1853,9 @@ public:
 
   value_type max() const {
     const size_type n = size();
-    value_type r = n ? logical(0) : value_type();
+    value_type r = n ? flat(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      const value_type x = logical(i);
+      const value_type x = flat(i);
       if (r < x)
         r = x;
     }
@@ -1823,7 +1872,7 @@ public:
   using value_type = std::remove_cv_t<Tp>;
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
-  value_type logical(size_type) const { return t_; }
+  value_type flat(size_type) const { return t_; }
   size_type size() const { return s_; }
 
 private:
@@ -1832,15 +1881,15 @@ private:
 };
 
 template <class Op, class A0> struct nc_unary_op {
-  using value_type =
-      std::decay_t<decltype(std::declval<Op>()(std::declval<A0>().logical(0)))>;
+  using value_type = std::decay_t<decltype(std::declval<Op>()(
+      std::declval<const A0 &>().flat(0)))>;
 
   Op op_;
   A0 a0_;
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
-  value_type logical(size_type i) const { return op_(a0_.logical(i)); }
+  value_type flat(size_type i) const { return op_(a0_.flat(i)); }
 
   size_type size() const { return a0_.size(); }
 
@@ -1853,7 +1902,7 @@ template <class Op, class A0> struct nc_unary_op {
 
 template <class Op, class A0, class A1> struct nc_binary_op {
   using value_type = std::decay_t<decltype(std::declval<Op>()(
-      std::declval<A0>().logical(0), std::declval<A1>().logical(0)))>;
+      std::declval<const A0 &>().flat(0), std::declval<const A1 &>().flat(0)))>;
 
   Op op_;
   A0 a0_;
@@ -1862,9 +1911,7 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
       : op_(op), a0_(a0), a1_(a1) {}
 
-  value_type logical(size_type i) const {
-    return op_(a0_.logical(i), a1_.logical(i));
-  }
+  value_type flat(size_type i) const { return op_(a0_.flat(i), a1_.flat(i)); }
 
   size_type size() const { return a0_.size(); }
 

@@ -3,7 +3,7 @@
 
 // ============================================================
 // Layout correctness tests for ET system
-// These tests verify that logical(i) makes operations
+// These tests verify that flat(i) makes operations
 // independent of physical storage layout.
 // ============================================================
 
@@ -79,6 +79,23 @@ TEST(NdarrayETLayoutTest, ScalarWithColumnMajor) {
   EXPECT_DOUBLE_EQ(C(0, 1), 3);
   EXPECT_DOUBLE_EQ(C(1, 0), 4);
   EXPECT_DOUBLE_EQ(C(1, 1), 5);
+}
+
+TEST(NdarrayETLayoutTest, FlatAccessIsMutableAndLayoutIndependent) {
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> A(2, 2);
+  A(0, 0) = 1;
+  A(0, 1) = 2;
+  A(1, 0) = 3;
+  A(1, 1) = 4;
+
+  static_assert(std::is_same_v<decltype(A.flat(0)), int &>);
+  A.flat(1) = 20;
+  EXPECT_EQ(A(0, 1), 20);
+  EXPECT_EQ(A.flat(2), 3);
+
+  const auto &const_A = A;
+  static_assert(std::is_same_v<decltype(const_A.flat(0)), const int &>);
+  EXPECT_EQ(const_A.flat(1), 20);
 }
 
 // ------------------------------------------------------------
