@@ -1419,79 +1419,6 @@ auto unravel_index(size_type i, const Extents &extents) {
   return idx;
 }
 
-template <typename Tp, typename Ex, typename Lp>
-typename ndarray<Tp, Ex, Lp>::const_reference
-ndarray<Tp, Ex, Lp>::flat(size_type i) const {
-  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
-  if constexpr (std::is_same_v<layout_type, default_layout>)
-    return (*this)[i];
-  else {
-    auto idx = unravel_index<default_layout>(i, extents());
-
-    const auto &mapping = elem_.mapping();
-    return std::apply(
-        [&](auto... idxs) -> decltype(auto) {
-          return data()[mapping(idxs...)];
-        },
-        idx);
-  }
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat(size_type i) {
-  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
-  if constexpr (std::is_same_v<layout_type, default_layout>)
-    return (*this)[i];
-  else {
-    auto idx = unravel_index<default_layout>(i, extents());
-
-    const auto &mapping = elem_.mapping();
-    return std::apply(
-        [&](auto... idxs) -> decltype(auto) {
-          return data()[mapping(idxs...)];
-        },
-        idx);
-  }
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename slice_view<Tp, Ex, Lp>::const_reference
-slice_view<Tp, Ex, Lp>::flat(size_type i) const {
-  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
-  if constexpr (std::is_same_v<layout_type, default_layout>)
-    return operator[](i);
-  else {
-    auto idx = unravel_index<default_layout>(i, extents());
-
-    for (rank_type r = 0; r < rank(); ++r) {
-      if (reverse_dims_[r])
-        idx[r] = extent(r) - 1 - idx[r];
-    }
-
-    return std::apply(
-        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
-  }
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename slice_view<Tp, Ex, Lp>::reference
-slice_view<Tp, Ex, Lp>::flat(size_type i) {
-  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
-  if constexpr (std::is_same_v<layout_type, default_layout>)
-    return operator[](i);
-  else {
-    auto idx = unravel_index<default_layout>(i, extents());
-
-    for (rank_type r = 0; r < rank(); ++r) {
-      if (reverse_dims_[r])
-        idx[r] = extent(r) - 1 - idx[r];
-    }
-
-    return std::apply(
-        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
-  }
-}
-
 // [numcxx.indexing_and_slicing]
 namespace detail {
 namespace index_utils {
@@ -1785,6 +1712,79 @@ template <typename... Args>
                    to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
              : detail::slice_utils::make_slice_view(
                    to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename ndarray<Tp, Ex, Lp>::const_reference
+ndarray<Tp, Ex, Lp>::flat(size_type i) const {
+  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return (*this)[i];
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
+
+    const auto &mapping = elem_.mapping();
+    return std::apply(
+        [&](auto... idxs) -> decltype(auto) {
+          return data()[mapping(idxs...)];
+        },
+        idx);
+  }
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat(size_type i) {
+  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return (*this)[i];
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
+
+    const auto &mapping = elem_.mapping();
+    return std::apply(
+        [&](auto... idxs) -> decltype(auto) {
+          return data()[mapping(idxs...)];
+        },
+        idx);
+  }
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename slice_view<Tp, Ex, Lp>::const_reference
+slice_view<Tp, Ex, Lp>::flat(size_type i) const {
+  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return operator[](i);
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
+
+    for (rank_type r = 0; r < rank(); ++r) {
+      if (reverse_dims_[r])
+        idx[r] = extent(r) - 1 - idx[r];
+    }
+
+    return std::apply(
+        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
+  }
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename slice_view<Tp, Ex, Lp>::reference
+slice_view<Tp, Ex, Lp>::flat(size_type i) {
+  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
+  if constexpr (std::is_same_v<layout_type, default_layout>)
+    return operator[](i);
+  else {
+    auto idx = unravel_index<default_layout>(i, extents());
+
+    for (rank_type r = 0; r < rank(); ++r) {
+      if (reverse_dims_[r])
+        idx[r] = extent(r) - 1 - idx[r];
+    }
+
+    return std::apply(
+        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
+  }
 }
 
 // [numcxx.expression_template]
