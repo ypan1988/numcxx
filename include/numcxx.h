@@ -174,21 +174,23 @@ template <class Tp>                     struct nc_is_val_expr<    mask_view<Tp> 
 template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp>        > : std::true_type  {};
 template <class ValExpr>                struct nc_is_val_expr<  nc_val_expr<ValExpr   >> : std::true_type  {};
 
-// mdspan-like types provide extents and layout semantics, either directly or through an mdspan-like operand.
-template <class Tp>                     struct nc_mdspan_like                            : std::false_type {};
-template <class Tp, class Ex, class Lp> struct nc_mdspan_like<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_mdspan_like<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_mdspan_like<    mask_view<Tp>        > : std::true_type  {};
-template <class Tp>                     struct nc_mdspan_like<indirect_view<Tp>        > : std::true_type  {};
-template <class Op, class A0>           struct nc_mdspan_like<  nc_unary_op<Op, A0>    > : nc_mdspan_like<std::remove_cvref_t<A0>> {};
-template <class Op, class A0, class A1> struct nc_mdspan_like< nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_mdspan_like<std::remove_cvref_t<A0>>::value  ||
-                                                                                                              nc_mdspan_like<std::remove_cvref_t<A1>>::value> {};
+// Types with multidimensional shape provide extents.
+template <class Tp>                     struct nc_has_extents                            : std::false_type {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_has_extents<    mask_view<Tp>        > : std::true_type  {};
+template <class Tp>                     struct nc_has_extents<indirect_view<Tp>        > : std::true_type  {};
+template <class Op, class A0>           struct nc_has_extents<  nc_unary_op<Op, A0>    > : nc_has_extents<std::remove_cvref_t<A0>> {};
+template <class Op, class A0, class A1> struct nc_has_extents< nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_has_extents<std::remove_cvref_t<A0>>::value  ||
+                                                                                                              nc_has_extents<std::remove_cvref_t<A1>>::value> {};
 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<std::remove_cvref_t<Tp>>::value;
-template <class Tp> inline constexpr bool nc_mdspan_like_v = nc_mdspan_like<std::remove_cvref_t<Tp>>::value;
+template <class Tp> inline constexpr bool nc_has_extents_v = nc_has_extents<std::remove_cvref_t<Tp>>::value;
 
+// Value expressions support element-wise evaluation.
+// Array expressions are value expressions with multidimensional extents.
 template <class Tp> concept value_expression = nc_is_val_expr_v<Tp>;
-template <class Tp> concept array_expression = nc_mdspan_like_v<Tp>;
+template <class Tp> concept array_expression = nc_is_val_expr_v<Tp> && nc_has_extents_v<Tp>;
 
 // Type traits and concepts used to distinguish scalar indexing from slicing operations.
 // A slice specifier is scalar index, slice, full_extent, or integral pair range.
@@ -1819,7 +1821,7 @@ public:
   // clang-format on
 
   [[nodiscard]] auto eval() const {
-    static_assert(nc_mdspan_like_v<ValExpr>,
+    static_assert(nc_has_extents_v<ValExpr>,
                   "Cannot eval() a scalar-only expression (no extents)");
     using extents_type = std::decay_t<decltype(extents())>;
     ndarray<value_type, extents_type, default_layout> res(extents());
@@ -1895,7 +1897,7 @@ template <class Op, class A0> struct nc_unary_op {
   size_type size() const { return a0_.size(); }
 
   auto extents() const {
-    static_assert(nc_mdspan_like_v<A0>,
+    static_assert(nc_has_extents_v<A0>,
                   "Unary expression has no extents (operand is scalar)");
     return a0_.extents();
   }
@@ -1917,10 +1919,10 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   size_type size() const { return a0_.size(); }
 
   auto extents() const {
-    static_assert(nc_mdspan_like_v<nc_binary_op>,
+    static_assert(nc_has_extents_v<nc_binary_op>,
                   "Binary expression has no extents (scalar + scalar)");
 
-    if constexpr (nc_mdspan_like_v<A0>) {
+    if constexpr (nc_has_extents_v<A0>) {
       return a0_.extents();
     } else {
       return a1_.extents();
@@ -2213,8 +2215,8 @@ namespace linalg {
 ///
 /// @throws std::invalid_argument If the inner dimensions do not match
 template <class A, class B> auto matmul(const A &a, const B &b) {
-  static_assert(nc_mdspan_like_v<A>, "lhs must be ndarray/slice_view type");
-  static_assert(nc_mdspan_like_v<B>, "rhs must be ndarray/slice_view type");
+  static_assert(nc_has_extents_v<A>, "lhs must be ndarray/slice_view type");
+  static_assert(nc_has_extents_v<B>, "rhs must be ndarray/slice_view type");
   static_assert(A::rank() == 2, "matmul requires rank-2 lhs");
   static_assert(B::rank() == 2, "matmul requires rank-2 rhs");
 
@@ -2248,8 +2250,8 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
 ///
 /// @throws std::invalid_argument If shapes are incompatible
 template <class A, class B> auto dot(const A &a, const B &b) {
-  static_assert(nc_mdspan_like_v<A>, "lhs must be ndarray/slice_view type");
-  static_assert(nc_mdspan_like_v<B>, "rhs must be ndarray/slice_view type");
+  static_assert(nc_has_extents_v<A>, "lhs must be ndarray/slice_view type");
+  static_assert(nc_has_extents_v<B>, "rhs must be ndarray/slice_view type");
 
   constexpr int rankA = A::rank();
   constexpr int rankB = B::rank();
