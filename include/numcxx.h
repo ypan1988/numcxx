@@ -1821,7 +1821,8 @@ public:
   [[nodiscard]] auto eval() const {
     static_assert(nc_mdspan_like_v<ValExpr>,
                   "Cannot eval() a scalar-only expression (no extents)");
-    ndarray<value_type, decltype(extents()), default_layout> res(extents());
+    using extents_type = std::decay_t<decltype(extents())>;
+    ndarray<value_type, extents_type, default_layout> res(extents());
     const size_type n = res.size();
     for (size_type i = 0; i < n; ++i) {
       res[i] = flat(i);
