@@ -162,7 +162,7 @@ template <class Tp, class Ex, class Lp> class    slice_view;
 template <class Tp>                     class     mask_view;
 template <class Tp>                     class indirect_view;
 
-template <class ValExpr>                class   nc_val_expr;
+template <class ValExpr>                struct  nc_val_expr;
 template <class Op, class A0>           struct  nc_unary_op;
 template <class Op, class A0, class A1> struct nc_binary_op;
 
