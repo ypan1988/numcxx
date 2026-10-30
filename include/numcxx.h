@@ -382,14 +382,15 @@ public:
   using  layout_type = LayoutPolicy;
   using mapping_type = typename layout_type::template mapping<extents_type>;
 
-  using const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type>;
-  using       mdspan_type = detail::mdspan<      element_type, extents_type, layout_type>;
-  using      mdarray_type = detail::mdarray<     element_type, extents_type, layout_type, detail::mdarray_container_t<ElementType, Extents>>;
+  using const_mdspan_type = detail::mdspan <const element_type, extents_type, layout_type> ;
+  using       mdspan_type = detail::mdspan <      element_type, extents_type, layout_type> ;
+  using      mdarray_type = detail::mdarray<      element_type, extents_type, layout_type,
+                detail::mdarray_container_t<      element_type, extents_type             >>;
 
   using const_reference = typename const_mdspan_type::reference;
   using       reference = typename       mdspan_type::reference;
-  using const_pointer   =          const         element_type *;
-  using       pointer   =                        element_type *;
+  using const_pointer   =          const  value_type  *        ;
+  using       pointer   =                 value_type  *        ;
 
   // construct/destroy:
   constexpr ndarray() = default;
