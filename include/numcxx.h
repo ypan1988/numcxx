@@ -371,26 +371,35 @@ template <class ElementType, class Extents, class LayoutPolicy = default_layout>
 class ndarray {
 public:
   // clang-format off
+  // element
   using element_type = ElementType;
   using   value_type = std::remove_cv_t<element_type>;
 
+  // extents
   using extents_type = Extents;
   using   index_type = typename extents_type::index_type;
   using    size_type = typename extents_type::size_type;
   using    rank_type = typename extents_type::rank_type;
 
+  // layout
   using  layout_type = LayoutPolicy;
   using mapping_type = typename layout_type::template mapping<extents_type>;
 
-  using const_mdspan_type = detail::mdspan <const element_type, extents_type, layout_type> ;
-  using       mdspan_type = detail::mdspan <      element_type, extents_type, layout_type> ;
-  using      mdarray_type = detail::mdarray<      element_type, extents_type, layout_type,
-                detail::mdarray_container_t<      element_type, extents_type             >>;
+  // mdspan
+  using const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type>;
+  using       mdspan_type = detail::mdspan<      element_type, extents_type, layout_type>;
+  
+  // mdarray
+  using mdarray_type = detail::mdarray<value_type, extents_type, layout_type,
+      detail::mdarray_container_t<value_type, extents_type>>;
 
+  // reference
   using const_reference = typename const_mdspan_type::reference;
   using       reference = typename       mdspan_type::reference;
-  using const_pointer   =          const  value_type  *        ;
-  using       pointer   =                 value_type  *        ;
+
+  // pointer
+  using const_pointer   = const element_type *;
+  using       pointer   =       element_type *;
 
   // construct/destroy:
   constexpr ndarray() = default;
