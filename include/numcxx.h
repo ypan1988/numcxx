@@ -291,81 +291,6 @@ public:
 };
 // clang-format on
 
-// Precondition: is_valid() == true.
-constexpr auto slice::normalize(size_type dim_len) const noexcept
-    -> normalized_slice {
-  const index_type len = static_cast<index_type>(dim_len);
-  const bool reversed = step_ < 0;
-
-  index_type start = 0, stop = 0;
-  size_type offset = 0, extent = 0;
-
-  // Overflow-safe constexpr absolute value for the reversed case.
-  // std::abs is not constexpr for integral types before C++23.
-  const size_type stride =
-      static_cast<size_type>(reversed ? -(step_ + 1) + 1 : step_);
-
-  if (len == 0)
-    return {0, 0, stride, reversed};
-
-  if (!reversed) {
-    // Resolve the start index using NumPy forward-slice semantics.
-    start = start_.value_or(0);
-    if (start < 0)
-      start += len;
-    start = std::clamp(start, index_type(0), len);
-
-    // Resolve the stop index using NumPy forward-slice semantics.
-    stop = stop_.value_or(len);
-    if (stop < 0)
-      stop += len;
-    stop = std::clamp(stop, index_type(0), len);
-
-    // Convert [start, stop) to a forward strided_slice.
-    bool empty_slice = start >= stop;
-    offset = static_cast<size_type>(start);
-    extent = static_cast<size_type>(empty_slice ? 0 : (stop - start));
-  } else {
-    // Resolve the start index using NumPy reverse-slice semantics.
-    start = start_.value_or(len - 1);
-    if (start < 0)
-      start += len;
-    start = std::clamp(start, index_type(0), len - 1);
-
-    // Resolve the stop index.
-    //
-    // For reverse slices, an omitted stop uses the NumPy sentinel
-    // value -1 ("one position before the beginning") and must be
-    // preserved. A user-supplied negative stop is treated as a
-    // regular negative index and converted relative to the end.
-    if (stop_.has_value()) {
-      stop = stop_.value();
-      if (stop < 0)
-        stop += len;
-      stop = std::clamp(stop, index_type(-1), len - 1);
-    } else {
-      stop = -1;
-    }
-
-    // NumPy reverse slices are empty when start <= stop.
-    bool empty_slice = start <= stop;
-    if (empty_slice)
-      offset = static_cast<size_type>(start);
-    else {
-      // Compute the last index visited by the reverse slice.
-      // This becomes the offset of the equivalent forward
-      // strided_slice; the original ordering is restored later
-      // using the reversed flag.
-      const index_type n = static_cast<index_type>((start - stop - 1) / stride);
-      offset = static_cast<size_type>(start + n * step_);
-    }
-
-    extent = static_cast<size_type>(empty_slice ? 0 : (start - stop));
-  }
-
-  return {offset, extent, stride, reversed};
-}
-
 // [numcxx.ndarray]
 template <class ElementType, class Extents, class LayoutPolicy = default_layout>
 class ndarray {
@@ -1415,6 +1340,82 @@ Array randint(typename Array::value_type low, typename Array::value_type high,
 } // namespace random
 
 // [numcxx.indexing_and_slicing]
+
+// Precondition: is_valid() == true.
+constexpr auto slice::normalize(size_type dim_len) const noexcept
+    -> normalized_slice {
+  const index_type len = static_cast<index_type>(dim_len);
+  const bool reversed = step_ < 0;
+
+  index_type start = 0, stop = 0;
+  size_type offset = 0, extent = 0;
+
+  // Overflow-safe constexpr absolute value for the reversed case.
+  // std::abs is not constexpr for integral types before C++23.
+  const size_type stride =
+      static_cast<size_type>(reversed ? -(step_ + 1) + 1 : step_);
+
+  if (len == 0)
+    return {0, 0, stride, reversed};
+
+  if (!reversed) {
+    // Resolve the start index using NumPy forward-slice semantics.
+    start = start_.value_or(0);
+    if (start < 0)
+      start += len;
+    start = std::clamp(start, index_type(0), len);
+
+    // Resolve the stop index using NumPy forward-slice semantics.
+    stop = stop_.value_or(len);
+    if (stop < 0)
+      stop += len;
+    stop = std::clamp(stop, index_type(0), len);
+
+    // Convert [start, stop) to a forward strided_slice.
+    bool empty_slice = start >= stop;
+    offset = static_cast<size_type>(start);
+    extent = static_cast<size_type>(empty_slice ? 0 : (stop - start));
+  } else {
+    // Resolve the start index using NumPy reverse-slice semantics.
+    start = start_.value_or(len - 1);
+    if (start < 0)
+      start += len;
+    start = std::clamp(start, index_type(0), len - 1);
+
+    // Resolve the stop index.
+    //
+    // For reverse slices, an omitted stop uses the NumPy sentinel
+    // value -1 ("one position before the beginning") and must be
+    // preserved. A user-supplied negative stop is treated as a
+    // regular negative index and converted relative to the end.
+    if (stop_.has_value()) {
+      stop = stop_.value();
+      if (stop < 0)
+        stop += len;
+      stop = std::clamp(stop, index_type(-1), len - 1);
+    } else {
+      stop = -1;
+    }
+
+    // NumPy reverse slices are empty when start <= stop.
+    bool empty_slice = start <= stop;
+    if (empty_slice)
+      offset = static_cast<size_type>(start);
+    else {
+      // Compute the last index visited by the reverse slice.
+      // This becomes the offset of the equivalent forward
+      // strided_slice; the original ordering is restored later
+      // using the reversed flag.
+      const index_type n = static_cast<index_type>((start - stop - 1) / stride);
+      offset = static_cast<size_type>(start + n * step_);
+    }
+
+    extent = static_cast<size_type>(empty_slice ? 0 : (start - stop));
+  }
+
+  return {offset, extent, stride, reversed};
+}
+
 namespace detail {
 namespace index_utils {
 inline size_type normalize_index(index_type idx, size_type dim_len) {
