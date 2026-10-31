@@ -1831,8 +1831,8 @@ slice_view<Tp, Ex, Lp>::flat(size_type i) {
 // The wrapped expression must have extents; scalar expressions are operands only.
 template <class ValExpr> class nc_val_expr {
   using RmExpr = std::remove_cvref_t<ValExpr>;
-  static_assert(nc_has_extents_v<RmExpr>,
-                "nc_val_expr requires an array expression");
+  static_assert(nc_is_val_expr_v<RmExpr>,
+                "nc_val_expr requires a value expression");
 
   ValExpr expr_;
 
