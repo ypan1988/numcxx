@@ -1832,8 +1832,8 @@ slice_view<Tp, Ex, Lp>::flat(size_type i) {
 // flat(i) accesses the element at linear index i as if the expression
 // used default_layout, independent of each operand's physical layout.
 
-// Wraps an array expression and provides evaluation and reduction APIs.
-// Scalar expressions are internal operands and are not wrapped directly.
+// Provides evaluation and reduction APIs for an expression tree.
+// The wrapped expression must have extents; scalar expressions are operands only.
 template <class ValExpr> class nc_val_expr {
   using RmExpr = std::remove_cvref_t<ValExpr>;
   static_assert(nc_has_extents_v<RmExpr>,
