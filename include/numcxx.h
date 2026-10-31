@@ -289,13 +289,11 @@ public:
   };
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
 };
-// clang-format on
 
 // [numcxx.ndarray]
 template <class ElementType, class Extents, class LayoutPolicy = default_layout>
 class ndarray {
 public:
-  // clang-format off
   // element
   using element_type = ElementType;
   using   value_type = std::remove_cv_t<element_type>;
