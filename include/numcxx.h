@@ -1837,7 +1837,9 @@ template <class ValExpr> class nc_val_expr {
   ValExpr expr_;
 
 public:
+  // element
   using value_type = typename RmExpr::value_type;
+  using element_type = value_type;
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
@@ -1907,7 +1909,9 @@ public:
 
 template <class Tp> class nc_scalar_expr {
 public:
+  // element
   using value_type = std::remove_cv_t<Tp>;
+  using element_type = value_type;
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
   value_type flat(size_type) const { return t_; }
@@ -1919,8 +1923,10 @@ private:
 };
 
 template <class Op, class A0> struct nc_unary_op {
+  // element
   using value_type = std::decay_t<decltype(std::declval<Op>()(
       std::declval<const A0 &>().flat(0)))>;
+  using element_type = value_type;
 
   Op op_;
   A0 a0_;
@@ -1939,8 +1945,10 @@ template <class Op, class A0> struct nc_unary_op {
 };
 
 template <class Op, class A0, class A1> struct nc_binary_op {
+  // element
   using value_type = std::decay_t<decltype(std::declval<Op>()(
       std::declval<const A0 &>().flat(0), std::declval<const A1 &>().flat(0)))>;
+  using element_type = value_type;
 
   Op op_;
   A0 a0_;
