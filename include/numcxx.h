@@ -842,23 +842,30 @@ private:
 template <class ElementType> class indirect_view {
 public:
   // clang-format off
+  // element
   using element_type = ElementType;
   using   value_type = std::remove_cv_t<element_type>;
 
+  // extents
   using extents_type = dextents<1>;
   using   index_type = typename extents_type::index_type;
   using    size_type = typename extents_type::size_type;
   using    rank_type = typename extents_type::rank_type;
 
+  // layout and accessor
   using         layout_type = default_layout;
   using const_accessor_type = detail::index_accessor<const element_type>;
   using       accessor_type = detail::index_accessor<      element_type>;
 
+  // mdspan
   using   const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type, const_accessor_type>;
   using         mdspan_type = detail::mdspan<      element_type, extents_type, layout_type,       accessor_type>;
 
-  using        const_reference = typename const_mdspan_type::reference;
-  using              reference = typename       mdspan_type::reference;
+  // reference
+  using const_reference = typename const_mdspan_type::reference;
+  using       reference = typename       mdspan_type::reference;
+
+  // data_handle
   using const_data_handle_type = typename const_mdspan_type::data_handle_type;
   using       data_handle_type = typename       mdspan_type::data_handle_type;
 
