@@ -167,24 +167,25 @@ template <class Op, class A0>           struct  nc_unary_op;
 template <class Op, class A0, class A1> struct nc_binary_op;
 
 // Value-expression types participate in NumCxx expression evaluation.
-template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<    mask_view<Tp        >> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp        >> : std::true_type  {};
-template <class ValExpr>                struct nc_is_val_expr<  nc_val_expr<ValExpr   >> : std::true_type  {};
-template <class Op, class A0>           struct nc_is_val_expr<  nc_unary_op<Op, A0    >> : std::true_type  {};
-template <class Op, class A0, class A1> struct nc_is_val_expr< nc_binary_op<Op, A0, A1>> : std::true_type  {};
+template <class ValExpr>                struct nc_is_val_expr                             : std::false_type {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<    slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr<     mask_view<Tp        >> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr< indirect_view<Tp        >> : std::true_type  {};
+template <class ValExpr>                struct nc_is_val_expr<   nc_val_expr<ValExpr   >> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr<nc_scalar_expr<Tp        >> : std::true_type  {};
+template <class Op, class A0>           struct nc_is_val_expr<   nc_unary_op<Op, A0    >> : std::true_type  {};
+template <class Op, class A0, class A1> struct nc_is_val_expr<  nc_binary_op<Op, A0, A1>> : std::true_type  {};
 
 // Types with multidimensional extents provide shape information.
-template <class Tp>                     struct nc_has_extents                            : std::false_type {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp>                     struct nc_has_extents<    mask_view<Tp        >> : std::true_type  {};
-template <class Tp>                     struct nc_has_extents<indirect_view<Tp        >> : std::true_type  {};
-template <class ValExpr>                struct nc_has_extents<  nc_val_expr<ValExpr   >> : nc_has_extents<std::remove_cvref_t<ValExpr>> {};
-template <class Op, class A0>           struct nc_has_extents<  nc_unary_op<Op, A0    >> : nc_has_extents<std::remove_cvref_t<A0>> {};
-template <class Op, class A0, class A1> struct nc_has_extents< nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_has_extents<std::remove_cvref_t<A0>>::value  ||
+template <class Tp>                     struct nc_has_extents                             : std::false_type {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<    slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_has_extents<     mask_view<Tp        >> : std::true_type  {};
+template <class Tp>                     struct nc_has_extents< indirect_view<Tp        >> : std::true_type  {};
+template <class ValExpr>                struct nc_has_extents<   nc_val_expr<ValExpr   >> : nc_has_extents<std::remove_cvref_t<ValExpr>> {};
+template <class Op, class A0>           struct nc_has_extents<   nc_unary_op<Op, A0    >> : nc_has_extents<std::remove_cvref_t<A0>> {};
+template <class Op, class A0, class A1> struct nc_has_extents<  nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_has_extents<std::remove_cvref_t<A0>>::value  ||
                                                                                                               nc_has_extents<std::remove_cvref_t<A1>>::value> {};
 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<std::remove_cvref_t<Tp>>::value;
@@ -1833,12 +1834,12 @@ slice_view<Tp, Ex, Lp>::flat(size_type i) {
 
 // Wraps an expression node and provides evaluation and reduction APIs.
 template <class ValExpr> class nc_val_expr {
-  using RmExpr = std::remove_reference_t<ValExpr>;
+  using RmExpr = std::remove_cvref_t<ValExpr>;
   ValExpr expr_;
 
 public:
   // element
-  using value_type = typename RmExpr::value_type;
+  using   value_type = typename RmExpr::value_type;
   using element_type = value_type;
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
@@ -1910,8 +1911,8 @@ public:
 template <class Tp> class nc_scalar_expr {
 public:
   // element
+  using element_type = Tp;
   using value_type = std::remove_cv_t<Tp>;
-  using element_type = value_type;
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
   value_type flat(size_type) const { return t_; }
@@ -1923,10 +1924,18 @@ private:
 };
 
 template <class Op, class A0> struct nc_unary_op {
+  using RmA0 = std::remove_cvref_t<A0>;
+
   // element
-  using value_type = std::decay_t<decltype(std::declval<Op>()(
-      std::declval<const A0 &>().flat(0)))>;
+  using   value_type = std::decay_t<decltype(std::declval<Op>()(
+    std::declval<const A0 &>().flat(0)))>;
   using element_type = value_type;
+
+  // extents
+  using extents_type = typename RmA0::extents_type;
+  using   index_type = typename extents_type::index_type;
+  using    size_type = typename extents_type::size_type;
+  using    rank_type = typename extents_type::rank_type;
 
   Op op_;
   A0 a0_;
@@ -1945,10 +1954,21 @@ template <class Op, class A0> struct nc_unary_op {
 };
 
 template <class Op, class A0, class A1> struct nc_binary_op {
+  using RmA0 = std::remove_cvref_t<A0>;
+  using RmA1 = std::remove_cvref_t<A1>;
+
   // element
   using value_type = std::decay_t<decltype(std::declval<Op>()(
-      std::declval<const A0 &>().flat(0), std::declval<const A1 &>().flat(0)))>;
+    std::declval<const A0 &>().flat(0),
+    std::declval<const A1 &>().flat(0)))>;
   using element_type = value_type;
+
+  // extents
+  using array_operand_type = std::conditional_t<nc_has_extents_v<RmA0>, RmA0, RmA1>;
+  using extents_type = typename array_operand_type::extents_type;
+  using   index_type = typename extents_type::index_type;
+  using    size_type = typename extents_type::size_type;
+  using    rank_type = typename extents_type::rank_type;
 
   Op op_;
   A0 a0_;
