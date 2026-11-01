@@ -36,9 +36,9 @@ m1(0, 1) = 5.0;
 
   |dimensions|dynamic extents|fixed extents|
   |----------|---------------|-------------|
-  |1D|`vec<T> = numcxx::ndarray<T, dextents<1>>`|`vec_fixed<T, N> = ndarray<T, extents<N>>`|
-  |2D|`mat<T> = numcxx::ndarray<T, dextents<2>>`|`mat_fixed<T, M, N> = ndarray<T, extents<M, N>>`| 
-  |3D|`cube<T> = numcxx::ndarray<T, dextents<3>>`|`cube_fixed<T, M, N, K> = ndarray<T, extents<M, N, K>>`|
+  |1D|`vec<T> = ndarray<T, dextents<1>>`|`vec_fixed<T, N> = ndarray<T, extents<N>>`|
+  |2D|`mat<T> = ndarray<T, dextents<2>>`|`mat_fixed<T, M, N> = ndarray<T, extents<M, N>>`| 
+  |3D|`cube<T> = ndarray<T, dextents<3>>`|`cube_fixed<T, M, N, K> = ndarray<T, extents<M, N, K>>`|
 
 ### 1.1 `vec<T>` / `vec_fixed<T, N>`
 + Type alias for 1D `ndarray`.
