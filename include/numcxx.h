@@ -623,12 +623,12 @@ public:
   template <value_expression Expr> slice_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
   // observers
-         constexpr          size_type                     size() const noexcept { return span_.size()       ; }
-         constexpr               bool                    empty() const noexcept { return span_.empty()      ; }
-         constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
-
+  [[nodiscard]] constexpr              size_type         size() const noexcept { return span_.size()       ; }
+  [[nodiscard]] constexpr                   bool        empty() const noexcept { return span_.empty()      ; }
   [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
   [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
+
+         constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_              ; }
@@ -798,9 +798,8 @@ public:
   template <value_expression Expr> mask_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
   // observers
-         constexpr          size_type                     size() const noexcept { return span_.size()   ; }
-         constexpr               bool                    empty() const noexcept { return size() == 0    ; }
-
+  [[nodiscard]] constexpr              size_type         size() const noexcept { return span_.size()       ; }
+  [[nodiscard]] constexpr                   bool        empty() const noexcept { return span_.empty()      ; }
   [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
   [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
 
@@ -935,9 +934,8 @@ public:
   template <value_expression Expr> indirect_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
   // observers
-         constexpr          size_type                     size() const noexcept { return span_.size()   ; }
-         constexpr               bool                    empty() const noexcept { return size() == 0    ; }
-
+  [[nodiscard]] constexpr              size_type         size() const noexcept { return span_.size()       ; }
+  [[nodiscard]] constexpr                   bool        empty() const noexcept { return span_.empty()      ; }
   [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
   [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
 
