@@ -634,7 +634,13 @@ public:
   [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
   [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
 
-         constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
+  [[nodiscard]] static constexpr bool is_always_unique     () noexcept { return mapping_type::is_always_unique()    ; }
+  [[nodiscard]] static constexpr bool is_always_exhaustive () noexcept { return mapping_type::is_always_exhaustive(); }
+  [[nodiscard]] static constexpr bool is_always_strided    () noexcept { return mapping_type::is_always_strided()   ; }
+  [[nodiscard]]        constexpr bool is_unique            () const    { return span_.mapping().is_unique()         ; }
+  [[nodiscard]]        constexpr bool is_exhaustive        () const    { return span_.mapping().is_exhaustive()     ; }
+  [[nodiscard]]        constexpr bool is_strided           () const    { return span_.mapping().is_strided()        ; }
+  [[nodiscard]] constexpr  index_type stride(rank_type     r) const    { return span_.stride(r)                     ; }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_              ; }
