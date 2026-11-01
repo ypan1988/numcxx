@@ -427,13 +427,13 @@ public:
   template <value_expression Expr> ndarray &operator>>=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
   // observers
-         constexpr          size_type                     size() const noexcept { return elem_.size()   ; }
-         constexpr               bool                    empty() const noexcept { return elem_.empty()  ; }
-         constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
-
+  [[nodiscard]] constexpr          size_type     size() const noexcept { return elem_.size()   ; }
+  [[nodiscard]] constexpr               bool    empty() const noexcept { return elem_.empty()  ; }
   [[nodiscard]] constexpr const extents_type& extents() const noexcept { return elem_.extents(); }
   [[nodiscard]] constexpr      const_pointer     data() const noexcept { return elem_.data()   ; }
   [[nodiscard]] constexpr            pointer     data()       noexcept { return elem_.data()   ; }
+
+         constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return elem_.to_mdspan(); }
