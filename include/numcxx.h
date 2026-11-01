@@ -626,8 +626,9 @@ public:
          constexpr          size_type                     size() const noexcept { return span_.size()       ; }
          constexpr               bool                    empty() const noexcept { return span_.empty()      ; }
          constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
-         constexpr const extents_type&                 extents() const noexcept { return span_.extents()    ; }
-         constexpr               auto              data_handle() const noexcept { return span_.data_handle(); }
+
+  [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
+  [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_              ; }
@@ -799,7 +800,9 @@ public:
   // observers
          constexpr          size_type                     size() const noexcept { return span_.size()   ; }
          constexpr               bool                    empty() const noexcept { return size() == 0    ; }
-         constexpr const extents_type&                 extents() const noexcept { return span_.extents(); }
+
+  [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
+  [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_          ; }
@@ -934,7 +937,9 @@ public:
   // observers
          constexpr          size_type                     size() const noexcept { return span_.size()   ; }
          constexpr               bool                    empty() const noexcept { return size() == 0    ; }
-         constexpr const extents_type&                 extents() const noexcept { return span_.extents(); }
+
+  [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
+  [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_          ; }
