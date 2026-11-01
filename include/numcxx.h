@@ -433,7 +433,13 @@ public:
   [[nodiscard]] constexpr      const_pointer     data() const noexcept { return elem_.data()   ; }
   [[nodiscard]] constexpr            pointer     data()       noexcept { return elem_.data()   ; }
 
-         constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
+  [[nodiscard]] static constexpr bool is_always_unique     () noexcept { return true; }
+  [[nodiscard]] static constexpr bool is_always_exhaustive () noexcept { return true; }
+  [[nodiscard]] static constexpr bool is_always_strided    () noexcept { return true; }
+  [[nodiscard]]        constexpr bool is_unique            () const    { return true; }
+  [[nodiscard]]        constexpr bool is_exhaustive        () const    { return true; }
+  [[nodiscard]]        constexpr bool is_strided           () const    { return true; }
+  [[nodiscard]] constexpr  index_type stride(rank_type     r) const    { return elem_.stride(r); }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return elem_.to_mdspan(); }
