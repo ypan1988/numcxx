@@ -520,6 +520,14 @@ public:
   using const_data_handle_type = typename const_mdspan_type::data_handle_type;
   using       data_handle_type = typename       mdspan_type::data_handle_type;
 
+  static constexpr  rank_type  rank        (           )       noexcept { return extents_type::rank()          ; }
+  static constexpr  rank_type  rank_dynamic(           )       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr  size_type static_extent(rank_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr index_type        extent(rank_type r) const noexcept { return span_.extent(r)               ; }
+
+  //--------------------------------------------------------------------------------
+  // [numcxx.slice_view.cons], slice_view constructors, destructor, and assignment
+
   // construct/destroy:
   slice_view() = delete;
   slice_view(const slice_view &) = default;
@@ -614,10 +622,6 @@ public:
   template <value_expression Expr> slice_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
   // observers
-  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
-  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
-         constexpr          size_type        extent(size_type r) const noexcept { return span_.extent(r)    ; }
          constexpr          size_type                     size() const noexcept { return span_.size()       ; }
          constexpr               bool                    empty() const noexcept { return span_.empty()      ; }
          constexpr          size_type        stride(rank_type r) const          { return span_.stride(r)    ; }
