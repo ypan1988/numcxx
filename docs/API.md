@@ -14,7 +14,6 @@
 		+ Compile-time extents with `extents<Dims...>`(e.g., extents<2, 3> for a fixed 2x3 ndarray).
 	+ **`LayoutPolicy`**: specifies how multidimensional indices are mapped to linear storage. Two options are available, namely `layout_right`(i.e., row-major ordering, the default) and `layout_left` (i.e., column-major ordering).
 + Constructors:
-
     ```cpp
     ndarray(SizeTypes... dyn_exts)           // with dynamic extents (rank must match Extents::rank()).
     ndarray(const ndarray &other)            // copy constructor.
@@ -25,12 +24,11 @@
     ```
 
 + Examples:
-
-  ```cpp
-  ndarray<double, dextents<2>, layout_right> m1(3, 4);
-  ndarray<double, extents<3, 4>> m2;
-  m1(0, 1) = 5.0;
-  ```
+    ```cpp
+    ndarray<double, dextents<2>, layout_right> m1(3, 4);
+    ndarray<double, extents<3, 4>> m2;
+    m1(0, 1) = 5.0;
+    ```
 + vector, matrix, cube classes are type aliases that fix the `Extents` / `LayoutPolicy` parameter of `ndarray`:
 
   |dimensions|dynamic extents|fixed extents|
@@ -42,9 +40,8 @@
 ### 1.1 `vec<T>` / `vec_fixed<T, N>`
 + Type alias for 1D `ndarray`.
 + For convenience, the following vector typedefs are defined:
-
-	```cpp
-	// dynamic vectors
+    ```cpp
+    // dynamic vectors
 	dvec = vec<double>
 	fvec = vec<float>
 	ivec = vec<int>
@@ -56,6 +53,7 @@
 	ivec2 / ivec3 / ivec4 = vec_fixed<int, N>
 	uvec2 / uvec3 / uvec4 = vec_fixed<unsigned, N>
     ```
+
 ### 1.2 `mat<T>` / `mat_fixed<T, M, N>`
 + Type alias for 2D `ndarray`.
 + For convenience, the following matrix typedefs are defined:
