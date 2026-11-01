@@ -14,15 +14,12 @@
 		+ Compile-time extents with `extents<Dims...>`(e.g., extents<2, 3> for a fixed 2x3 ndarray).
 	+ **`LayoutPolicy`**: specifies how multidimensional indices are mapped to linear storage. Two options are available, namely `layout_right`(i.e., row-major ordering, the default) and `layout_left` (i.e., column-major ordering).
 + Constructors:
-
-```cpp
-ndarray(SizeTypes... dyn_exts)           // with dynamic extents (rank must match Extents::rank()).
-ndarray(const ndarray &other)            // copy constructor.
-ndarray(ndarray &&other)                 // move constructor.
-ndarray(const slice_view<T, Ex, Lp> &sv) // from a slice view.
-ndarray(const mask_view<T> &mv)          // from a mask view.
-ndarray(const indirect_view<T> &iv)      // from an indirect view.
-```
+    + `ndarray(SizeTypes... dyn_exts)` - with dynamic extents (rank must match `Extents::rank()`).
+    + `ndarray(const ndarray &other)` - copy constructor.
+    + `ndarray(ndarray &&other)` - move constructor.
+    + `ndarray(const slice_view<T, Ex, Lp> &sv)` - from a slice view.
+    + `ndarray(const mask_view<T> &mv)` - from a mask view.
+    + `ndarray(const indirect_view<T> &iv)` - from an indirect view.
 
 + Examples:
 
