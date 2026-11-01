@@ -40,19 +40,20 @@
 ### 1.1 `vec<T>` / `vec_fixed<T, N>`
 + Type alias for 1D `ndarray`.
 + For convenience, the following vector typedefs are defined:
-    ```cpp
-    // dynamic vectors
-	dvec = vec<double>
-	fvec = vec<float>
-	ivec = vec<int>
-	uvec = vec<unsigned>
+    
+```cpp
+// dynamic vectors
+dvec = vec<double>
+fvec = vec<float>
+ivec = vec<int>
+uvec = vec<unsigned>
 
-	// static vectors: vec_fixed<T, N>, with N = 2, 3, 4
-	dvec2 / dvec3 / dvec4 = vec_fixed<double, N>
-	fvec2 / fvec3 / fvec4 = vec_fixed<float, N>
-	ivec2 / ivec3 / ivec4 = vec_fixed<int, N>
-	uvec2 / uvec3 / uvec4 = vec_fixed<unsigned, N>
-    ```
+// static vectors: vec_fixed<T, N>, with N = 2, 3, 4
+dvec2 / dvec3 / dvec4 = vec_fixed<double,N>
+fvec2 / fvec3 / fvec4 = vec_fixed<float, N>
+ivec2 / ivec3 / ivec4 = vec_fixed<int, N>
+uvec2 / uvec3 / uvec4 =vec_fixed<unsigned, N>
+```
 
 ### 1.2 `mat<T>` / `mat_fixed<T, M, N>`
 + Type alias for 2D `ndarray`.
