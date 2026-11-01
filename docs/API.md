@@ -14,21 +14,24 @@
 		+ Compile-time extents with `extents<Dims...>`(e.g., extents<2, 3> for a fixed 2x3 ndarray).
 	+ **`LayoutPolicy`**: specifies how multidimensional indices are mapped to linear storage. Two options are available, namely `layout_right`(i.e., row-major ordering, the default) and `layout_left` (i.e., column-major ordering).
 + Constructors:
-    ```cpp
-    ndarray(SizeTypes... dyn_exts)           // with dynamic extents (rank must match Extents::rank()).
-    ndarray(const ndarray &other)            // copy constructor.
-    ndarray(ndarray &&other)                 // move constructor.
-    ndarray(const slice_view<T, Ex, Lp> &sv) // from a slice view.
-    ndarray(const mask_view<T> &mv)          // from a mask view.
-    ndarray(const indirect_view<T> &iv)      // from an indirect view.
+
+```cpp
+ndarray(SizeTypes... dyn_exts)           // with dynamic extents (rank must match Extents::rank()).
+ndarray(const ndarray &other)            // copy constructor.
+ndarray(ndarray &&other)                 // move constructor.
+ndarray(const slice_view<T, Ex, Lp> &sv) // from a slice view.
+ndarray(const mask_view<T> &mv)          // from a mask view.
+ndarray(const indirect_view<T> &iv)      // from an indirect view.
     ```
 
 + Examples:
-    ```cpp
-    ndarray<double, dextents<2>, layout_right> m1(3, 4);
-    ndarray<double, extents<3, 4>> m2;
-    m1(0, 1) = 5.0;
-    ```
+
+```cpp
+ndarray<double, dextents<2>, layout_right> m1(3, 4);
+ndarray<double, extents<3, 4>> m2;
+m1(0, 1) = 5.0;
+```
+
 + vector, matrix, cube classes are type aliases that fix the `Extents` / `LayoutPolicy` parameter of `ndarray`:
 
   |dimensions|dynamic extents|fixed extents|
