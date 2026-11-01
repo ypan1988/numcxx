@@ -1,10 +1,16 @@
 # API Documentation for NumCxx
 ## Overview
-+ [Vector, Matrix, Cube and NdArray Classes](#ndarray-classes)
+<div class="api-overview">
 
-  [ndarray](#ndarray-def), [vec](#vec-def), [mat](#mat-def), [cube](#cube-def)
-  
-+ [Member functions and Slicing](#member-functions-and-slicing)
+[Vector, Matrix, Cube and NdArray Classes](#ndarray-classes)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[ndarray](#ndarray-def), [vec](#vec-def), [mat](#mat-def), [cube](#cube-def)
+
+[Member functions and Slicing](#member-functions-and-slicing)
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[slice](#slice-def)
+
+</div>
 
 <a id="ndarray-classes"></a>
 ## Vector, Matrix, Cube and NdArray Classes
@@ -100,6 +106,8 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 
 <a id="member-functions-and-slicing"></a>
 ## Member functions and Slicing
+
+<a id="slice-def"></a>
 ### `slice`
 
 + `slice` describes a range of elements in one dimension using `start`, `stop`, and `step`.
