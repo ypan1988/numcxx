@@ -1827,8 +1827,7 @@ slice_view<Tp, Ex, Lp>::flat(size_type i) {
 // flat(i) accesses the element at linear index i as if the expression
 // used default_layout, independent of each operand's physical layout.
 
-// Provides evaluation and reduction APIs for an expression tree.
-// The wrapped expression must have extents; scalar expressions are operands only.
+// Provides evaluation and reduction APIs for a value expression.
 template <class ValExpr> class nc_val_expr {
   using RmExpr = std::remove_cvref_t<ValExpr>;
   static_assert(nc_is_val_expr_v<RmExpr>,
@@ -1847,6 +1846,9 @@ public:
   using size_type = typename extents_type::size_type;
   using rank_type = typename extents_type::rank_type;
 
+  // ndarray
+  using ndarray_type = ndarray<value_type, extents_type, default_layout>;
+
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
   [[nodiscard]] value_type flat(size_type i) const { return expr_.flat(i); }
@@ -1864,7 +1866,7 @@ public:
   // clang-format on
 
   [[nodiscard]] auto eval() const {
-    ndarray<value_type, extents_type, default_layout> res(extents());
+    ndarray_type res(extents());
     const size_type n = res.size();
     for (size_type i = 0; i < n; ++i) {
       res[i] = flat(i);
