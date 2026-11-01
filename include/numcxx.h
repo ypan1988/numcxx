@@ -1905,7 +1905,10 @@ public:
     return res;
   }
 
-  [[nodiscard]] size_type size() const { return expr_.size(); }
+  [[nodiscard]] constexpr size_type size() const noexcept {
+    return expr_.size();
+  }
+  [[nodiscard]] constexpr bool empty() const noexcept { return expr_.empty(); }
   [[nodiscard]] constexpr const extents_type &extents() const noexcept {
     return expr_.extents();
   }
@@ -1994,7 +1997,9 @@ template <class Op, class A0> struct nc_unary_op {
 
   value_type flat(size_type i) const { return op_(a0_.flat(i)); }
 
-  size_type size() const { return a0_.size(); }
+  [[nodiscard]] constexpr size_type size() const noexcept { return a0_.size(); }
+
+  [[nodiscard]] constexpr bool empty() const noexcept { return a0_.empty(); }
 
   [[nodiscard]] constexpr const extents_type &extents() const noexcept {
     return a0_.extents();
@@ -2040,7 +2045,15 @@ template <class Op, class A0, class A1> struct nc_binary_op {
 
   value_type flat(size_type i) const { return op_(a0_.flat(i), a1_.flat(i)); }
 
-  size_type size() const { return a0_.size(); }
+  [[nodiscard]] constexpr size_type size() const noexcept {
+    if constexpr (nc_has_extents_v<RmA0>) {
+      return a0_.size();
+    } else {
+      return a1_.size();
+    }
+  }
+
+  [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
 
   [[nodiscard]] constexpr const extents_type &extents() const noexcept {
     if constexpr (nc_has_extents_v<RmA0>) {
