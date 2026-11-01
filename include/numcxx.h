@@ -1865,10 +1865,16 @@ public:
   // ndarray
   using ndarray_type = ndarray<value_type, extents_type, default_layout>;
 
-  static constexpr  rank_type  rank        (           )       noexcept { return extents_type::rank()          ; }
-  static constexpr  rank_type  rank_dynamic(           )       noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr  size_type static_extent(rank_type r)       noexcept { return extents_type::static_extent(r); }
-         constexpr index_type        extent(rank_type r) const noexcept { return expr_.extent(r)               ; }
+  static constexpr rank_type rank() noexcept { return extents_type::rank(); }
+  static constexpr rank_type rank_dynamic() noexcept {
+    return extents_type::rank_dynamic();
+  }
+  static constexpr size_type static_extent(rank_type r) noexcept {
+    return extents_type::static_extent(r);
+  }
+  constexpr index_type extent(rank_type r) const noexcept {
+    return expr_.extent(r);
+  }
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
@@ -1949,6 +1955,9 @@ private:
 };
 
 template <class Op, class A0> struct nc_unary_op {
+  Op op_;
+  A0 a0_;
+
   using RmA0 = std::remove_cvref_t<A0>;
   static_assert(nc_has_extents_v<RmA0>,
                 "nc_unary_op requires an array operand");
@@ -1964,8 +1973,16 @@ template <class Op, class A0> struct nc_unary_op {
   using size_type = typename extents_type::size_type;
   using rank_type = typename extents_type::rank_type;
 
-  Op op_;
-  A0 a0_;
+  static constexpr rank_type rank() noexcept { return extents_type::rank(); }
+  static constexpr rank_type rank_dynamic() noexcept {
+    return extents_type::rank_dynamic();
+  }
+  static constexpr size_type static_extent(rank_type r) noexcept {
+    return extents_type::static_extent(r);
+  }
+  constexpr index_type extent(rank_type r) const noexcept {
+    return extents().extent(r);
+  }
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
@@ -1977,6 +1994,10 @@ template <class Op, class A0> struct nc_unary_op {
 };
 
 template <class Op, class A0, class A1> struct nc_binary_op {
+  Op op_;
+  A0 a0_;
+  A1 a1_;
+
   using RmA0 = std::remove_cvref_t<A0>;
   using RmA1 = std::remove_cvref_t<A1>;
   static_assert(nc_has_extents_v<RmA0> || nc_has_extents_v<RmA1>,
@@ -1995,9 +2016,16 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   using size_type = typename extents_type::size_type;
   using rank_type = typename extents_type::rank_type;
 
-  Op op_;
-  A0 a0_;
-  A1 a1_;
+  static constexpr rank_type rank() noexcept { return extents_type::rank(); }
+  static constexpr rank_type rank_dynamic() noexcept {
+    return extents_type::rank_dynamic();
+  }
+  static constexpr size_type static_extent(rank_type r) noexcept {
+    return extents_type::static_extent(r);
+  }
+  constexpr index_type extent(rank_type r) const noexcept {
+    return extents().extent(r);
+  }
 
   nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
       : op_(op), a0_(a0), a1_(a1) {}
