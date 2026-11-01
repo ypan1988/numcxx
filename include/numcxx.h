@@ -320,6 +320,14 @@ public:
   using const_pointer   = const element_type *;
   using       pointer   =       element_type *;
 
+  static constexpr  rank_type  rank        (           )       noexcept { return extents_type::rank()          ; }
+  static constexpr  rank_type  rank_dynamic(           )       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr  size_type static_extent(rank_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr index_type        extent(rank_type r) const noexcept { return elem_.extent(r)               ; }
+
+  //--------------------------------------------------------------------------------
+  // [numcxx.ndarray.cons], ndarray constructors, destructor, and assignment
+
   // construct/destroy:
   constexpr ndarray() = default;
   constexpr ndarray(const ndarray &v) = default;
@@ -419,10 +427,6 @@ public:
   template <value_expression Expr> ndarray &operator>>=(const Expr &v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
   // observers
-  static constexpr          rank_type                     rank()       noexcept { return extents_type::rank()          ; }
-  static constexpr          rank_type             rank_dynamic()       noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr          size_type static_extent(size_type r)       noexcept { return extents_type::static_extent(r); }
-         constexpr          size_type        extent(size_type r) const noexcept { return elem_.extent(r); }
          constexpr          size_type                     size() const noexcept { return elem_.size()   ; }
          constexpr               bool                    empty() const noexcept { return elem_.empty()  ; }
          constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
