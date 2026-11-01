@@ -1,12 +1,16 @@
 # API Documentation for NumCxx
-## 0. Overview
+## Overview
 + [Vector, Matrix, Cube and NdArray Classes](#ndarray-classes)
+
+  [ndarray](#ndarray-def), [vec](#vec-def), [mat](#mat-def), [cube](#cube-def)
+  
 + [Member functions and Slicing](#member-functions-and-slicing)
 
 <a id="ndarray-classes"></a>
-## 1. Vector, Matrix, Cube and NdArray Classes
+## Vector, Matrix, Cube and NdArray Classes
 
-### 1.0 `ndarray<T, Extents, LayoutPolicy>`
+<a id="ndarray-def"></a>
+### `ndarray<T, Extents, LayoutPolicy>`
 + `ndarray` is a template class that represents a **generic, multidimensional array**.
 	+ **`T`**: the type (`double`, `float`, `int`, ...) of the stored elements.
 	+ **`Extents`**: describes the rank (i.e., number of dimensions) and size of each dimension. You can choose:
@@ -37,7 +41,8 @@ m1(0, 1) = 5.0;
   |2D|`mat<T> = ndarray<T, dextents<2>>`|`mat_fixed<T, M, N> = ndarray<T, extents<M, N>>`| 
   |3D|`cube<T> = ndarray<T, dextents<3>>`|`cube_fixed<T, M, N, K> = ndarray<T, extents<M, N, K>>`|
 
-### 1.1 `vec<T>` / `vec_fixed<T, N>`
+<a id="vec-def"></a>
+### `vec<T>` / `vec_fixed<T, N>`
 + Type alias for 1D `ndarray`.
 + For convenience, the following vector typedefs are defined:
     
@@ -55,7 +60,8 @@ ivec2 / ivec3 / ivec4 = vec_fixed<int, N>
 uvec2 / uvec3 / uvec4 = vec_fixed<unsigned, N>
 ```
 
-### 1.2 `mat<T>` / `mat_fixed<T, M, N>`
+<a id="mat-def"></a>
+### `mat<T>` / `mat_fixed<T, M, N>`
 + Type alias for 2D `ndarray`.
 + For convenience, the following matrix typedefs are defined:
 
@@ -73,7 +79,8 @@ imat22 / imat33 / imat44 = mat_fixed<int, N, N>
 umat22 / umat33 / umat44 = mat_fixed<unsigned, N, N>
 ```
 
-### 1.3 `cube<T>` / `cube_fixed<T, M, N, K>`
+<a id="cube-def"></a>
+### `cube<T>` / `cube_fixed<T, M, N, K>`
 + Type alias for 3D `ndarray`.
 + For convenience, the following cube typedefs are defined:
 
@@ -92,8 +99,8 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 ```
 
 <a id="member-functions-and-slicing"></a>
-## 2. Member functions and Slicing
-### 2.0 `slice`
+## Member functions and Slicing
+### `slice`
 
 + `slice` describes a range of elements in one dimension using `start`, `stop`, and `step`.
 + It follows NumPy-style slicing:
