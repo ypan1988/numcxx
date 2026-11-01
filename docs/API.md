@@ -22,7 +22,7 @@ ndarray(ndarray &&other)                 // move constructor.
 ndarray(const slice_view<T, Ex, Lp> &sv) // from a slice view.
 ndarray(const mask_view<T> &mv)          // from a mask view.
 ndarray(const indirect_view<T> &iv)      // from an indirect view.
-    ```
+```
 
 + Examples:
 
