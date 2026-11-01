@@ -430,9 +430,10 @@ public:
          constexpr          size_type                     size() const noexcept { return elem_.size()   ; }
          constexpr               bool                    empty() const noexcept { return elem_.empty()  ; }
          constexpr          size_type        stride(rank_type r) const          { return elem_.stride(r); }
-         constexpr const extents_type&                 extents() const noexcept { return elem_.extents(); }
-         constexpr      const_pointer                     data() const noexcept { return elem_.data()   ; }
-         constexpr            pointer                     data()       noexcept { return elem_.data()   ; }
+
+  [[nodiscard]] constexpr const extents_type& extents() const noexcept { return elem_.extents(); }
+  [[nodiscard]] constexpr      const_pointer     data() const noexcept { return elem_.data()   ; }
+  [[nodiscard]] constexpr            pointer     data()       noexcept { return elem_.data()   ; }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return elem_.to_mdspan(); }
@@ -1902,7 +1903,9 @@ public:
   }
 
   [[nodiscard]] size_type size() const { return expr_.size(); }
-  [[nodiscard]] auto extents() const { return expr_.extents(); }
+  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
+    return expr_.extents();
+  }
 
   value_type sum() const {
     const size_type n = size();
@@ -1981,7 +1984,7 @@ template <class Op, class A0> struct nc_unary_op {
     return extents_type::static_extent(r);
   }
   constexpr index_type extent(rank_type r) const noexcept {
-    return extents().extent(r);
+    return a0_.extent(r);
   }
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
@@ -1990,7 +1993,9 @@ template <class Op, class A0> struct nc_unary_op {
 
   size_type size() const { return a0_.size(); }
 
-  auto extents() const { return a0_.extents(); }
+  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
+    return a0_.extents();
+  }
 };
 
 template <class Op, class A0, class A1> struct nc_binary_op {
@@ -2034,8 +2039,8 @@ template <class Op, class A0, class A1> struct nc_binary_op {
 
   size_type size() const { return a0_.size(); }
 
-  auto extents() const {
-    if constexpr (nc_has_extents_v<A0>) {
+  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
+    if constexpr (nc_has_extents_v<RmA0>) {
       return a0_.extents();
     } else {
       return a1_.extents();
