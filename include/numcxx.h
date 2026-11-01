@@ -1865,6 +1865,11 @@ public:
   // ndarray
   using ndarray_type = ndarray<value_type, extents_type, default_layout>;
 
+  static constexpr  rank_type  rank        (           )       noexcept { return extents_type::rank()          ; }
+  static constexpr  rank_type  rank_dynamic(           )       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr  size_type static_extent(rank_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr index_type        extent(rank_type r) const noexcept { return expr_.extent(r)               ; }
+
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
   [[nodiscard]] value_type flat(size_type i) const { return expr_.flat(i); }
