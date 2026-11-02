@@ -1,0 +1,82 @@
+name: Benchmarks
+
+on:
+  push:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OPENBLAS_NUM_THREADS: 1
+      BASELINE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev pkg-config ninja-build
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DNUMCXX_ENABLE_BENCHMARKS=ON
+
+      - name: Build benchmarks
+        run: cmake --build build --target numcxx_benchmarks --parallel 2
+
+      - name: Build and run baseline benchmarks
+        run: |
+          if [ -z "$BASELINE_SHA" ] || [ "$BASELINE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "## Benchmark comparison" >> "$GITHUB_STEP_SUMMARY"
+            echo "No prior commit is available for comparison." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if ! git cat-file -e "$BASELINE_SHA:benchmarks/CMakeLists.txt" 2>/dev/null; then
+            echo "## Benchmark comparison" >> "$GITHUB_STEP_SUMMARY"
+            echo "The prior commit does not contain the benchmark suite, so this run establishes the baseline." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          baseline_dir="$RUNNER_TEMP/numcxx-benchmark-baseline"
+          git worktree add "$baseline_dir" "$BASELINE_SHA"
+          cmake -S "$baseline_dir" -B build-baseline -G Ninja -DCMAKE_BUILD_TYPE=Release -DNUMCXX_ENABLE_BENCHMARKS=ON
+          cmake --build build-baseline --target numcxx_benchmarks --parallel 2
+          ./build-baseline/benchmarks/numcxx_benchmarks \
+            --benchmark_out=benchmark-baseline.json \
+            --benchmark_out_format=json \
+            --benchmark_repetitions=5 \
+            --benchmark_report_aggregates_only=true \
+            --benchmark_min_time=0.1
+
+      - name: Run benchmarks
+        run: >
+          ./build/benchmarks/numcxx_benchmarks
+          --benchmark_out=benchmark-current.json
+          --benchmark_out_format=json
+          --benchmark_repetitions=5
+          --benchmark_report_aggregates_only=true
+          --benchmark_min_time=0.1
+
+      - name: Compare benchmark results
+        if: hashFiles('benchmark-baseline.json') != ''
+        run: python3 benchmarks/compare.py benchmark-baseline.json benchmark-current.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_id }}
+          path: benchmark-*.json
+          if-no-files-found: warn
+          retention-days: 90

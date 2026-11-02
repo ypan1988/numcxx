@@ -24,6 +24,7 @@ project (
 
 option(NUMCXX_ENABLE_TESTS      "Enable tests."              Off)
 option(NUMCXX_ENABLE_EXAMPLES   "Build examples."            Off)
+option(NUMCXX_ENABLE_BENCHMARKS "Build benchmarks."          Off)
 option(NUMCXX_ENABLE_CLANG_TIDY "Enable clang-tidy analysis" ON)
 option(NUMCXX_ENABLE_COVERAGE   "Enable code coverage"       Off)
 
@@ -129,3 +130,7 @@ target_link_libraries(demo PRIVATE numcxx::numcxx)
 # ------------------------------------------------------------
 enable_testing()
 add_subdirectory(tests)
+
+if (NUMCXX_ENABLE_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
