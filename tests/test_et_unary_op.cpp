@@ -37,3 +37,16 @@ TEST(NdarrayUnaryOpsTest, AbsComposed) {
     EXPECT_DOUBLE_EQ(r(1), 1.0);  // abs(0 + 1)
     EXPECT_DOUBLE_EQ(r(2), 5.0);  // abs(4 + 1)
 }
+
+TEST(NdarrayUnaryOpsTest, ExpressionReadsUpdatedOperand) {
+    numcxx::dvec a(2);
+    a(0) = -3.0;
+    a(1) = 4.0;
+
+    auto expr = abs(a);
+    a(0) = -7.0;
+
+    const auto result = expr.eval();
+    EXPECT_DOUBLE_EQ(result(0), 7.0);
+    EXPECT_DOUBLE_EQ(result(1), 4.0);
+}

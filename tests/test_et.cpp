@@ -30,3 +30,18 @@ TEST(NdarrayETTest, BinaryMulAdd) {
     EXPECT_DOUBLE_EQ(C(1, 0), 3 * 3 + 7);
     EXPECT_DOUBLE_EQ(C(1, 1), 4 * 4 + 11);
 }
+
+TEST(NdarrayETTest, ExpressionReadsUpdatedOperands) {
+    numcxx::dvec a(2), b(2);
+    a(0) = 1.0;
+    a(1) = 2.0;
+    b(0) = 10.0;
+    b(1) = 20.0;
+
+    auto expr = a + b;
+    a(0) = 42.0;
+
+    const auto result = expr.eval();
+    EXPECT_DOUBLE_EQ(result(0), 52.0);
+    EXPECT_DOUBLE_EQ(result(1), 22.0);
+}

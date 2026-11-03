@@ -1975,9 +1975,41 @@ private:
   size_type s_;
 };
 
+namespace detail {
+
+// Keep array-like leaves by reference; expression nodes and scalar operands
+// remain inexpensive values.
+template <class T> struct nc_operand_storage {
+  using type = std::remove_cvref_t<T>;
+};
+
+template <class Tp, class Ex, class Lp>
+struct nc_operand_storage<ndarray<Tp, Ex, Lp>> {
+  using type = const ndarray<Tp, Ex, Lp> &;
+};
+
+template <class Tp, class Ex, class Lp>
+struct nc_operand_storage<slice_view<Tp, Ex, Lp>> {
+  using type = const slice_view<Tp, Ex, Lp> &;
+};
+
+template <class Tp> struct nc_operand_storage<mask_view<Tp>> {
+  using type = const mask_view<Tp> &;
+};
+
+template <class Tp> struct nc_operand_storage<indirect_view<Tp>> {
+  using type = const indirect_view<Tp> &;
+};
+
+template <class T>
+using nc_operand_storage_t =
+    typename nc_operand_storage<std::remove_cvref_t<T>>::type;
+
+} // namespace detail
+
 template <class Op, class A0> struct nc_unary_op {
   Op op_;
-  A0 a0_;
+  detail::nc_operand_storage_t<A0> a0_;
 
   using RmA0 = std::remove_cvref_t<A0>;
   static_assert(nc_has_extents_v<RmA0>,
@@ -2020,8 +2052,8 @@ template <class Op, class A0> struct nc_unary_op {
 
 template <class Op, class A0, class A1> struct nc_binary_op {
   Op op_;
-  A0 a0_;
-  A1 a1_;
+  detail::nc_operand_storage_t<A0> a0_;
+  detail::nc_operand_storage_t<A1> a1_;
 
   using RmA0 = std::remove_cvref_t<A0>;
   using RmA1 = std::remove_cvref_t<A1>;
@@ -2134,6 +2166,8 @@ inline auto make_scalar_expr(const typename Expr::value_type &x,
 }
 } // namespace detail
 
+// Expression nodes reference array-like operands; consume them before those
+// operands go out of scope or are moved.
 // clang-format off
 #define NUMCXX_MAKE_UNARY_FN(FN, FUNCTOR)                                      \
   template <value_expression E>                                                \
