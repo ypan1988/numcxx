@@ -2404,9 +2404,15 @@ void print(const M &arr, FILE *file = stdout) {
 //
 #ifdef NUMCXX_DETAIL_HAS_CBLAS
 namespace detail {
+template <class Matrix> struct is_slice_view : std::false_type {};
+template <class ElementType, class Extents, class LayoutPolicy>
+struct is_slice_view<slice_view<ElementType, Extents, LayoutPolicy>>
+    : std::true_type {};
+template <class Matrix>
+inline constexpr bool is_slice_view_v = is_slice_view<std::remove_cvref_t<Matrix>>::value;
+
 // Determine whether a matrix can be passed directly to CBLAS and, if so,
-// return its row-major or column-major storage order. Slice views are checked
-// using their effective strides and rejected when any dimension is reversed.
+// return its row-major or column-major storage order.
 template <class Matrix>
 bool cblas_matrix_order(const Matrix &matrix, CBLAS_ORDER &order) {
   const auto span = matrix.to_mdspan();
@@ -2414,38 +2420,25 @@ bool cblas_matrix_order(const Matrix &matrix, CBLAS_ORDER &order) {
   if (!mapping.is_exhaustive() || !mapping.is_strided())
     return false;
 
-  if constexpr (requires { matrix.has_reversed_dim(); }) {
+  if constexpr (is_slice_view_v<Matrix>) {
     if (matrix.has_reversed_dim())
       return false;
   }
 
   const bool row_contiguous =
       span.stride(1) == 1 && span.stride(0) == span.extent(1);
-  const bool column_contiguous =
+  const bool col_contiguous =
       span.stride(0) == 1 && span.stride(1) == span.extent(0);
 
-  if constexpr (requires { matrix.has_reversed_dim(); }) {
-    if (row_contiguous) {
-      order = CblasRowMajor;
-      return true;
-    }
-    if (column_contiguous) {
-      order = CblasColMajor;
-      return true;
-    }
-  } else if constexpr (std::is_same_v<typename Matrix::layout_type,
-                                      layout_right>) {
-    if (row_contiguous) {
-      order = CblasRowMajor;
-      return true;
-    }
-  } else if constexpr (std::is_same_v<typename Matrix::layout_type,
-                                      layout_left>) {
-    if (column_contiguous) {
-      order = CblasColMajor;
-      return true;
-    }
+  if (row_contiguous) {
+    order = CblasRowMajor;
+    return true;
   }
+  if (col_contiguous) {
+    order = CblasColMajor;
+    return true;
+  }
+
   return false;
 }
 } // namespace detail
