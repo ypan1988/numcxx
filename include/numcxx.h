@@ -2441,6 +2441,69 @@ bool cblas_matrix_order(const Matrix &matrix, CBLAS_ORDER &order) {
 
   return false;
 }
+
+// Multiply contiguous float or double matrices through CBLAS. Return false
+// when the operands or dimensions are unsupported so the caller can fall back
+// to the generic matrix_product implementation.
+template <class A, class B, class C>
+bool nc_cblas_gemm(const A &a, const B &b, C &c) {
+  using value_type =
+      std::common_type_t<typename A::value_type, typename B::value_type>;
+  if constexpr ((std::is_same_v<value_type, float> ||
+                 std::is_same_v<value_type, double>) &&
+                std::is_same_v<typename A::value_type, value_type> &&
+                std::is_same_v<typename B::value_type, value_type>) {
+    const auto &a_ext = a.extents();
+    const auto &b_ext = b.extents();
+    const auto m = a_ext.extent(0);
+    const auto n = b_ext.extent(1);
+    const auto k = a_ext.extent(1);
+    constexpr auto cblas_max = std::numeric_limits<int>::max();
+    if (m <= 0 || n <= 0 || k <= 0 ||
+        m > cblas_max || n > cblas_max || k > cblas_max)
+      return false;
+
+    CBLAS_ORDER a_order;
+    CBLAS_ORDER b_order;
+    if (!cblas_matrix_order(a, a_order) ||
+        !cblas_matrix_order(b, b_order))
+      return false;
+
+    constexpr CBLAS_ORDER result_order =
+        std::is_same_v<default_layout, layout_right> ? CblasRowMajor
+                                                     : CblasColMajor;
+    const auto trans_a =
+        a_order == result_order ? CblasNoTrans : CblasTrans;
+    const auto trans_b =
+        b_order == result_order ? CblasNoTrans : CblasTrans;
+    const int cblas_m = static_cast<int>(m);
+    const int cblas_n = static_cast<int>(n);
+    const int cblas_k = static_cast<int>(k);
+    const int lda = result_order == CblasRowMajor
+                        ? (trans_a == CblasNoTrans ? cblas_k : cblas_m)
+                        : (trans_a == CblasNoTrans ? cblas_m : cblas_k);
+    const int ldb = result_order == CblasRowMajor
+                        ? (trans_b == CblasNoTrans ? cblas_n : cblas_k)
+                        : (trans_b == CblasNoTrans ? cblas_k : cblas_n);
+    const int ldc = result_order == CblasRowMajor ? cblas_n : cblas_m;
+    const value_type alpha = value_type{1};
+    const value_type beta = value_type{};
+
+    if constexpr (std::is_same_v<value_type, float>) {
+      cblas_sgemm(result_order, trans_a, trans_b, cblas_m, cblas_n, cblas_k,
+                  alpha, a.to_mdspan().data_handle(), lda,
+                  b.to_mdspan().data_handle(), ldb, beta,
+                  c.to_mdspan().data_handle(), ldc);
+    } else {
+      cblas_dgemm(result_order, trans_a, trans_b, cblas_m, cblas_n, cblas_k,
+                  alpha, a.to_mdspan().data_handle(), lda,
+                  b.to_mdspan().data_handle(), ldb, beta,
+                  c.to_mdspan().data_handle(), ldc);
+    }
+    return true;
+  }
+  return false;
+}
 } // namespace detail
 #endif
 
@@ -2474,64 +2537,11 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
   ndarray<value_type, extents_type, default_layout> c(a_ext.extent(0),
                                                       b_ext.extent(1));
 
-  // CBLAS accepts one storage order per GEMM call. Contiguous layout_right
-  // matrices use row strides (stride(1) == 1, stride(0) == columns), and
-  // layout_left matrices use column strides (stride(0) == 1, stride(1) == rows).
-  // Mixed input layouts are supported by transposing the operand whose storage
-  // order differs from the output order; C always follows default_layout.
-  // Non-contiguous, reversed, unsupported-layout, and unsupported-type inputs
-  // retain the generic matrix_product path for correctness.
 #ifdef NUMCXX_DETAIL_HAS_CBLAS
-  if constexpr ((std::is_same_v<value_type, float> ||
-                 std::is_same_v<value_type, double>) &&
-                std::is_same_v<typename A::value_type, value_type> &&
-                std::is_same_v<typename B::value_type, value_type>) {
-    const auto m = a_ext.extent(0);
-    const auto n = b_ext.extent(1);
-    const auto k = a_ext.extent(1);
-    constexpr auto cblas_max = std::numeric_limits<int>::max();
-    if (m > 0 && n > 0 && k > 0 &&
-        m <= cblas_max && n <= cblas_max && k <= cblas_max) {
-      CBLAS_ORDER a_order;
-      CBLAS_ORDER b_order;
-      if (detail::cblas_matrix_order(a, a_order) &&
-          detail::cblas_matrix_order(b, b_order)) {
-        constexpr CBLAS_ORDER result_order =
-            std::is_same_v<default_layout, layout_right> ? CblasRowMajor
-                                                         : CblasColMajor;
-        const auto trans_a =
-            a_order == result_order ? CblasNoTrans : CblasTrans;
-        const auto trans_b =
-            b_order == result_order ? CblasNoTrans : CblasTrans;
-        const int cblas_m = static_cast<int>(m);
-        const int cblas_n = static_cast<int>(n);
-        const int cblas_k = static_cast<int>(k);
-        const int lda = result_order == CblasRowMajor
-                            ? (trans_a == CblasNoTrans ? cblas_k : cblas_m)
-                            : (trans_a == CblasNoTrans ? cblas_m : cblas_k);
-        const int ldb = result_order == CblasRowMajor
-                            ? (trans_b == CblasNoTrans ? cblas_n : cblas_k)
-                            : (trans_b == CblasNoTrans ? cblas_k : cblas_n);
-        const int ldc =
-            result_order == CblasRowMajor ? cblas_n : cblas_m;
-        const value_type alpha = value_type{1};
-        const value_type beta = value_type{};
-
-        if constexpr (std::is_same_v<value_type, float>) {
-          cblas_sgemm(result_order, trans_a, trans_b, cblas_m, cblas_n,
-                      cblas_k, alpha, a.to_mdspan().data_handle(), lda,
-                      b.to_mdspan().data_handle(), ldb, beta,
-                      c.to_mdspan().data_handle(), ldc);
-        } else {
-          cblas_dgemm(result_order, trans_a, trans_b, cblas_m, cblas_n,
-                      cblas_k, alpha, a.to_mdspan().data_handle(), lda,
-                      b.to_mdspan().data_handle(), ldb, beta,
-                      c.to_mdspan().data_handle(), ldc);
-        }
-        return c;
-      }
-    }
-  }
+  // CBLAS requires one storage order per call. Mixed layouts are handled with
+  // transpose flags; unsupported layouts and types use the generic fallback.
+  if (detail::nc_cblas_gemm(a, b, c))
+    return c;
 #endif
 
   detail::linalg::matrix_product(a.to_mdspan(), b.to_mdspan(), c.to_mdspan());
