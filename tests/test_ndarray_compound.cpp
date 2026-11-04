@@ -89,3 +89,23 @@ TEST(NdarrayExprCompoundAssign, DivAssign) {
         EXPECT_DOUBLE_EQ(A.data()[i], expected[i]);
     }
 }
+
+TEST(NdarrayExprCompoundAssign, RejectsMismatchedShapesBeforeWriting) {
+    numcxx::dmat A(2, 3);
+    numcxx::dmat B(3, 2);
+    numcxx::dmat C(3, 2);
+    numcxx::dmat D(3, 2);
+    std::iota(A.data(), A.data() + A.size(), 1);
+    std::iota(B.data(), B.data() + B.size(), 10);
+    const double original[] = {1, 2, 3, 4, 5, 6};
+
+    EXPECT_THROW(A += B, std::invalid_argument);
+    for (size_t i = 0; i < A.size(); ++i) {
+        EXPECT_DOUBLE_EQ(A.data()[i], original[i]);
+    }
+
+    EXPECT_THROW(A = C + D, std::invalid_argument);
+    for (size_t i = 0; i < A.size(); ++i) {
+        EXPECT_DOUBLE_EQ(A.data()[i], original[i]);
+    }
+}

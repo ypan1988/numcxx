@@ -82,3 +82,15 @@ TEST(NdarrayETOpsTest, ScalarOps) {
     EXPECT_DOUBLE_EQ(c(1), 2.0);
     EXPECT_DOUBLE_EQ(c(2), 3.0);
 }
+
+TEST(NdarrayETOpsTest, BinaryOpsRequireMatchingShapes) {
+    numcxx::dmat a(2, 3);
+    numcxx::dmat same_size_different_shape(3, 2);
+    numcxx::dvec different_rank_same_size(6);
+
+    EXPECT_THROW((void)(a + same_size_different_shape), std::invalid_argument);
+    EXPECT_THROW((void)(a + different_rank_same_size), std::invalid_argument);
+
+    auto valid_expression = a + a;
+    EXPECT_NO_THROW((void)(valid_expression + a));
+}

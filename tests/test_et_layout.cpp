@@ -113,12 +113,12 @@ TEST(NdarrayETLayoutTest, SliceViewWithLayout) {
 
   auto s = A(0, numcxx::slice());
 
-  numcxx::dmat B(1, 3);
+  numcxx::dvec B(3);
   B = s + 1.0;
 
-  EXPECT_DOUBLE_EQ(B(0, 0), 2);
-  EXPECT_DOUBLE_EQ(B(0, 1), 3);
-  EXPECT_DOUBLE_EQ(B(0, 2), 4);
+  EXPECT_DOUBLE_EQ(B(0), 2);
+  EXPECT_DOUBLE_EQ(B(1), 3);
+  EXPECT_DOUBLE_EQ(B(2), 4);
 }
 
 //// ------------------------------------------------------------

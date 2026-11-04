@@ -247,6 +247,23 @@ template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_cont
 template <class T> struct is_boolean_expr : std::bool_constant<
     requires(const T &expr) { static_cast<bool>(expr.flat(size_type{})); }> {};
 
+template <class Lhs, class Rhs>
+void check_shape_match(const Lhs &lhs, const Rhs &rhs) {
+  using lhs_type = std::remove_cvref_t<Lhs>;
+  using rhs_type = std::remove_cvref_t<Rhs>;
+
+  if (lhs_type::rank() != rhs_type::rank())
+    NUMCXX_THROW(std::invalid_argument,
+                 "array operands must have identical shapes");
+
+  for (typename lhs_type::rank_type r = 0; r < lhs_type::rank(); ++r) {
+    if (lhs.extent(r) !=
+        rhs.extent(static_cast<typename rhs_type::rank_type>(r)))
+      NUMCXX_THROW(std::invalid_argument,
+                   "array operands must have identical shapes");
+  }
+}
+
 template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
@@ -500,6 +517,7 @@ private:
 
   template <class Op, class Expr>
   ndarray &apply_expr_op(Op &&op, const Expr &expr) {
+    detail::check_shape_match(*this, expr);
     auto ptr = data();
     const size_type n = size();
 #pragma omp simd
@@ -708,6 +726,7 @@ private:
 
   template <class Op, class Expr>
   slice_view &apply_expr_op(Op &&op, const Expr &expr) {
+    detail::check_shape_match(*this, expr);
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
       op((*this)[i], expr.flat(i));
@@ -874,6 +893,7 @@ private:
 
   template <class Op, class Expr>
   mask_view &apply_expr_op(Op &&op, const Expr &expr) {
+    detail::check_shape_match(*this, expr);
     for (size_type i = 0; i < size(); ++i)
       op((*this)[i], expr.flat(i));
     return *this;
@@ -1002,6 +1022,7 @@ private:
 
   template <class Op, class Expr>
   indirect_view &apply_expr_op(Op &&op, const Expr &expr) {
+    detail::check_shape_match(*this, expr);
     for (size_type i = 0; i < size(); ++i)
       op((*this)[i], expr.flat(i));
     return *this;
@@ -2108,7 +2129,10 @@ template <class Op, class A0, class A1> struct nc_binary_op {
   }
 
   nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
-      : op_(op), a0_(a0), a1_(a1) {}
+      : op_(op), a0_(a0), a1_(a1) {
+    if constexpr (nc_has_extents_v<RmA0> && nc_has_extents_v<RmA1>)
+      detail::check_shape_match(a0, a1);
+  }
 
   value_type flat(size_type i) const { return op_(a0_.flat(i), a1_.flat(i)); }
 
