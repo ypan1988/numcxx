@@ -1,4 +1,4 @@
-﻿cmake_minimum_required (VERSION 3.15)
+cmake_minimum_required (VERSION 3.21)
 
 # ------------------------------------------------------------
 # MSVC hot reload support
@@ -86,17 +86,18 @@ else()
     target_link_libraries(numcxx::blas INTERFACE ${OPENBLAS_LINK_LIBRARIES})
 endif()
 
-# Macro to copy OpenBLAS DLL (Windows specific)
-macro(copy_openblas_dll target_name)
+# Copy runtime DLLs from linked targets (Windows specific).
+function(copy_runtime_dlls target_name)
     if(WIN32)
         add_custom_command(TARGET ${target_name} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${OPENBLAS_BIN_DIR}/libopenblas.dll"
-                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-            COMMENT "Copying OpenBLAS DLL for ${target_name}"
+                $<TARGET_RUNTIME_DLLS:${target_name}>
+                "$<TARGET_FILE_DIR:${target_name}>"
+            COMMAND_EXPAND_LISTS
+            COMMENT "Copying runtime DLLs for ${target_name}"
         )
     endif()
-endmacro()
+endfunction()
 
 # ------------------------------------------------------------
 # Header-only library
@@ -124,6 +125,7 @@ target_link_libraries(numcxx INTERFACE numcxx::blas)
 # ------------------------------------------------------------
 add_executable(demo src/demo.cpp)
 target_link_libraries(demo PRIVATE numcxx::numcxx)
+copy_runtime_dlls(demo)
 
 # ------------------------------------------------------------
 # Testing

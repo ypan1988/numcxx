@@ -100,6 +100,102 @@ TEST(LinalgMatmulTest, ZeroMatrix) {
   EXPECT_DOUBLE_EQ(C(1, 1), 0);
 }
 
+TEST(LinalgMatmulTest, MixedLayouts) {
+  numcxx::ndarray<double, numcxx::dextents<2>, numcxx::layout_right> A(2, 3);
+  numcxx::ndarray<double, numcxx::dextents<2>, numcxx::layout_left> B(3, 2);
+
+  A(0, 0) = 1;
+  A(0, 1) = 2;
+  A(0, 2) = 3;
+  A(1, 0) = 4;
+  A(1, 1) = 5;
+  A(1, 2) = 6;
+  B(0, 0) = 7;
+  B(0, 1) = 8;
+  B(1, 0) = 9;
+  B(1, 1) = 10;
+  B(2, 0) = 11;
+  B(2, 1) = 12;
+
+  auto C = numcxx::linalg::matmul(A, B);
+
+  EXPECT_DOUBLE_EQ(C(0, 0), 58);
+  EXPECT_DOUBLE_EQ(C(0, 1), 64);
+  EXPECT_DOUBLE_EQ(C(1, 0), 139);
+  EXPECT_DOUBLE_EQ(C(1, 1), 154);
+}
+
+TEST(LinalgMatmulTest, ColumnMajorOperands) {
+  numcxx::ndarray<float, numcxx::dextents<2>, numcxx::layout_left> A(2, 3);
+  numcxx::ndarray<float, numcxx::dextents<2>, numcxx::layout_left> B(3, 2);
+
+  A(0, 0) = 1;
+  A(0, 1) = 2;
+  A(0, 2) = 3;
+  A(1, 0) = 4;
+  A(1, 1) = 5;
+  A(1, 2) = 6;
+  B(0, 0) = 7;
+  B(0, 1) = 8;
+  B(1, 0) = 9;
+  B(1, 1) = 10;
+  B(2, 0) = 11;
+  B(2, 1) = 12;
+
+  auto C = numcxx::linalg::matmul(A, B);
+
+  EXPECT_FLOAT_EQ(C(0, 0), 58);
+  EXPECT_FLOAT_EQ(C(0, 1), 64);
+  EXPECT_FLOAT_EQ(C(1, 0), 139);
+  EXPECT_FLOAT_EQ(C(1, 1), 154);
+}
+
+TEST(LinalgMatmulTest, SliceOperands) {
+  numcxx::dmat A(2, 3);
+  numcxx::dmat strided_source(2, 6);
+  numcxx::dmat B(3, 2);
+
+  A(0, 0) = 1;
+  A(0, 1) = 2;
+  A(0, 2) = 3;
+  A(1, 0) = 4;
+  A(1, 1) = 5;
+  A(1, 2) = 6;
+  strided_source(0, 0) = 1;
+  strided_source(0, 1) = 99;
+  strided_source(0, 2) = 2;
+  strided_source(0, 3) = 99;
+  strided_source(0, 4) = 3;
+  strided_source(0, 5) = 99;
+  strided_source(1, 0) = 4;
+  strided_source(1, 1) = 99;
+  strided_source(1, 2) = 5;
+  strided_source(1, 3) = 99;
+  strided_source(1, 4) = 6;
+  strided_source(1, 5) = 99;
+  B(0, 0) = 7;
+  B(0, 1) = 8;
+  B(1, 0) = 9;
+  B(1, 1) = 10;
+  B(2, 0) = 11;
+  B(2, 1) = 12;
+
+  auto contiguous = A(numcxx::slice(), numcxx::slice());
+  auto C = numcxx::linalg::matmul(contiguous, B);
+  EXPECT_DOUBLE_EQ(C(0, 0), 58);
+  EXPECT_DOUBLE_EQ(C(0, 1), 64);
+  EXPECT_DOUBLE_EQ(C(1, 0), 139);
+  EXPECT_DOUBLE_EQ(C(1, 1), 154);
+
+  auto strided = strided_source(
+      numcxx::slice(), numcxx::slice(std::nullopt, std::nullopt, 2));
+  auto D = numcxx::linalg::matmul(strided, B);
+  EXPECT_DOUBLE_EQ(D(0, 0), 58);
+  EXPECT_DOUBLE_EQ(D(0, 1), 64);
+  EXPECT_DOUBLE_EQ(D(1, 0), 139);
+  EXPECT_DOUBLE_EQ(D(1, 1), 154);
+}
+
 // ------------------------------------------------------------
 // Shape mismatch test
 // ------------------------------------------------------------

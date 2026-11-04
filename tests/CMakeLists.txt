@@ -38,7 +38,9 @@ foreach(TEST_TARGET IN LISTS TEST_TARGETS)
             numcxx::numcxx
             GTest::gtest_main
     )
-    
+
+    copy_runtime_dlls(${TEST_TARGET})
+
     include(GoogleTest)
     gtest_discover_tests(${TEST_TARGET})
 endforeach()

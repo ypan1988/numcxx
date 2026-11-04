@@ -25,6 +25,7 @@
 #include <cstdlib> // std::abort
 #include <functional>
 #include <initializer_list>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -51,6 +52,27 @@
 #include <linalg>
 #endif
 // clang-format on
+
+// CBLAS acceleration is optional; set NUMCXX_ENABLE_CBLAS=0 to disable it.
+// NUMCXX_CBLAS_HEADER can name a non-standard CBLAS header.
+#ifndef NUMCXX_ENABLE_CBLAS
+#define NUMCXX_ENABLE_CBLAS 1
+#endif
+
+#if NUMCXX_ENABLE_CBLAS
+#ifndef NUMCXX_CBLAS_HEADER
+#define NUMCXX_CBLAS_HEADER <cblas.h>
+#endif
+#if defined(__has_include)
+#if __has_include(NUMCXX_CBLAS_HEADER)
+#include NUMCXX_CBLAS_HEADER
+#define NUMCXX_DETAIL_HAS_CBLAS
+#endif
+#else
+#include NUMCXX_CBLAS_HEADER
+#define NUMCXX_DETAIL_HAS_CBLAS
+#endif
+#endif
 
 // [numcxx.configuration]
 
@@ -641,6 +663,7 @@ public:
   [[nodiscard]]        constexpr bool is_exhaustive        () const    { return span_.mapping().is_exhaustive()     ; }
   [[nodiscard]]        constexpr bool is_strided           () const    { return span_.mapping().is_strided()        ; }
   [[nodiscard]] constexpr  index_type stride(rank_type     r) const    { return span_.stride(r)                     ; }
+  [[nodiscard]] constexpr bool has_reversed_dim() const noexcept { return has_reversed_dim_; }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_              ; }
@@ -2379,6 +2402,55 @@ void print(const M &arr, FILE *file = stdout) {
 //
 // [numcxx.linalg] linear algebra
 //
+#ifdef NUMCXX_DETAIL_HAS_CBLAS
+namespace detail {
+// Determine whether a matrix can be passed directly to CBLAS and, if so,
+// return its row-major or column-major storage order. Slice views are checked
+// using their effective strides and rejected when any dimension is reversed.
+template <class Matrix>
+bool cblas_matrix_order(const Matrix &matrix, CBLAS_ORDER &order) {
+  const auto span = matrix.to_mdspan();
+  const auto &mapping = span.mapping();
+  if (!mapping.is_exhaustive() || !mapping.is_strided())
+    return false;
+
+  if constexpr (requires { matrix.has_reversed_dim(); }) {
+    if (matrix.has_reversed_dim())
+      return false;
+  }
+
+  const bool row_contiguous =
+      span.stride(1) == 1 && span.stride(0) == span.extent(1);
+  const bool column_contiguous =
+      span.stride(0) == 1 && span.stride(1) == span.extent(0);
+
+  if constexpr (requires { matrix.has_reversed_dim(); }) {
+    if (row_contiguous) {
+      order = CblasRowMajor;
+      return true;
+    }
+    if (column_contiguous) {
+      order = CblasColMajor;
+      return true;
+    }
+  } else if constexpr (std::is_same_v<typename Matrix::layout_type,
+                                      layout_right>) {
+    if (row_contiguous) {
+      order = CblasRowMajor;
+      return true;
+    }
+  } else if constexpr (std::is_same_v<typename Matrix::layout_type,
+                                      layout_left>) {
+    if (column_contiguous) {
+      order = CblasColMajor;
+      return true;
+    }
+  }
+  return false;
+}
+} // namespace detail
+#endif
+
 namespace linalg {
 
 /// 2D matrix multiplication: C = A x B
@@ -2389,7 +2461,7 @@ namespace linalg {
 /// @tparam B Type with rank() == 2 and to_mdspan() (ndarray, slice_view)
 /// @param  a Left matrix of shape (M × K)
 /// @param  b Right matrix of shape (K × N)
-/// @returns Result matrix of shape (M × N) as row-major ndarray
+/// @returns Result matrix of shape (M × N) in default_layout
 ///
 /// @throws std::invalid_argument If the inner dimensions do not match
 template <class A, class B> auto matmul(const A &a, const B &b) {
@@ -2408,6 +2480,67 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
   using extents_type = dextents<2>;
   ndarray<value_type, extents_type, default_layout> c(a_ext.extent(0),
                                                       b_ext.extent(1));
+
+  // CBLAS accepts one storage order per GEMM call. Contiguous layout_right
+  // matrices use row strides (stride(1) == 1, stride(0) == columns), and
+  // layout_left matrices use column strides (stride(0) == 1, stride(1) == rows).
+  // Mixed input layouts are supported by transposing the operand whose storage
+  // order differs from the output order; C always follows default_layout.
+  // Non-contiguous, reversed, unsupported-layout, and unsupported-type inputs
+  // retain the generic matrix_product path for correctness.
+#ifdef NUMCXX_DETAIL_HAS_CBLAS
+  if constexpr ((std::is_same_v<value_type, float> ||
+                 std::is_same_v<value_type, double>) &&
+                std::is_same_v<typename A::value_type, value_type> &&
+                std::is_same_v<typename B::value_type, value_type>) {
+    const auto m = a_ext.extent(0);
+    const auto n = b_ext.extent(1);
+    const auto k = a_ext.extent(1);
+    constexpr auto cblas_max = std::numeric_limits<int>::max();
+    if (m > 0 && n > 0 && k > 0 &&
+        m <= cblas_max && n <= cblas_max && k <= cblas_max) {
+      CBLAS_ORDER a_order;
+      CBLAS_ORDER b_order;
+      if (detail::cblas_matrix_order(a, a_order) &&
+          detail::cblas_matrix_order(b, b_order)) {
+        constexpr CBLAS_ORDER result_order =
+            std::is_same_v<default_layout, layout_right> ? CblasRowMajor
+                                                         : CblasColMajor;
+        const auto trans_a =
+            a_order == result_order ? CblasNoTrans : CblasTrans;
+        const auto trans_b =
+            b_order == result_order ? CblasNoTrans : CblasTrans;
+        const int cblas_m = static_cast<int>(m);
+        const int cblas_n = static_cast<int>(n);
+        const int cblas_k = static_cast<int>(k);
+        const int lda = result_order == CblasRowMajor
+                            ? (trans_a == CblasNoTrans ? cblas_k : cblas_m)
+                            : (trans_a == CblasNoTrans ? cblas_m : cblas_k);
+        const int ldb = result_order == CblasRowMajor
+                            ? (trans_b == CblasNoTrans ? cblas_n : cblas_k)
+                            : (trans_b == CblasNoTrans ? cblas_k : cblas_n);
+        const int ldc =
+            result_order == CblasRowMajor ? cblas_n : cblas_m;
+        const value_type alpha = value_type{1};
+        const value_type beta = value_type{};
+
+        if constexpr (std::is_same_v<value_type, float>) {
+          cblas_sgemm(result_order, trans_a, trans_b, cblas_m, cblas_n,
+                      cblas_k, alpha, a.to_mdspan().data_handle(), lda,
+                      b.to_mdspan().data_handle(), ldb, beta,
+                      c.to_mdspan().data_handle(), ldc);
+        } else {
+          cblas_dgemm(result_order, trans_a, trans_b, cblas_m, cblas_n,
+                      cblas_k, alpha, a.to_mdspan().data_handle(), lda,
+                      b.to_mdspan().data_handle(), ldb, beta,
+                      c.to_mdspan().data_handle(), ldc);
+        }
+        return c;
+      }
+    }
+  }
+#endif
+
   detail::linalg::matrix_product(a.to_mdspan(), b.to_mdspan(), c.to_mdspan());
 
   return c;

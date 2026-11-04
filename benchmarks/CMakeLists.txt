@@ -12,3 +12,4 @@ FetchContent_MakeAvailable(google_benchmark)
 
 add_executable(numcxx_benchmarks numcxx_benchmarks.cpp)
 target_link_libraries(numcxx_benchmarks PRIVATE numcxx::numcxx benchmark::benchmark)
+copy_runtime_dlls(numcxx_benchmarks)
