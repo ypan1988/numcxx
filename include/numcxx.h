@@ -2196,21 +2196,51 @@ inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
 
 template <class Op, class Expr>
 inline auto make_expr_scalar(const Expr &x,
-                             const typename Expr::value_type &y) {
-  using value_type = typename Expr::value_type;
-  using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<value_type>>;
-  OpType node(Op{}, x, nc_scalar_expr<value_type>(y, x.size()));
+                             const auto &y) {
+  using scalar_type = std::remove_cvref_t<decltype(y)>;
+  using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<scalar_type>>;
+  OpType node(Op{}, x, nc_scalar_expr<scalar_type>(y, x.size()));
   return nc_val_expr<OpType>(node);
 }
 
 template <class Op, class Expr>
-inline auto make_scalar_expr(const typename Expr::value_type &x,
-                             const Expr &y) {
-  using value_type = typename Expr::value_type;
-  using OpType = nc_binary_op<Op, nc_scalar_expr<value_type>, Expr>;
-  OpType node(Op{}, nc_scalar_expr<value_type>(x, y.size()), y);
+inline auto make_scalar_expr(const auto &x, const Expr &y) {
+  using scalar_type = std::remove_cvref_t<decltype(x)>;
+  using OpType = nc_binary_op<Op, nc_scalar_expr<scalar_type>, Expr>;
+  OpType node(Op{}, nc_scalar_expr<scalar_type>(x, y.size()), y);
   return nc_val_expr<OpType>(node);
 }
+
+template <class T> struct complex_component {
+  using type = T;
+  static constexpr bool is_complex = false;
+};
+
+template <class T> struct complex_component<std::complex<T>> {
+  using type = T;
+  static constexpr bool is_complex = true;
+};
+
+template <class T>
+using complex_component_t =
+    typename complex_component<std::remove_cvref_t<T>>::type;
+
+template <class T, class U,
+          bool IsComplex = complex_component<std::remove_cvref_t<T>>::is_complex ||
+                           complex_component<std::remove_cvref_t<U>>::is_complex>
+struct promoted_type {
+  using type = std::common_type_t<std::remove_cvref_t<T>,
+                                  std::remove_cvref_t<U>>;
+};
+
+template <class T, class U>
+struct promoted_type<T, U, true> {
+  using type = std::complex<std::common_type_t<complex_component_t<T>,
+                                               complex_component_t<U>>>;
+};
+
+template <class T, class U>
+using promoted_type_t = typename promoted_type<T, U>::type;
 } // namespace detail
 
 // Expression nodes reference array-like operands; consume them before those
@@ -2225,35 +2255,47 @@ inline auto make_scalar_expr(const typename Expr::value_type &x,
 #define NUMCXX_MAKE_BINARY_OP(OP, FUNCTOR)                                     \
   template <value_expression E1, value_expression E2>                         \
   inline auto operator OP(const E1 &x, const E2 &y) {                          \
-    return detail::make_expr_expr<FUNCTOR<typename E1::value_type>>(x, y);     \
+    using value_type = detail::promoted_type_t<typename E1::value_type,       \
+                                                typename E2::value_type>;      \
+    return detail::make_expr_expr<FUNCTOR<value_type>>(x, y);                 \
   }                                                                            \
-  template <value_expression E>                                                \
-  inline auto operator OP(const E &x, const typename E::value_type &y) {       \
-    return detail::make_expr_scalar<FUNCTOR<typename E::value_type>>(x, y);    \
+  template <value_expression E, class S>                                      \
+    requires (!value_expression<S>)                                            \
+  inline auto operator OP(const E &x, const S &y) {                            \
+    using value_type = detail::promoted_type_t<typename E::value_type, S>;     \
+    return detail::make_expr_scalar<FUNCTOR<value_type>>(x, y);               \
   }                                                                            \
-  template <value_expression E>                                                \
-  inline auto operator OP(const typename E::value_type &x, const E &y) {       \
-    return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
+  template <class S, value_expression E>                                      \
+    requires (!value_expression<S>)                                            \
+  inline auto operator OP(const S &x, const E &y) {                            \
+    using value_type = detail::promoted_type_t<S, typename E::value_type>;     \
+    return detail::make_scalar_expr<FUNCTOR<value_type>>(x, y);               \
   }
 
 #define NUMCXX_MAKE_BINARY_FN(FN, FUNCTOR)                                     \
   template <value_expression E1, value_expression E2>                         \
   inline auto FN(const E1 &x, const E2 &y) {                                   \
-    return detail::make_expr_expr<FUNCTOR<typename E1::value_type>>(x, y);     \
+    using value_type = detail::promoted_type_t<typename E1::value_type,       \
+                                                typename E2::value_type>;      \
+    return detail::make_expr_expr<FUNCTOR<value_type>>(x, y);                 \
   }                                                                            \
-  template <value_expression E>                                                \
-  inline auto FN(const E &x, const typename E::value_type &y) {                \
-    return detail::make_expr_scalar<FUNCTOR<typename E::value_type>>(x, y);    \
+  template <value_expression E, class S>                                      \
+    requires (!value_expression<S>)                                            \
+  inline auto FN(const E &x, const S &y) {                                     \
+    using value_type = detail::promoted_type_t<typename E::value_type, S>;     \
+    return detail::make_expr_scalar<FUNCTOR<value_type>>(x, y);               \
   }                                                                            \
-  template <value_expression E>                                                \
-  inline auto FN(const typename E::value_type &x, const E &y) {                \
-    return detail::make_scalar_expr<FUNCTOR<typename E::value_type>>(x, y);    \
+  template <class S, value_expression E>                                      \
+    requires (!value_expression<S>)                                            \
+  inline auto FN(const S &x, const E &y) {                                     \
+    using value_type = detail::promoted_type_t<S, typename E::value_type>;     \
+    return detail::make_scalar_expr<FUNCTOR<value_type>>(x, y);               \
   }
 
   template <class Tp> struct nc_bit_shift_left  { Tp operator()(const Tp &x, const Tp &y) const { return x << y; } };
   template <class Tp> struct nc_bit_shift_right { Tp operator()(const Tp &x, const Tp &y) const { return x >> y; } };
 
-  template <class Tp> struct nc_abs_expr   { Tp operator()(const Tp& x) const { return std::abs  (x); } };
+  template <class Tp> struct nc_abs_expr   { auto operator()(const Tp& x) const { return std::abs  (x); } };
   template <class Tp> struct nc_acos_expr  { Tp operator()(const Tp& x) const { return std::acos (x); } };
   template <class Tp> struct nc_asin_expr  { Tp operator()(const Tp& x) const { return std::asin (x); } };
   template <class Tp> struct nc_atan_expr  { Tp operator()(const Tp& x) const { return std::atan (x); } };
@@ -2261,7 +2303,14 @@ inline auto make_scalar_expr(const typename Expr::value_type &x,
   template <class Tp> struct nc_cosh_expr  { Tp operator()(const Tp& x) const { return std::cosh (x); } };
   template <class Tp> struct nc_exp_expr   { Tp operator()(const Tp& x) const { return std::exp  (x); } };
   template <class Tp> struct nc_log_expr   { Tp operator()(const Tp& x) const { return std::log  (x); } };
-  template <class Tp> struct nc_log10_expr { Tp operator()(const Tp& x) const { return std::log10(x); } };
+  template <class Tp> struct nc_log10_expr {
+    auto operator()(const Tp &x) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return std::log(x) / std::log(Tp(10));
+      else
+        return std::log10(x);
+    }
+  };
   template <class Tp> struct nc_sin_expr   { Tp operator()(const Tp& x) const { return std::sin  (x); } };
   template <class Tp> struct nc_sinh_expr  { Tp operator()(const Tp& x) const { return std::sinh (x); } };
   template <class Tp> struct nc_sqrt_expr  { Tp operator()(const Tp& x) const { return std::sqrt (x); } };
@@ -2270,6 +2319,84 @@ inline auto make_scalar_expr(const typename Expr::value_type &x,
 
   template <class Tp> struct nc_atan2_expr { Tp operator()(const Tp& x, const Tp& y) const { return std::atan2(x, y); } };
   template <class Tp> struct nc_pow_expr   { Tp operator()(const Tp& x, const Tp& y) const { return std::pow  (x, y); } };
+  template <class Tp> struct nc_conj_expr {
+    auto operator()(const Tp &x) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return std::conj(x);
+      else
+        return x;
+    }
+  };
+  template <class Tp> struct nc_real_expr {
+    auto operator()(const Tp &x) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return x.real();
+      else
+        return x;
+    }
+  };
+  template <class Tp> struct nc_imag_expr {
+    auto operator()(const Tp &x) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return x.imag();
+      else
+        return Tp{};
+    }
+  };
+  template <class Tp> struct nc_arg_expr {
+    auto operator()(const Tp &x) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return std::arg(x);
+      else
+        return std::arg(std::complex<Tp>(x));
+    }
+  };
+  template <class Tp> struct nc_less_expr {
+    bool operator()(const Tp &x, const Tp &y) const {
+      if constexpr (detail::complex_component<Tp>::is_complex) {
+        const bool x_real_nan = std::isnan(x.real());
+        const bool y_real_nan = std::isnan(y.real());
+        if (x_real_nan != y_real_nan)
+          return !x_real_nan;
+        if (!x_real_nan) {
+          if (x.real() != y.real())
+            return x.real() < y.real();
+        }
+
+        const bool x_imag_nan = std::isnan(x.imag());
+        const bool y_imag_nan = std::isnan(y.imag());
+        if (x_imag_nan != y_imag_nan)
+          return !x_imag_nan;
+        return !x_imag_nan && x.imag() < y.imag();
+      } else {
+        return x < y;
+      }
+    }
+  };
+  template <class Tp> struct nc_less_equal_expr {
+    bool operator()(const Tp &x, const Tp &y) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return nc_less_expr<Tp>{}(x, y) || x == y;
+      else
+        return x <= y;
+    }
+  };
+  template <class Tp> struct nc_greater_expr {
+    bool operator()(const Tp &x, const Tp &y) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return nc_less_expr<Tp>{}(y, x);
+      else
+        return x > y;
+    }
+  };
+  template <class Tp> struct nc_greater_equal_expr {
+    bool operator()(const Tp &x, const Tp &y) const {
+      if constexpr (detail::complex_component<Tp>::is_complex)
+        return nc_less_expr<Tp>{}(y, x) || x == y;
+      else
+        return x >= y;
+    }
+  };
 
 // applies binary operators to each element of two ndarrays, or a ndarray and a value
 NUMCXX_MAKE_BINARY_OP( +, std::plus         )
@@ -2288,13 +2415,18 @@ NUMCXX_MAKE_BINARY_OP(||, std::logical_or   )
 // compares two ndarrays or a ndarray with a value
 NUMCXX_MAKE_BINARY_OP(==, std::equal_to     )
 NUMCXX_MAKE_BINARY_OP(!=, std::not_equal_to )
-NUMCXX_MAKE_BINARY_OP( <, std::less         )
-NUMCXX_MAKE_BINARY_OP(<=, std::less_equal   )
-NUMCXX_MAKE_BINARY_OP( >, std::greater      )
-NUMCXX_MAKE_BINARY_OP(>=, std::greater_equal)
+NUMCXX_MAKE_BINARY_OP( <, nc_less_expr         )
+NUMCXX_MAKE_BINARY_OP(<=, nc_less_equal_expr   )
+NUMCXX_MAKE_BINARY_OP( >, nc_greater_expr      )
+NUMCXX_MAKE_BINARY_OP(>=, nc_greater_equal_expr)
 
 // absolute function
 NUMCXX_MAKE_UNARY_FN( abs, nc_abs_expr )
+NUMCXX_MAKE_UNARY_FN(conj, nc_conj_expr)
+NUMCXX_MAKE_UNARY_FN(real, nc_real_expr)
+NUMCXX_MAKE_UNARY_FN(imag, nc_imag_expr)
+NUMCXX_MAKE_UNARY_FN( arg, nc_arg_expr )
+NUMCXX_MAKE_UNARY_FN(angle, nc_arg_expr)
 
 // exponential functions
 NUMCXX_MAKE_UNARY_FN( exp, nc_exp_expr )
@@ -2358,9 +2490,6 @@ NUMCXX_DEF_PRINTF_FMT(bool              , "%d"   )
 NUMCXX_DEF_PRINTF_FMT(signed char       , "%hhd" )
 NUMCXX_DEF_PRINTF_FMT(unsigned char     , "%hhu" )
 
-template <typename T> struct is_complex : std::false_type {};
-template <typename T> struct is_complex<std::complex<T>> : std::true_type {};
-
 template <typename T> void print_complex(const std::complex<T> &z, FILE *file) {
   if constexpr (std::is_same_v<T, long double>) {
     std::fprintf(file, "(%Lg, %Lg)", z.real(), z.imag());
@@ -2373,7 +2502,7 @@ template <typename T> void print_complex(const std::complex<T> &z, FILE *file) {
 template <typename T> void print_element(const T &x, FILE *file) {
   using U = std::remove_cv_t<std::remove_reference_t<T>>;
 
-  if constexpr (is_complex<U>::value) {
+  if constexpr (complex_component<U>::is_complex) {
     print_complex(x, file);
   } else {
     static_assert(printf_format_t<U>::fmt != nullptr, "numcxx::print: unsupported type for printf_format");
@@ -2466,15 +2595,17 @@ bool cblas_matrix_order(const Matrix &matrix, CBLAS_ORDER &order) {
   return false;
 }
 
-// Multiply contiguous float or double matrices through CBLAS. Return false
+// Multiply contiguous BLAS-supported matrices through CBLAS. Return false
 // when the operands or dimensions are unsupported so the caller can fall back
 // to the generic matrix_product implementation.
 template <class A, class B, class C>
 bool nc_cblas_gemm(const A &a, const B &b, C &c) {
   using value_type =
-      std::common_type_t<typename A::value_type, typename B::value_type>;
+      promoted_type_t<typename A::value_type, typename B::value_type>;
   if constexpr ((std::is_same_v<value_type, float> ||
-                 std::is_same_v<value_type, double>) &&
+                 std::is_same_v<value_type, double> ||
+                 std::is_same_v<value_type, std::complex<float>> ||
+                 std::is_same_v<value_type, std::complex<double>>) &&
                 std::is_same_v<typename A::value_type, value_type> &&
                 std::is_same_v<typename B::value_type, value_type>) {
     const auto &a_ext = a.extents();
@@ -2518,10 +2649,20 @@ bool nc_cblas_gemm(const A &a, const B &b, C &c) {
                   alpha, a.to_mdspan().data_handle(), lda,
                   b.to_mdspan().data_handle(), ldb, beta,
                   c.to_mdspan().data_handle(), ldc);
-    } else {
+    } else if constexpr (std::is_same_v<value_type, double>) {
       cblas_dgemm(result_order, trans_a, trans_b, cblas_m, cblas_n, cblas_k,
                   alpha, a.to_mdspan().data_handle(), lda,
                   b.to_mdspan().data_handle(), ldb, beta,
+                  c.to_mdspan().data_handle(), ldc);
+    } else if constexpr (std::is_same_v<value_type, std::complex<float>>) {
+      cblas_cgemm(result_order, trans_a, trans_b, cblas_m, cblas_n, cblas_k,
+                  &alpha, a.to_mdspan().data_handle(), lda,
+                  b.to_mdspan().data_handle(), ldb, &beta,
+                  c.to_mdspan().data_handle(), ldc);
+    } else {
+      cblas_zgemm(result_order, trans_a, trans_b, cblas_m, cblas_n, cblas_k,
+                  &alpha, a.to_mdspan().data_handle(), lda,
+                  b.to_mdspan().data_handle(), ldb, &beta,
                   c.to_mdspan().data_handle(), ldc);
     }
     return true;
@@ -2556,7 +2697,8 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
     NUMCXX_THROW(std::invalid_argument, "matmul: incompatible shapes");
   }
 
-  using value_type = std::common_type_t<typename A::value_type, typename B::value_type>;
+  using value_type =
+      detail::promoted_type_t<typename A::value_type, typename B::value_type>;
   using extents_type = dextents<2>;
   ndarray<value_type, extents_type, default_layout> c(a_ext.extent(0),
                                                       b_ext.extent(1));
@@ -2568,7 +2710,22 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
     return c;
 #endif
 
-  detail::linalg::matrix_product(a.to_mdspan(), b.to_mdspan(), c.to_mdspan());
+  if constexpr (std::is_same_v<typename A::value_type, value_type> &&
+                std::is_same_v<typename B::value_type, value_type>) {
+    detail::linalg::matrix_product(a.to_mdspan(), b.to_mdspan(),
+                                   c.to_mdspan());
+  } else {
+    for (size_type i = 0; i < c.extent(0); ++i) {
+      for (size_type j = 0; j < c.extent(1); ++j) {
+        value_type sum{};
+        for (size_type k = 0; k < a_ext.extent(1); ++k) {
+          sum += static_cast<value_type>(a(i, k)) *
+                 static_cast<value_type>(b(k, j));
+        }
+        c(i, j) = sum;
+      }
+    }
+  }
 
   return c;
 }
@@ -2594,7 +2751,8 @@ template <class A, class B> auto dot(const A &a, const B &b) {
   constexpr int rankA = A::rank();
   constexpr int rankB = B::rank();
 
-  using value_type = std::common_type_t<typename A::value_type, typename B::value_type>;
+  using value_type =
+      detail::promoted_type_t<typename A::value_type, typename B::value_type>;
 
   // 1D x 1D: inner product (scalar)
   if constexpr (rankA == 1 && rankB == 1) {
@@ -2605,7 +2763,8 @@ template <class A, class B> auto dot(const A &a, const B &b) {
     }
     value_type result = value_type{};
     for (size_type i = 0; i < a_ext.extent(0); ++i) {
-      result += a[i] * b[i];
+      result += static_cast<value_type>(a[i]) *
+                static_cast<value_type>(b[i]);
     }
     return result;
   }
@@ -2618,7 +2777,20 @@ template <class A, class B> auto dot(const A &a, const B &b) {
     }
     using extents_type = dextents<1>;
     ndarray<value_type, extents_type, default_layout> c(a_ext.extent(0));
-    detail::linalg::matrix_vector_product(a.to_mdspan(), b.to_mdspan(), c.to_mdspan());
+    if constexpr (std::is_same_v<typename A::value_type, value_type> &&
+                  std::is_same_v<typename B::value_type, value_type>) {
+      detail::linalg::matrix_vector_product(a.to_mdspan(), b.to_mdspan(),
+                                            c.to_mdspan());
+    } else {
+      for (size_type i = 0; i < a_ext.extent(0); ++i) {
+        value_type sum{};
+        for (size_type j = 0; j < a_ext.extent(1); ++j) {
+          sum += static_cast<value_type>(a(i, j)) *
+                 static_cast<value_type>(b[j]);
+        }
+        c[i] = sum;
+      }
+    }
     return c;
   }
   // 1D x 2D: vector-matrix product
@@ -2636,7 +2808,8 @@ template <class A, class B> auto dot(const A &a, const B &b) {
     for (size_type j = 0; j < b_ext.extent(1); ++j) {
       value_type sum = value_type{};
       for (size_type i = 0; i < a_ext.extent(0); ++i) {
-        sum += a[i] * b(i, j);
+        sum += static_cast<value_type>(a[i]) *
+               static_cast<value_type>(b(i, j));
       }
       c[j] = sum;
     }
@@ -2700,6 +2873,19 @@ using dcube    = cube<double>  ;
 using fvec     =  vec<float>   ;
 using fmat     =  mat<float>   ;
 using fcube    = cube<float>   ;
+
+// complex
+using cx_float  = std::complex<float> ;
+using cx_double = std::complex<double>;
+using cx_fvec   = vec<cx_float>       ;
+using cx_fmat   = mat<cx_float>       ;
+using cx_fcube  = cube<cx_float>      ;
+using cx_dvec   = vec<cx_double>      ;
+using cx_dmat   = mat<cx_double>      ;
+using cx_dcube  = cube<cx_double>    ;
+using cx_vec    = cx_dvec             ;
+using cx_mat    = cx_dmat             ;
+using cx_cube   = cx_dcube            ;
 
 // -------- fixed-size --------
 // int

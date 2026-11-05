@@ -150,6 +150,69 @@ TEST(LinalgMatmulTest, ColumnMajorOperands) {
   EXPECT_FLOAT_EQ(C(1, 1), 154);
 }
 
+template <class Complex>
+void check_complex_matmul() {
+  numcxx::ndarray<Complex, numcxx::dextents<2>, numcxx::layout_right> A(2, 2);
+  numcxx::ndarray<Complex, numcxx::dextents<2>, numcxx::layout_left> B(2, 2);
+
+  A(0, 0) = Complex(1, 1);
+  A(0, 1) = Complex(2, 0);
+  A(1, 0) = Complex(0, 0);
+  A(1, 1) = Complex(1, -1);
+  B(0, 0) = Complex(1, 0);
+  B(0, 1) = Complex(0, 0);
+  B(1, 0) = Complex(0, 1);
+  B(1, 1) = Complex(2, 0);
+
+  const auto C = numcxx::linalg::matmul(A, B);
+  EXPECT_EQ(C(0, 0), (Complex(1, 3)));
+  EXPECT_EQ(C(0, 1), (Complex(4, 0)));
+  EXPECT_EQ(C(1, 0), (Complex(1, 1)));
+  EXPECT_EQ(C(1, 1), (Complex(2, -2)));
+}
+
+TEST(LinalgMatmulTest, ComplexFloat) {
+  check_complex_matmul<std::complex<float>>();
+}
+
+TEST(LinalgMatmulTest, ComplexDouble) {
+  check_complex_matmul<std::complex<double>>();
+}
+
+TEST(LinalgMatmulTest, MixedRealAndComplexOperands) {
+  numcxx::dmat A(1, 2);
+  numcxx::cx_fmat B(2, 1);
+  A(0, 0) = 2.0;
+  A(0, 1) = 3.0;
+  B(0, 0) = {1.0f, 1.0f};
+  B(1, 0) = {2.0f, -1.0f};
+
+  const auto C = numcxx::linalg::matmul(A, B);
+  static_assert(std::is_same_v<typename decltype(C)::value_type,
+                               std::complex<double>>);
+  EXPECT_EQ(C(0, 0), (std::complex<double>(8.0, -1.0)));
+}
+
+TEST(LinalgMatmulTest, MixedRealAndComplexDot) {
+  numcxx::cx_fvec complex_values(2);
+  numcxx::dvec real_values(2);
+  complex_values(0) = {1.0f, 1.0f};
+  complex_values(1) = {2.0f, -1.0f};
+  real_values(0) = 2.0;
+  real_values(1) = 3.0;
+
+  const auto scalar = numcxx::linalg::dot(complex_values, real_values);
+  static_assert(
+      std::is_same_v<std::remove_cv_t<decltype(scalar)>, std::complex<double>>);
+  EXPECT_EQ(scalar, (std::complex<double>(8.0, -1.0)));
+
+  numcxx::cx_fmat matrix(1, 2);
+  matrix(0, 0) = complex_values(0);
+  matrix(0, 1) = complex_values(1);
+  const auto product = numcxx::linalg::dot(matrix, real_values);
+  EXPECT_EQ(product(0), (std::complex<double>(8.0, -1.0)));
+}
+
 TEST(LinalgMatmulTest, SliceOperands) {
   numcxx::dmat A(2, 3);
   numcxx::dmat strided_source(2, 6);
