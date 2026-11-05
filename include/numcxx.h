@@ -518,11 +518,10 @@ private:
   template <class Op, class Expr>
   ndarray &apply_expr_op(Op &&op, const Expr &expr) {
     detail::check_shape_match(*this, expr);
-    auto ptr = data();
     const size_type n = size();
 #pragma omp simd
     for (size_type i = 0; i < n; ++i)
-      op(ptr[i], expr.flat(i));
+      op(flat(i), expr.flat(i));
     return *this;
   }
 
@@ -581,7 +580,8 @@ public:
   slice_view(slice_view &&) noexcept = default;
   explicit slice_view(mdspan_type span, std::array<bool, extents_type::rank()> reverse = {})
     : span_(span), reverse_dims_(reverse),
-      has_reversed_dim_(std::any_of(reverse.begin(), reverse.end(), [](bool b) { return b; })) {}
+      has_reversed_dim_(std::any_of(reverse.begin(), reverse.end(), [](bool b) { return b; })),
+      flat_contiguous_(is_flat_contiguous(span, reverse)) {}
   ~slice_view() = default;
 
   // assignment:
@@ -689,6 +689,37 @@ public:
   // clang-format on
 
 private:
+  static bool is_flat_contiguous(
+      const mdspan_type &span,
+      const std::array<bool, extents_type::rank()> &reverse) noexcept {
+    if (span.size() <= 1)
+      return true;
+    if (!span.mapping().is_exhaustive())
+      return false;
+    for (rank_type r = 0; r < extents_type::rank(); ++r)
+      if (reverse[r] && span.extent(r) > 1)
+        return false;
+
+    size_type expected_stride = 1;
+    auto check_dim = [&](rank_type r) {
+      if (span.extent(r) > 1 && span.stride(r) != expected_stride)
+        return false;
+      expected_stride *= span.extent(r);
+      return true;
+    };
+
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
+      for (rank_type r = extents_type::rank(); r-- > 0;)
+        if (!check_dim(r))
+          return false;
+    } else {
+      for (rank_type r = 0; r < extents_type::rank(); ++r)
+        if (!check_dim(r))
+          return false;
+    }
+    return true;
+  }
+
   size_type calc_offset(size_type i) const noexcept {
     if (size() == 0)
       return 0;
@@ -703,6 +734,26 @@ private:
       remaining /= dim_len;
     };
     if constexpr (std::is_same_v<layout_type, layout_right>) {
+      for (rank_type r = rank(); r-- > 0;)
+        process_dim(r);
+    } else {
+      for (rank_type r = 0; r < rank(); ++r)
+        process_dim(r);
+    }
+    return offset;
+  }
+
+  size_type calc_flat_offset(size_type i) const noexcept {
+    size_type offset = 0, remaining = i;
+    auto process_dim = [&](rank_type r) {
+      const size_type dim_len = extent(r);
+      size_type idx = remaining % dim_len;
+      if (reverse_dims_[r])
+        idx = dim_len - 1 - idx;
+      offset += idx * span_.stride(r);
+      remaining /= dim_len;
+    };
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
       for (rank_type r = rank(); r-- > 0;)
         process_dim(r);
     } else {
@@ -729,7 +780,7 @@ private:
     detail::check_shape_match(*this, expr);
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr.flat(i));
+      op(flat(i), expr.flat(i));
     return *this;
   }
 
@@ -737,6 +788,7 @@ private:
   mdspan_type span_;
   std::array<bool, extents_type::rank()> reverse_dims_{};
   bool has_reversed_dim_;
+  bool flat_contiguous_;
   // std::vector<size_type> logical_offset_;
 };
 
@@ -1862,38 +1914,14 @@ template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::const_reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) const {
   NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
-  if constexpr (std::is_same_v<layout_type, default_layout>)
-    return operator[](i);
-  else {
-    auto idx = unravel_index<default_layout>(i, extents());
-
-    for (rank_type r = 0; r < rank(); ++r) {
-      if (reverse_dims_[r])
-        idx[r] = extent(r) - 1 - idx[r];
-    }
-
-    return std::apply(
-        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
-  }
+  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
 }
 
 template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) {
   NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
-  if constexpr (std::is_same_v<layout_type, default_layout>)
-    return operator[](i);
-  else {
-    auto idx = unravel_index<default_layout>(i, extents());
-
-    for (rank_type r = 0; r < rank(); ++r) {
-      if (reverse_dims_[r])
-        idx[r] = extent(r) - 1 - idx[r];
-    }
-
-    return std::apply(
-        [this](auto... idxs) -> decltype(auto) { return span_(idxs...); }, idx);
-  }
+  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
 }
 
 // [numcxx.expression_template]

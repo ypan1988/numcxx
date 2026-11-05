@@ -121,6 +121,56 @@ TEST(NdarrayETLayoutTest, SliceViewWithLayout) {
   EXPECT_DOUBLE_EQ(B(2), 4);
 }
 
+TEST(NdarrayETLayoutTest, StridedSliceExpressionAssignmentUsesLogicalOrder) {
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_right> A(3, 4);
+  for (numcxx::size_type i = 0; i < A.extent(0); ++i)
+    for (numcxx::size_type j = 0; j < A.extent(1); ++j)
+      A(i, j) = static_cast<int>(10 * i + j);
+
+  auto view = A(numcxx::full_extent, numcxx::slice(0, 4, 2));
+  view = view + 100;
+
+  for (numcxx::size_type i = 0; i < A.extent(0); ++i) {
+    EXPECT_EQ(A(i, 0), static_cast<int>(10 * i + 100));
+    EXPECT_EQ(A(i, 2), static_cast<int>(10 * i + 102));
+    EXPECT_EQ(A(i, 1), static_cast<int>(10 * i + 1));
+    EXPECT_EQ(A(i, 3), static_cast<int>(10 * i + 3));
+  }
+}
+
+TEST(NdarrayETLayoutTest, SliceViewFlatUsesDefaultOrderForReversedStrides) {
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> A(3, 5);
+  for (numcxx::size_type i = 0; i < A.extent(0); ++i)
+    for (numcxx::size_type j = 0; j < A.extent(1); ++j)
+      A(i, j) = static_cast<int>(10 * i + j);
+
+  auto view = A(numcxx::slice({}, {}, -1), numcxx::slice(0, 5, 2));
+  for (numcxx::size_type i = 0; i < view.size(); ++i) {
+    const auto index =
+        numcxx::unravel_index<numcxx::default_layout>(i, view.extents());
+    EXPECT_EQ(view.flat(i), view(index[0], index[1]));
+    view.flat(i) = static_cast<int>(100 + i);
+    EXPECT_EQ(view(index[0], index[1]), static_cast<int>(100 + i));
+  }
+}
+
+TEST(NdarrayETLayoutTest, NonDefaultLayoutExpressionAssignmentUsesLogicalOrder) {
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> A(2, 3);
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> B(2, 3);
+  for (numcxx::size_type i = 0; i < A.extent(0); ++i) {
+    for (numcxx::size_type j = 0; j < A.extent(1); ++j) {
+      A(i, j) = static_cast<int>(10 * i + j);
+      B(i, j) = static_cast<int>(100 * i + j);
+    }
+  }
+
+  A = A + B;
+
+  for (numcxx::size_type i = 0; i < A.extent(0); ++i)
+    for (numcxx::size_type j = 0; j < A.extent(1); ++j)
+      EXPECT_EQ(A(i, j), static_cast<int>(110 * i + 2 * j));
+}
+
 //// ------------------------------------------------------------
 //// mask view + expression + layout
 //// ------------------------------------------------------------
