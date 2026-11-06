@@ -2867,6 +2867,41 @@ lapack_int lapack_gesv(int order, lapack_int n, lapack_int nrhs, T *a,
     return lapack_int{};
   }
 }
+
+template <class T>
+lapack_int lapack_potrf(int order, char uplo, lapack_int n, T *a,
+                        lapack_int lda) {
+  if constexpr (std::is_same_v<T, float>) {
+    return LAPACKE_spotrf(order, uplo, n, a, lda);
+  } else if constexpr (std::is_same_v<T, double>) {
+    return LAPACKE_dpotrf(order, uplo, n, a, lda);
+  } else if constexpr (std::is_same_v<T, std::complex<float>>) {
+    const size_type matrix_size = static_cast<size_type>(n) * n;
+    std::vector<lapack_complex_float> lapack_a(matrix_size);
+    for (size_type i = 0; i < matrix_size; ++i)
+      lapack_a[i] = lapack_make_complex_float(a[i].real(), a[i].imag());
+    const lapack_int info = LAPACKE_cpotrf(order, uplo, n, lapack_a.data(), lda);
+    for (size_type i = 0; i < matrix_size; ++i)
+      a[i] = {lapack_complex_float_real(lapack_a[i]),
+              lapack_complex_float_imag(lapack_a[i])};
+    return info;
+  } else if constexpr (std::is_same_v<T, std::complex<double>>) {
+    const size_type matrix_size = static_cast<size_type>(n) * n;
+    std::vector<lapack_complex_double> lapack_a(matrix_size);
+    for (size_type i = 0; i < matrix_size; ++i)
+      lapack_a[i] = lapack_make_complex_double(a[i].real(), a[i].imag());
+    const lapack_int info = LAPACKE_zpotrf(order, uplo, n, lapack_a.data(), lda);
+    for (size_type i = 0; i < matrix_size; ++i)
+      a[i] = {lapack_complex_double_real(lapack_a[i]),
+              lapack_complex_double_imag(lapack_a[i])};
+    return info;
+  } else {
+    static_assert(is_solve_value_v<T>,
+                  "cholesky supports float, double, complex<float>, and "
+                  "complex<double>");
+    return lapack_int{};
+  }
+}
 #endif
 
 template <class T>
@@ -2917,6 +2952,68 @@ void gaussian_solve(std::vector<T> &a, std::vector<T> &b, size_type n,
     }
   }
 }
+
+
+template <class T> T cholesky_conjugate(const T &value) {
+  if constexpr (std::is_same_v<T, std::complex<float>> ||
+                std::is_same_v<T, std::complex<double>>)
+    return std::conj(value);
+  else
+    return value;
+}
+
+template <class T> auto cholesky_real_part(const T &value) {
+  if constexpr (std::is_same_v<T, std::complex<float>> ||
+                std::is_same_v<T, std::complex<double>>)
+    return value.real();
+  else
+    return value;
+}
+
+template <class T>
+void cholesky_fallback(std::vector<T> &matrix, size_type n, bool upper) {
+  using real_type = decltype(cholesky_real_part(T{}));
+  for (size_type j = 0; j < n; ++j) {
+    T diagonal = matrix[j * n + j];
+    for (size_type k = 0; k < j; ++k) {
+      if (upper)
+        diagonal -= cholesky_conjugate(matrix[k * n + j]) *
+                    matrix[k * n + j];
+      else
+        diagonal -= matrix[j * n + k] *
+                    cholesky_conjugate(matrix[j * n + k]);
+    }
+
+    const real_type real_diagonal = cholesky_real_part(diagonal);
+    if (!(real_diagonal > real_type{})) {
+      const std::string message =
+          "cholesky: matrix is not positive-definite at leading minor " +
+          std::to_string(j + 1);
+      NUMCXX_THROW(std::runtime_error, message.c_str());
+    }
+    const real_type root = std::sqrt(real_diagonal);
+    matrix[j * n + j] = T{root};
+
+    if (upper) {
+      for (size_type column = j + 1; column < n; ++column) {
+        T value = matrix[j * n + column];
+        for (size_type k = 0; k < j; ++k)
+          value -= cholesky_conjugate(matrix[k * n + j]) *
+                   matrix[k * n + column];
+        matrix[j * n + column] = value / root;
+      }
+    } else {
+      for (size_type row = j + 1; row < n; ++row) {
+        T value = matrix[row * n + j];
+        for (size_type k = 0; k < j; ++k)
+          value -= matrix[row * n + k] *
+                   cholesky_conjugate(matrix[j * n + k]);
+        matrix[row * n + j] = value / root;
+      }
+    }
+  }
+}
+
 } // namespace detail
 
 namespace linalg {
@@ -3205,6 +3302,90 @@ template <class A, class B> auto solve(const A &a, const B &b) {
       }
     return result;
   }
+}
+
+/// Cholesky decomposition of a Hermitian positive-definite matrix.
+///
+/// @tparam A Rank-2 ndarray or slice_view with square extents
+/// @param a Input matrix of shape (M, M)
+/// @param upper If true, return U such that A = U^H * U; otherwise return
+///              L such that A = L * L^H
+/// @returns The triangular factor in a new ndarray, with the other triangle
+///          zero-filled
+/// @throws std::invalid_argument If the input matrix is not square
+/// @throws std::runtime_error If the input matrix is not positive-definite
+template <class A> auto cholesky(const A &a, bool upper = false) {
+  static_assert(detail::is_solve_operand_v<A>,
+                "cholesky: a must be an ndarray or slice_view");
+  static_assert(A::rank() == 2, "cholesky requires a rank-2 matrix");
+
+  using value_type = typename A::value_type;
+  static_assert(detail::is_solve_value_v<value_type>,
+                "cholesky supports float, double, complex<float>, and "
+                "complex<double>");
+
+  const size_type n = a.extent(0);
+  if (a.extent(1) != n)
+    NUMCXX_THROW(std::invalid_argument, "cholesky: a must be square");
+  ndarray<value_type, dextents<2>> result(n, n);
+  if (n == 0)
+    return result;
+
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+  bool use_lapack =
+      n <= static_cast<size_type>(std::numeric_limits<lapack_int>::max());
+  int lapack_order = LAPACK_ROW_MAJOR;
+  if (use_lapack && !detail::lapack_matrix_order(a, lapack_order))
+    use_lapack = false;
+#endif
+
+  const bool column_major =
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+      use_lapack && lapack_order == LAPACK_COL_MAJOR;
+#else
+      false;
+#endif
+  std::vector<value_type> factor(a.size());
+  for (size_type i = 0; i < n; ++i)
+    for (size_type j = 0; j < n; ++j) {
+      const size_type index = column_major ? j * n + i : i * n + j;
+      factor[index] = static_cast<value_type>(a(i, j));
+    }
+
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+  if (use_lapack) {
+    const auto lapack_n = static_cast<lapack_int>(n);
+    const lapack_int info = detail::lapack_potrf(
+        lapack_order, upper ? 'U' : 'L', lapack_n, factor.data(), lapack_n);
+    if (info < 0) {
+      const std::string message =
+          "cholesky: illegal argument " + std::to_string(-info) +
+          " to LAPACK potrf";
+      NUMCXX_THROW(std::invalid_argument, message.c_str());
+    }
+    if (info > 0) {
+      const std::string message =
+          "cholesky: matrix is not positive-definite at leading minor " +
+          std::to_string(info);
+      NUMCXX_THROW(std::runtime_error, message.c_str());
+    }
+  } else
+#endif
+  {
+    detail::cholesky_fallback(factor, n, upper);
+  }
+
+  for (size_type i = 0; i < n; ++i)
+    for (size_type j = 0; j < n; ++j) {
+      const bool in_factor_triangle = upper ? i <= j : i >= j;
+      if (in_factor_triangle) {
+        const size_type index = column_major ? j * n + i : i * n + j;
+        result(i, j) = factor[index];
+      } else {
+        result(i, j) = value_type{};
+      }
+    }
+  return result;
 }
 
 } // namespace linalg

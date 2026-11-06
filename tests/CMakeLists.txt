@@ -29,6 +29,7 @@ set(TEST_TARGETS
     test_random
     test_linalg_matmul
     test_linalg_solve
+    test_linalg_cholesky
 )
 
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)
