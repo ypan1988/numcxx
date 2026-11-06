@@ -2904,6 +2904,98 @@ lapack_int lapack_potrf(int order, char uplo, lapack_int n, T *a,
     return lapack_int{};
   }
 }
+
+template <class T>
+lapack_int lapack_geqrf(int order, lapack_int m, lapack_int n, T *a,
+                        lapack_int lda, T *tau) {
+  if constexpr (std::is_same_v<T, float>) {
+    return LAPACKE_sgeqrf(order, m, n, a, lda, tau);
+  } else if constexpr (std::is_same_v<T, double>) {
+    return LAPACKE_dgeqrf(order, m, n, a, lda, tau);
+  } else if constexpr (std::is_same_v<T, std::complex<float>>) {
+    const size_type matrix_size = static_cast<size_type>(m) * n;
+    const size_type reflector_count = std::min(m, n);
+    std::vector<lapack_complex_float> lapack_a(matrix_size);
+    std::vector<lapack_complex_float> lapack_tau(reflector_count);
+    for (size_type i = 0; i < matrix_size; ++i)
+      lapack_a[i] = lapack_make_complex_float(a[i].real(), a[i].imag());
+    const lapack_int info =
+        LAPACKE_cgeqrf(order, m, n, lapack_a.data(), lda, lapack_tau.data());
+    for (size_type i = 0; i < matrix_size; ++i)
+      a[i] = {lapack_complex_float_real(lapack_a[i]),
+              lapack_complex_float_imag(lapack_a[i])};
+    for (size_type i = 0; i < reflector_count; ++i)
+      tau[i] = {lapack_complex_float_real(lapack_tau[i]),
+                lapack_complex_float_imag(lapack_tau[i])};
+    return info;
+  } else if constexpr (std::is_same_v<T, std::complex<double>>) {
+    const size_type matrix_size = static_cast<size_type>(m) * n;
+    const size_type reflector_count = std::min(m, n);
+    std::vector<lapack_complex_double> lapack_a(matrix_size);
+    std::vector<lapack_complex_double> lapack_tau(reflector_count);
+    for (size_type i = 0; i < matrix_size; ++i)
+      lapack_a[i] = lapack_make_complex_double(a[i].real(), a[i].imag());
+    const lapack_int info =
+        LAPACKE_zgeqrf(order, m, n, lapack_a.data(), lda, lapack_tau.data());
+    for (size_type i = 0; i < matrix_size; ++i)
+      a[i] = {lapack_complex_double_real(lapack_a[i]),
+              lapack_complex_double_imag(lapack_a[i])};
+    for (size_type i = 0; i < reflector_count; ++i)
+      tau[i] = {lapack_complex_double_real(lapack_tau[i]),
+                lapack_complex_double_imag(lapack_tau[i])};
+    return info;
+  } else {
+    static_assert(is_solve_value_v<T>,
+                  "qr supports float, double, complex<float>, and "
+                  "complex<double>");
+    return lapack_int{};
+  }
+}
+
+template <class T>
+lapack_int lapack_orgqr(int order, lapack_int m, lapack_int n, lapack_int k,
+                        T *a, lapack_int lda, const T *tau) {
+  if constexpr (std::is_same_v<T, float>) {
+    return LAPACKE_sorgqr(order, m, n, k, a, lda, tau);
+  } else if constexpr (std::is_same_v<T, double>) {
+    return LAPACKE_dorgqr(order, m, n, k, a, lda, tau);
+  } else if constexpr (std::is_same_v<T, std::complex<float>>) {
+    const size_type matrix_size = static_cast<size_type>(m) * n;
+    const size_type reflector_count = static_cast<size_type>(k);
+    std::vector<lapack_complex_float> lapack_a(matrix_size);
+    std::vector<lapack_complex_float> lapack_tau(reflector_count);
+    for (size_type i = 0; i < matrix_size; ++i)
+      lapack_a[i] = lapack_make_complex_float(a[i].real(), a[i].imag());
+    for (size_type i = 0; i < reflector_count; ++i)
+      lapack_tau[i] = lapack_make_complex_float(tau[i].real(), tau[i].imag());
+    const lapack_int info =
+        LAPACKE_cungqr(order, m, n, k, lapack_a.data(), lda, lapack_tau.data());
+    for (size_type i = 0; i < matrix_size; ++i)
+      a[i] = {lapack_complex_float_real(lapack_a[i]),
+              lapack_complex_float_imag(lapack_a[i])};
+    return info;
+  } else if constexpr (std::is_same_v<T, std::complex<double>>) {
+    const size_type matrix_size = static_cast<size_type>(m) * n;
+    const size_type reflector_count = static_cast<size_type>(k);
+    std::vector<lapack_complex_double> lapack_a(matrix_size);
+    std::vector<lapack_complex_double> lapack_tau(reflector_count);
+    for (size_type i = 0; i < matrix_size; ++i)
+      lapack_a[i] = lapack_make_complex_double(a[i].real(), a[i].imag());
+    for (size_type i = 0; i < reflector_count; ++i)
+      lapack_tau[i] = lapack_make_complex_double(tau[i].real(), tau[i].imag());
+    const lapack_int info =
+        LAPACKE_zungqr(order, m, n, k, lapack_a.data(), lda, lapack_tau.data());
+    for (size_type i = 0; i < matrix_size; ++i)
+      a[i] = {lapack_complex_double_real(lapack_a[i]),
+              lapack_complex_double_imag(lapack_a[i])};
+    return info;
+  } else {
+    static_assert(is_solve_value_v<T>,
+                  "qr supports float, double, complex<float>, and "
+                  "complex<double>");
+    return lapack_int{};
+  }
+}
 #endif
 
 template <class T>
@@ -3016,9 +3108,75 @@ void cholesky_fallback(std::vector<T> &matrix, size_type n, bool upper) {
   }
 }
 
+template <class T>
+void qr_fallback(std::vector<T> &matrix, size_type m, size_type n,
+                 std::vector<T> &tau) {
+  using real_type = decltype(cholesky_real_part(T{}));
+  const size_type k = std::min(m, n);
+  for (size_type j = 0; j < k; ++j) {
+    real_type norm{};
+    for (size_type i = j; i < m; ++i)
+      norm = std::hypot(norm, static_cast<real_type>(
+                                   std::abs(matrix[i * n + j])));
+
+    const T alpha = matrix[j * n + j];
+    if (norm == real_type{}) {
+      tau[j] = T{};
+      continue;
+    }
+
+    const real_type beta_real =
+        cholesky_real_part(alpha) >= real_type{} ? -norm : norm;
+    const T beta{beta_real};
+    const T v0 = alpha - beta;
+    tau[j] = (beta - alpha) / beta;
+    for (size_type i = j + 1; i < m; ++i)
+      matrix[i * n + j] /= v0;
+    matrix[j * n + j] = beta;
+
+    for (size_type column = j + 1; column < n; ++column) {
+      T dot = matrix[j * n + column];
+      for (size_type i = j + 1; i < m; ++i)
+        dot += cholesky_conjugate(matrix[i * n + j]) *
+               matrix[i * n + column];
+      dot *= cholesky_conjugate(tau[j]);
+      matrix[j * n + column] -= dot;
+      for (size_type i = j + 1; i < m; ++i)
+        matrix[i * n + column] -= matrix[i * n + j] * dot;
+    }
+  }
+}
+
+template <class T>
+void form_q_fallback(const std::vector<T> &reflectors,
+                     const std::vector<T> &tau, std::vector<T> &q,
+                     size_type m, size_type n, size_type q_columns,
+                     size_type k) {
+  for (size_type i = 0; i < std::min(m, q_columns); ++i)
+    q[i * q_columns + i] = T{1};
+
+  for (size_type jj = k; jj-- > 0;) {
+    for (size_type column = 0; column < q_columns; ++column) {
+      T dot{};
+      for (size_type i = jj; i < m; ++i) {
+        const T v = i == jj ? T{1} : reflectors[i * n + jj];
+        dot += cholesky_conjugate(v) * q[i * q_columns + column];
+      }
+      dot *= tau[jj];
+      for (size_type i = jj; i < m; ++i) {
+        const T v = i == jj ? T{1} : reflectors[i * n + jj];
+        q[i * q_columns + column] -= v * dot;
+      }
+    }
+  }
+}
+
 } // namespace detail
 
 namespace linalg {
+
+/// Select which parts of a QR factorization to return.
+enum class qr_mode { reduced, complete, r_only };
 
 /// 2D matrix multiplication: C = A x B
 ///
@@ -3390,6 +3548,143 @@ template <class A> auto cholesky(const A &a, bool upper = false) {
       }
     }
   return result;
+}
+
+/// QR factorization of a rank-2 matrix.
+///
+/// @tparam A Rank-2 ndarray or slice_view
+/// @param a Input matrix of shape (M, N)
+/// @param mode reduced returns Q(M, K), R(K, N); complete returns Q(M, M),
+///             R(M, N); r_only skips Q construction and returns an empty Q
+///             together with R(K, N), where K = min(M, N).
+/// @returns A pair containing Q and R for every mode. In r_only mode Q has
+///          shape (0, 0), allowing a stable return type without std::variant.
+/// @throws std::invalid_argument If mode is not a supported qr_mode
+/// @throws std::invalid_argument If LAPACK reports an illegal argument
+template <class A>
+auto qr(const A &a, qr_mode mode = qr_mode::reduced) {
+  static_assert(detail::is_solve_operand_v<A>,
+                "qr: a must be an ndarray or slice_view");
+  static_assert(A::rank() == 2, "qr requires a rank-2 matrix");
+
+  using value_type = typename A::value_type;
+  static_assert(detail::is_solve_value_v<value_type>,
+                "qr supports float, double, complex<float>, and "
+                "complex<double>");
+  if (mode != qr_mode::reduced && mode != qr_mode::complete &&
+      mode != qr_mode::r_only)
+    NUMCXX_THROW(std::invalid_argument, "qr: unsupported mode");
+
+  const size_type m = a.extent(0);
+  const size_type n = a.extent(1);
+  const size_type k = std::min(m, n);
+  const bool r_only = mode == qr_mode::r_only;
+  const bool complete = mode == qr_mode::complete;
+  const size_type q_columns = complete ? m : k;
+  ndarray<value_type, dextents<2>> q(r_only ? 0 : m,
+                                     r_only ? 0 : q_columns);
+  ndarray<value_type, dextents<2>> r(complete ? m : k, n);
+
+  if (m == 0 || n == 0) {
+    if (complete && n == 0)
+      for (size_type i = 0; i < m; ++i)
+        for (size_type j = 0; j < m; ++j)
+          q(i, j) = i == j ? value_type{1} : value_type{};
+    return std::make_pair(std::move(q), std::move(r));
+  }
+
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+  bool use_lapack =
+      m <= static_cast<size_type>(std::numeric_limits<lapack_int>::max()) &&
+      n <= static_cast<size_type>(std::numeric_limits<lapack_int>::max());
+  int lapack_order = LAPACK_ROW_MAJOR;
+  if (use_lapack && !detail::lapack_matrix_order(a, lapack_order))
+    use_lapack = false;
+#endif
+
+  const bool column_major =
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+      use_lapack && lapack_order == LAPACK_COL_MAJOR;
+#else
+      false;
+#endif
+  std::vector<value_type> work(a.size());
+  for (size_type i = 0; i < m; ++i)
+    for (size_type j = 0; j < n; ++j) {
+      const size_type index = column_major ? j * m + i : i * n + j;
+      work[index] = static_cast<value_type>(a(i, j));
+    }
+  std::vector<value_type> tau(k);
+
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+  if (use_lapack) {
+    const auto lapack_m = static_cast<lapack_int>(m);
+    const auto lapack_n = static_cast<lapack_int>(n);
+    const auto lapack_k = static_cast<lapack_int>(k);
+    const lapack_int lda = column_major ? std::max<lapack_int>(1, lapack_m)
+                                        : std::max<lapack_int>(1, lapack_n);
+    const lapack_int geqrf_info = detail::lapack_geqrf(
+        lapack_order, lapack_m, lapack_n, work.data(), lda, tau.data());
+    if (geqrf_info < 0) {
+      const std::string message =
+          "qr: illegal argument " + std::to_string(-geqrf_info) +
+          " to LAPACK geqrf";
+      NUMCXX_THROW(std::invalid_argument, message.c_str());
+    }
+
+    for (size_type i = 0; i < r.extent(0); ++i)
+      for (size_type j = 0; j < n; ++j)
+        r(i, j) = i <= j ? work[column_major ? j * m + i : i * n + j]
+                         : value_type{};
+
+    if (!r_only) {
+      std::vector<value_type> q_work(m * q_columns, value_type{});
+      for (size_type i = 0; i < m; ++i)
+        for (size_type j = 0; j < k && j <= i; ++j) {
+          const size_type source = column_major ? j * m + i : i * n + j;
+          const size_type target =
+              column_major ? j * m + i : i * q_columns + j;
+          q_work[target] = work[source];
+        }
+
+      const lapack_int q_lda =
+          column_major
+              ? std::max<lapack_int>(1, lapack_m)
+              : std::max<lapack_int>(1, static_cast<lapack_int>(q_columns));
+      const lapack_int orgqr_info = detail::lapack_orgqr(
+          lapack_order, lapack_m, static_cast<lapack_int>(q_columns),
+          lapack_k, q_work.data(), q_lda, tau.data());
+      if (orgqr_info < 0) {
+        const std::string message =
+            "qr: illegal argument " + std::to_string(-orgqr_info) +
+            " to LAPACK orgqr/ungqr";
+        NUMCXX_THROW(std::invalid_argument, message.c_str());
+      }
+
+      for (size_type i = 0; i < m; ++i)
+        for (size_type j = 0; j < q_columns; ++j) {
+          const size_type index =
+              column_major ? j * m + i : i * q_columns + j;
+          q(i, j) = q_work[index];
+        }
+    }
+  } else
+#endif
+  {
+    detail::qr_fallback(work, m, n, tau);
+    for (size_type i = 0; i < r.extent(0); ++i)
+      for (size_type j = 0; j < n; ++j)
+        r(i, j) = i <= j ? work[i * n + j] : value_type{};
+
+    if (!r_only) {
+      std::vector<value_type> q_work(m * q_columns, value_type{});
+      detail::form_q_fallback(work, tau, q_work, m, n, q_columns, k);
+      for (size_type i = 0; i < m; ++i)
+        for (size_type j = 0; j < q_columns; ++j)
+          q(i, j) = q_work[i * q_columns + j];
+    }
+  }
+  return std::make_pair(std::move(q), std::move(r));
 }
 
 } // namespace linalg

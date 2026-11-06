@@ -30,6 +30,7 @@ set(TEST_TARGETS
     test_linalg_matmul
     test_linalg_solve
     test_linalg_cholesky
+    test_linalg_qr
 )
 
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)
