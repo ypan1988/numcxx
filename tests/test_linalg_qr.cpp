@@ -42,7 +42,7 @@ TEST(LinalgQRTest, SquareReducedFactorization) {
   EXPECT_DOUBLE_EQ(r(1, 0), 0.0);
 }
 
-TEST(LinalgQRTest, TallMatrixReducedAndCompleteModes) {
+TEST(LinalgQRTest, TallMatrixReducedAndComplete) {
   numcxx::dmat a(4, 2);
   for (numcxx::size_type i = 0; i < 4; ++i) {
     a(i, 0) = static_cast<double>(i + 1);
@@ -58,7 +58,7 @@ TEST(LinalgQRTest, TallMatrixReducedAndCompleteModes) {
   ExpectOrthonormalColumns(q_reduced, 1e-12);
 
   const auto [q_complete, r_complete] =
-      numcxx::linalg::qr(a, numcxx::linalg::qr_mode::complete);
+      numcxx::linalg::qr_complete(a);
   EXPECT_EQ(q_complete.extent(0), 4);
   EXPECT_EQ(q_complete.extent(1), 4);
   EXPECT_EQ(r_complete.extent(0), 4);
@@ -82,7 +82,7 @@ TEST(LinalgQRTest, WideMatrixReducedFactorization) {
   ExpectOrthonormalColumns(q, 1e-12);
 
   const auto [q_complete, r_complete] =
-      numcxx::linalg::qr(a, numcxx::linalg::qr_mode::complete);
+      numcxx::linalg::qr_complete(a);
   EXPECT_EQ(q_complete.extent(0), 2);
   EXPECT_EQ(q_complete.extent(1), 2);
   EXPECT_EQ(r_complete.extent(0), 2);
@@ -90,7 +90,7 @@ TEST(LinalgQRTest, WideMatrixReducedFactorization) {
   ExpectQRReconstruction(a, q_complete, r_complete);
 }
 
-TEST(LinalgQRTest, ROnlySkipsQAndUsesStablePairReturn) {
+TEST(LinalgQRTest, QRROnlyReturnsR) {
   numcxx::dmat a(3, 2);
   a(0, 0) = 1.0;
   a(0, 1) = 2.0;
@@ -99,11 +99,10 @@ TEST(LinalgQRTest, ROnlySkipsQAndUsesStablePairReturn) {
   a(2, 0) = 2.0;
   a(2, 1) = 4.0;
 
-  const auto [q_empty, r_only] =
-      numcxx::linalg::qr(a, numcxx::linalg::qr_mode::r_only);
+  const auto r_only = numcxx::linalg::qr_r(a);
   const auto [q, r] = numcxx::linalg::qr(a);
-  EXPECT_EQ(q_empty.extent(0), 0);
-  EXPECT_EQ(q_empty.extent(1), 0);
+  static_assert(decltype(r_only)::rank() == 2);
+  static_assert(std::is_same_v<typename decltype(r_only)::value_type, double>);
   EXPECT_EQ(r_only.extent(0), 2);
   EXPECT_EQ(r_only.extent(1), 2);
   for (numcxx::size_type i = 0; i < r.extent(0); ++i)
@@ -155,6 +154,19 @@ TEST(LinalgQRTest, RankDeficientInputStillFactors) {
   const auto [q, r] = numcxx::linalg::qr(a);
   ExpectQRReconstruction(a, q, r);
   EXPECT_NEAR(r(1, 1), 0.0, 1e-12);
+  ExpectOrthonormalColumns(q, 1e-12);
+}
+
+TEST(LinalgQRTest, DiagonalMatrixDoesNotProduceNaN) {
+  numcxx::dmat a(3, 3);
+  a(0, 0) = 1.0;
+  a(1, 1) = 2.0;
+  a(2, 2) = 3.0;
+  const auto [q, r] = numcxx::linalg::qr(a);
+  ExpectQRReconstruction(a, q, r);
+  for (numcxx::size_type i = 0; i < r.extent(0); ++i)
+    for (numcxx::size_type j = 0; j < r.extent(1); ++j)
+      EXPECT_TRUE(std::isfinite(r(i, j)));
 }
 
 TEST(LinalgQRTest, InputIsPreservedForAllModes) {
@@ -166,8 +178,8 @@ TEST(LinalgQRTest, InputIsPreservedForAllModes) {
   const auto original = a;
 
   (void)numcxx::linalg::qr(a);
-  (void)numcxx::linalg::qr(a, numcxx::linalg::qr_mode::complete);
-  (void)numcxx::linalg::qr(a, numcxx::linalg::qr_mode::r_only);
+  (void)numcxx::linalg::qr_complete(a);
+  (void)numcxx::linalg::qr_r(a);
   for (numcxx::size_type i = 0; i < 2; ++i)
     for (numcxx::size_type j = 0; j < 2; ++j)
       EXPECT_DOUBLE_EQ(a(i, j), original(i, j));
@@ -214,13 +226,24 @@ TEST(LinalgQRTest, PreservesFloatType) {
   ExpectQRReconstruction(a, q, r, 1e-5);
 }
 
-TEST(LinalgQRTest, EmptyDimensionsHaveModeSpecificShapes) {
+TEST(LinalgQRTest, EmptyDimensionsHaveExpectedShapes) {
   numcxx::dmat no_rows(0, 3);
   const auto [q_rows, r_rows] = numcxx::linalg::qr(no_rows);
   EXPECT_EQ(q_rows.extent(0), 0);
   EXPECT_EQ(q_rows.extent(1), 0);
   EXPECT_EQ(r_rows.extent(0), 0);
   EXPECT_EQ(r_rows.extent(1), 3);
+
+  const auto [q_complete_rows, r_complete_rows] =
+      numcxx::linalg::qr_complete(no_rows);
+  EXPECT_EQ(q_complete_rows.extent(0), 0);
+  EXPECT_EQ(q_complete_rows.extent(1), 0);
+  EXPECT_EQ(r_complete_rows.extent(0), 0);
+  EXPECT_EQ(r_complete_rows.extent(1), 3);
+
+  const auto r_only_rows = numcxx::linalg::qr_r(no_rows);
+  EXPECT_EQ(r_only_rows.extent(0), 0);
+  EXPECT_EQ(r_only_rows.extent(1), 3);
 
   numcxx::dmat no_columns(3, 0);
   const auto [q_reduced, r_reduced] = numcxx::linalg::qr(no_columns);
@@ -229,8 +252,7 @@ TEST(LinalgQRTest, EmptyDimensionsHaveModeSpecificShapes) {
   EXPECT_EQ(r_reduced.extent(0), 0);
   EXPECT_EQ(r_reduced.extent(1), 0);
 
-  const auto [q_complete, r_complete] =
-      numcxx::linalg::qr(no_columns, numcxx::linalg::qr_mode::complete);
+  const auto [q_complete, r_complete] = numcxx::linalg::qr_complete(no_columns);
   EXPECT_EQ(q_complete.extent(0), 3);
   EXPECT_EQ(q_complete.extent(1), 3);
   EXPECT_EQ(r_complete.extent(0), 3);
@@ -238,12 +260,8 @@ TEST(LinalgQRTest, EmptyDimensionsHaveModeSpecificShapes) {
   for (numcxx::size_type i = 0; i < 3; ++i)
     for (numcxx::size_type j = 0; j < 3; ++j)
       EXPECT_DOUBLE_EQ(q_complete(i, j), i == j ? 1.0 : 0.0);
-}
 
-TEST(LinalgQRTest, RejectsInvalidMode) {
-  numcxx::dmat a(1, 1);
-  a(0, 0) = 1.0;
-  EXPECT_THROW((void)numcxx::linalg::qr(
-                   a, static_cast<numcxx::linalg::qr_mode>(99)),
-               std::invalid_argument);
+  const auto r_only = numcxx::linalg::qr_r(no_columns);
+  EXPECT_EQ(r_only.extent(0), 0);
+  EXPECT_EQ(r_only.extent(1), 0);
 }

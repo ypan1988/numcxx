@@ -3115,6 +3115,7 @@ void qr_fallback(std::vector<T> &matrix, size_type m, size_type n,
   const size_type k = std::min(m, n);
   for (size_type j = 0; j < k; ++j) {
     real_type norm{};
+    // Accumulating with hypot avoids overflow and underflow in the norm.
     for (size_type i = j; i < m; ++i)
       norm = std::hypot(norm, static_cast<real_type>(
                                    std::abs(matrix[i * n + j])));
@@ -3125,6 +3126,8 @@ void qr_fallback(std::vector<T> &matrix, size_type m, size_type n,
       continue;
     }
 
+    // Choosing beta with the opposite real sign from alpha keeps alpha - beta
+    // nonzero whenever the column has nonzero norm.
     const real_type beta_real =
         cholesky_real_part(alpha) >= real_type{} ? -norm : norm;
     const T beta{beta_real};
@@ -3174,9 +3177,6 @@ void form_q_fallback(const std::vector<T> &reflectors,
 } // namespace detail
 
 namespace linalg {
-
-/// Select which parts of a QR factorization to return.
-enum class qr_mode { reduced, complete, r_only };
 
 /// 2D matrix multiplication: C = A x B
 ///
@@ -3550,36 +3550,25 @@ template <class A> auto cholesky(const A &a, bool upper = false) {
   return result;
 }
 
-/// QR factorization of a rank-2 matrix.
-///
-/// @tparam A Rank-2 ndarray or slice_view
-/// @param a Input matrix of shape (M, N)
-/// @param mode reduced returns Q(M, K), R(K, N); complete returns Q(M, M),
-///             R(M, N); r_only skips Q construction and returns an empty Q
-///             together with R(K, N), where K = min(M, N).
-/// @returns A pair containing Q and R for every mode. In r_only mode Q has
-///          shape (0, 0), allowing a stable return type without std::variant.
-/// @throws std::invalid_argument If mode is not a supported qr_mode
-/// @throws std::invalid_argument If LAPACK reports an illegal argument
+namespace detail {
+enum class qr_impl_mode { reduced, complete, r_only };
+
 template <class A>
-auto qr(const A &a, qr_mode mode = qr_mode::reduced) {
-  static_assert(detail::is_solve_operand_v<A>,
+auto qr_impl(const A &a, qr_impl_mode mode) {
+  static_assert(numcxx::detail::is_solve_operand_v<A>,
                 "qr: a must be an ndarray or slice_view");
   static_assert(A::rank() == 2, "qr requires a rank-2 matrix");
 
   using value_type = typename A::value_type;
-  static_assert(detail::is_solve_value_v<value_type>,
+  static_assert(numcxx::detail::is_solve_value_v<value_type>,
                 "qr supports float, double, complex<float>, and "
                 "complex<double>");
-  if (mode != qr_mode::reduced && mode != qr_mode::complete &&
-      mode != qr_mode::r_only)
-    NUMCXX_THROW(std::invalid_argument, "qr: unsupported mode");
 
   const size_type m = a.extent(0);
   const size_type n = a.extent(1);
   const size_type k = std::min(m, n);
-  const bool r_only = mode == qr_mode::r_only;
-  const bool complete = mode == qr_mode::complete;
+  const bool r_only = mode == qr_impl_mode::r_only;
+  const bool complete = mode == qr_impl_mode::complete;
   const size_type q_columns = complete ? m : k;
   ndarray<value_type, dextents<2>> q(r_only ? 0 : m,
                                      r_only ? 0 : q_columns);
@@ -3598,7 +3587,8 @@ auto qr(const A &a, qr_mode mode = qr_mode::reduced) {
       m <= static_cast<size_type>(std::numeric_limits<lapack_int>::max()) &&
       n <= static_cast<size_type>(std::numeric_limits<lapack_int>::max());
   int lapack_order = LAPACK_ROW_MAJOR;
-  if (use_lapack && !detail::lapack_matrix_order(a, lapack_order))
+  if (use_lapack &&
+      !numcxx::detail::lapack_matrix_order(a, lapack_order))
     use_lapack = false;
 #endif
 
@@ -3623,7 +3613,7 @@ auto qr(const A &a, qr_mode mode = qr_mode::reduced) {
     const auto lapack_k = static_cast<lapack_int>(k);
     const lapack_int lda = column_major ? std::max<lapack_int>(1, lapack_m)
                                         : std::max<lapack_int>(1, lapack_n);
-    const lapack_int geqrf_info = detail::lapack_geqrf(
+    const lapack_int geqrf_info = numcxx::detail::lapack_geqrf(
         lapack_order, lapack_m, lapack_n, work.data(), lda, tau.data());
     if (geqrf_info < 0) {
       const std::string message =
@@ -3651,7 +3641,7 @@ auto qr(const A &a, qr_mode mode = qr_mode::reduced) {
           column_major
               ? std::max<lapack_int>(1, lapack_m)
               : std::max<lapack_int>(1, static_cast<lapack_int>(q_columns));
-      const lapack_int orgqr_info = detail::lapack_orgqr(
+      const lapack_int orgqr_info = numcxx::detail::lapack_orgqr(
           lapack_order, lapack_m, static_cast<lapack_int>(q_columns),
           lapack_k, q_work.data(), q_lda, tau.data());
       if (orgqr_info < 0) {
@@ -3671,20 +3661,46 @@ auto qr(const A &a, qr_mode mode = qr_mode::reduced) {
   } else
 #endif
   {
-    detail::qr_fallback(work, m, n, tau);
+    numcxx::detail::qr_fallback(work, m, n, tau);
     for (size_type i = 0; i < r.extent(0); ++i)
       for (size_type j = 0; j < n; ++j)
         r(i, j) = i <= j ? work[i * n + j] : value_type{};
 
     if (!r_only) {
       std::vector<value_type> q_work(m * q_columns, value_type{});
-      detail::form_q_fallback(work, tau, q_work, m, n, q_columns, k);
+      numcxx::detail::form_q_fallback(work, tau, q_work, m, n, q_columns, k);
       for (size_type i = 0; i < m; ++i)
         for (size_type j = 0; j < q_columns; ++j)
           q(i, j) = q_work[i * q_columns + j];
     }
   }
   return std::make_pair(std::move(q), std::move(r));
+}
+} // namespace detail
+
+/// Compute the reduced QR factorization A = Q * R.
+///
+/// Equivalent to `np.linalg.qr(a)` in NumPy. Q has shape (M, K) and R has
+/// shape (K, N), where K = min(M, N).
+template <class A> auto qr(const A &a) {
+  return detail::qr_impl(a, detail::qr_impl_mode::reduced);
+}
+
+/// Compute the complete QR factorization A = Q * R.
+///
+/// Equivalent to `np.linalg.qr(a, mode="complete")` in NumPy. Q has shape
+/// (M, M) and R has shape (M, N).
+template <class A> auto qr_complete(const A &a) {
+  return detail::qr_impl(a, detail::qr_impl_mode::complete);
+}
+
+/// Compute only the R factor without constructing Q.
+///
+/// Equivalent to `np.linalg.qr(a, mode="r")` in NumPy. R has shape (K, N),
+/// where K = min(M, N).
+template <class A> auto qr_r(const A &a) {
+  auto result = detail::qr_impl(a, detail::qr_impl_mode::r_only);
+  return std::move(result.second);
 }
 
 } // namespace linalg
