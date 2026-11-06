@@ -2876,6 +2876,8 @@ lapack_int lapack_potrf(int order, char uplo, lapack_int n, T *a,
   } else if constexpr (std::is_same_v<T, double>) {
     return LAPACKE_dpotrf(order, uplo, n, a, lda);
   } else if constexpr (std::is_same_v<T, std::complex<float>>) {
+    // The extra conversion buffer avoids relying on std::complex/LAPACKE ABI
+    // compatibility.
     const size_type matrix_size = static_cast<size_type>(n) * n;
     std::vector<lapack_complex_float> lapack_a(matrix_size);
     for (size_type i = 0; i < matrix_size; ++i)
@@ -3307,7 +3309,9 @@ template <class A, class B> auto solve(const A &a, const B &b) {
 /// Cholesky decomposition of a Hermitian positive-definite matrix.
 ///
 /// @tparam A Rank-2 ndarray or slice_view with square extents
-/// @param a Input matrix of shape (M, M)
+/// @param a Input matrix of shape (M, M). Only the lower triangle when
+///          upper is false, or the upper triangle when upper is true, and
+///          the diagonal are read; no Hermitian check is performed.
 /// @param upper If true, return U such that A = U^H * U; otherwise return
 ///              L such that A = L * L^H
 /// @returns The triangular factor in a new ndarray, with the other triangle

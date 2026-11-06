@@ -79,6 +79,21 @@ TEST(LinalgCholeskyTest, UsesRequestedTriangleAndPreservesInput) {
   EXPECT_DOUBLE_EQ(a(1, 0), -100.0);
 }
 
+TEST(LinalgCholeskyTest, LowerFactorIgnoresUpperTriangle) {
+  numcxx::dmat a(2, 2);
+  a(0, 0) = 4.0;
+  a(0, 1) = -100.0;
+  a(1, 0) = 2.0;
+  a(1, 1) = 3.0;
+
+  const auto lower = numcxx::linalg::cholesky(a);
+  EXPECT_NEAR(lower(0, 0), 2.0, 1e-12);
+  EXPECT_DOUBLE_EQ(lower(0, 1), 0.0);
+  EXPECT_NEAR(lower(1, 0), 1.0, 1e-12);
+  EXPECT_NEAR(lower(1, 1), std::sqrt(2.0), 1e-12);
+  EXPECT_DOUBLE_EQ(a(0, 1), -100.0);
+}
+
 TEST(LinalgCholeskyTest, PreservesFloatAndComplexTypes) {
   numcxx::ndarray<float, numcxx::dextents<2>> float_matrix(2, 2);
   float_matrix(0, 0) = 4.0f;
