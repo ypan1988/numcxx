@@ -28,6 +28,7 @@ set(TEST_TARGETS
     test_et_layout
     test_random
     test_linalg_matmul
+    test_linalg_solve
 )
 
 foreach(TEST_TARGET IN LISTS TEST_TARGETS)

@@ -32,6 +32,7 @@
 #include <random>
 #include <source_location>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -71,6 +72,70 @@
 #else
 #include NUMCXX_CBLAS_HEADER
 #define NUMCXX_DETAIL_HAS_CBLAS
+#endif
+#endif
+
+// LAPACKE is independent of CBLAS; set NUMCXX_ENABLE_LAPACKE=0 to use the
+// built-in Gaussian-elimination fallback.
+#ifndef NUMCXX_ENABLE_LAPACKE
+#define NUMCXX_ENABLE_LAPACKE 1
+#endif
+
+#if NUMCXX_ENABLE_LAPACKE
+#ifndef NUMCXX_LAPACKE_HEADER
+#define NUMCXX_LAPACKE_HEADER <lapacke.h>
+#endif
+#if !defined(OPENBLAS_USE64BITINT) && defined(__has_include)
+#if __has_include(<openblas_config.h>)
+#include <openblas_config.h>
+#endif
+#endif
+#if defined(__has_include)
+#if __has_include(NUMCXX_LAPACKE_HEADER)
+#ifndef HAVE_LAPACK_CONFIG_H
+#define NUMCXX_DETAIL_DEFINED_HAVE_LAPACK_CONFIG_H
+#define HAVE_LAPACK_CONFIG_H
+#endif
+#if defined(OPENBLAS_USE64BITINT) && !defined(LAPACK_ILP64)
+#define NUMCXX_DETAIL_DEFINED_LAPACK_ILP64
+#define LAPACK_ILP64
+#endif
+#pragma push_macro("I")
+#undef I
+#include NUMCXX_LAPACKE_HEADER
+#pragma pop_macro("I")
+#ifdef NUMCXX_DETAIL_DEFINED_LAPACK_ILP64
+#undef LAPACK_ILP64
+#undef NUMCXX_DETAIL_DEFINED_LAPACK_ILP64
+#endif
+#ifdef NUMCXX_DETAIL_DEFINED_HAVE_LAPACK_CONFIG_H
+#undef HAVE_LAPACK_CONFIG_H
+#undef NUMCXX_DETAIL_DEFINED_HAVE_LAPACK_CONFIG_H
+#endif
+#define NUMCXX_DETAIL_HAS_LAPACKE
+#endif
+#else
+#ifndef HAVE_LAPACK_CONFIG_H
+#define NUMCXX_DETAIL_DEFINED_HAVE_LAPACK_CONFIG_H
+#define HAVE_LAPACK_CONFIG_H
+#endif
+#if defined(OPENBLAS_USE64BITINT) && !defined(LAPACK_ILP64)
+#define NUMCXX_DETAIL_DEFINED_LAPACK_ILP64
+#define LAPACK_ILP64
+#endif
+#pragma push_macro("I")
+#undef I
+#include NUMCXX_LAPACKE_HEADER
+#pragma pop_macro("I")
+#ifdef NUMCXX_DETAIL_DEFINED_LAPACK_ILP64
+#undef LAPACK_ILP64
+#undef NUMCXX_DETAIL_DEFINED_LAPACK_ILP64
+#endif
+#ifdef NUMCXX_DETAIL_DEFINED_HAVE_LAPACK_CONFIG_H
+#undef HAVE_LAPACK_CONFIG_H
+#undef NUMCXX_DETAIL_DEFINED_HAVE_LAPACK_CONFIG_H
+#endif
+#define NUMCXX_DETAIL_HAS_LAPACKE
 #endif
 #endif
 
@@ -2700,6 +2765,157 @@ bool nc_cblas_gemm(const A &a, const B &b, C &c) {
 } // namespace detail
 #endif
 
+namespace detail {
+template <class T> struct is_solve_operand : std::false_type {};
+template <class T, class Extents, class LayoutPolicy>
+struct is_solve_operand<ndarray<T, Extents, LayoutPolicy>> : std::true_type {};
+template <class T, class Extents, class LayoutPolicy>
+struct is_solve_operand<slice_view<T, Extents, LayoutPolicy>>
+    : std::true_type {};
+template <class T>
+inline constexpr bool is_solve_operand_v =
+    is_solve_operand<std::remove_cvref_t<T>>::value;
+
+template <class T>
+inline constexpr bool is_solve_value_v =
+    std::is_same_v<T, float> || std::is_same_v<T, double> ||
+    std::is_same_v<T, std::complex<float>> ||
+    std::is_same_v<T, std::complex<double>>;
+
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+template <class Matrix>
+bool lapack_matrix_order(const Matrix &matrix, int &order) {
+  const auto span = matrix.to_mdspan();
+  const auto &mapping = span.mapping();
+  if (!mapping.is_exhaustive() || !mapping.is_strided())
+    return false;
+  if constexpr (requires { matrix.has_reversed_dim(); }) {
+    if (matrix.has_reversed_dim())
+      return false;
+  }
+
+  const bool row_contiguous =
+      span.stride(1) == 1 && span.stride(0) == span.extent(1);
+  const bool col_contiguous =
+      span.stride(0) == 1 && span.stride(1) == span.extent(0);
+  if (row_contiguous) {
+    order = LAPACK_ROW_MAJOR;
+    return true;
+  }
+  if (col_contiguous) {
+    order = LAPACK_COL_MAJOR;
+    return true;
+  }
+  return false;
+}
+
+template <class Vector>
+bool lapack_vector_contiguous(const Vector &vector) {
+  const auto span = vector.to_mdspan();
+  if (!span.mapping().is_exhaustive() || !span.mapping().is_strided() ||
+      span.stride(0) != 1)
+    return false;
+  if constexpr (requires { vector.has_reversed_dim(); })
+    return !vector.has_reversed_dim();
+  return true;
+}
+
+template <class T>
+lapack_int lapack_gesv(int order, lapack_int n, lapack_int nrhs, T *a,
+                       lapack_int lda, lapack_int *ipiv, T *b,
+                       lapack_int ldb) {
+  if constexpr (std::is_same_v<T, float>) {
+    return LAPACKE_sgesv(order, n, nrhs, a, lda, ipiv, b, ldb);
+  } else if constexpr (std::is_same_v<T, double>) {
+    return LAPACKE_dgesv(order, n, nrhs, a, lda, ipiv, b, ldb);
+  } else if constexpr (std::is_same_v<T, std::complex<float>>) {
+    const size_type a_size = static_cast<size_type>(n) * n;
+    const size_type b_size = static_cast<size_type>(n) * nrhs;
+    std::vector<lapack_complex_float> lapack_a(a_size);
+    std::vector<lapack_complex_float> lapack_b(b_size);
+    for (size_type i = 0; i < a_size; ++i)
+      lapack_a[i] = lapack_make_complex_float(a[i].real(), a[i].imag());
+    for (size_type i = 0; i < b_size; ++i)
+      lapack_b[i] = lapack_make_complex_float(b[i].real(), b[i].imag());
+    const lapack_int info =
+        LAPACKE_cgesv(order, n, nrhs, lapack_a.data(), lda, ipiv,
+                      lapack_b.data(), ldb);
+    for (size_type i = 0; i < b_size; ++i)
+      b[i] = {lapack_complex_float_real(lapack_b[i]),
+              lapack_complex_float_imag(lapack_b[i])};
+    return info;
+  } else if constexpr (std::is_same_v<T, std::complex<double>>) {
+    const size_type a_size = static_cast<size_type>(n) * n;
+    const size_type b_size = static_cast<size_type>(n) * nrhs;
+    std::vector<lapack_complex_double> lapack_a(a_size);
+    std::vector<lapack_complex_double> lapack_b(b_size);
+    for (size_type i = 0; i < a_size; ++i)
+      lapack_a[i] = lapack_make_complex_double(a[i].real(), a[i].imag());
+    for (size_type i = 0; i < b_size; ++i)
+      lapack_b[i] = lapack_make_complex_double(b[i].real(), b[i].imag());
+    const lapack_int info =
+        LAPACKE_zgesv(order, n, nrhs, lapack_a.data(), lda, ipiv,
+                      lapack_b.data(), ldb);
+    for (size_type i = 0; i < b_size; ++i)
+      b[i] = {lapack_complex_double_real(lapack_b[i]),
+              lapack_complex_double_imag(lapack_b[i])};
+    return info;
+  } else {
+    static_assert(is_solve_value_v<T>,
+                  "solve supports float, double, complex<float>, and complex<double>");
+    return lapack_int{};
+  }
+}
+#endif
+
+template <class T>
+void gaussian_solve(std::vector<T> &a, std::vector<T> &b, size_type n,
+                    size_type nrhs) {
+  using magnitude_type = decltype(std::abs(T{}));
+  for (size_type k = 0; k < n; ++k) {
+    size_type pivot = k;
+    magnitude_type pivot_magnitude = std::abs(a[k * n + k]);
+    for (size_type i = k + 1; i < n; ++i) {
+      const auto magnitude = std::abs(a[i * n + k]);
+      if (magnitude > pivot_magnitude) {
+        pivot = i;
+        pivot_magnitude = magnitude;
+      }
+    }
+    if (pivot_magnitude == magnitude_type{}) {
+      const std::string message =
+          "solve: matrix is singular at pivot " + std::to_string(k + 1);
+      NUMCXX_THROW(std::runtime_error, message.c_str());
+    }
+
+    if (pivot != k) {
+      for (size_type j = 0; j < n; ++j)
+        std::swap(a[k * n + j], a[pivot * n + j]);
+      for (size_type j = 0; j < nrhs; ++j)
+        std::swap(b[k * nrhs + j], b[pivot * nrhs + j]);
+    }
+
+    for (size_type i = k + 1; i < n; ++i) {
+      const T factor = a[i * n + k] / a[k * n + k];
+      a[i * n + k] = T{};
+#pragma omp simd
+      for (size_type j = k + 1; j < n; ++j)
+        a[i * n + j] -= factor * a[k * n + j];
+      for (size_type j = 0; j < nrhs; ++j)
+        b[i * nrhs + j] -= factor * b[k * nrhs + j];
+    }
+  }
+
+  for (size_type ii = n; ii-- > 0;) {
+    for (size_type rhs = 0; rhs < nrhs; ++rhs) {
+      for (size_type j = ii + 1; j < n; ++j)
+        b[ii * nrhs + rhs] -= a[ii * n + j] * b[j * nrhs + rhs];
+      b[ii * nrhs + rhs] /= a[ii * n + ii];
+    }
+  }
+}
+} // namespace detail
+
 namespace linalg {
 
 /// 2D matrix multiplication: C = A x B
@@ -2852,6 +3068,139 @@ template <class A, class B> auto dot(const A &a, const B &b) {
                   "dot currently only supports 1D/2D combinations");
     // The static_assert above will fail; add a friendly message:
     NUMCXX_THROW(std::invalid_argument, "dot: unsupported rank combination");
+  }
+}
+
+/// Solve A @ x = b using LU factorization with partial pivoting.
+///
+/// @tparam A Rank-2 ndarray or slice_view with square extents
+/// @tparam B Rank-1 or rank-2 ndarray or slice_view
+/// @param a Coefficient matrix of shape (M, M)
+/// @param b Right-hand side of shape (M,) or (M, K)
+/// @returns x with the same shape as b, in default_layout
+/// @throws std::invalid_argument If the coefficient or RHS shapes are invalid
+/// @throws std::runtime_error If the coefficient matrix is singular
+template <class A, class B> auto solve(const A &a, const B &b) {
+  static_assert(detail::is_solve_operand_v<A>,
+                "solve: a must be an ndarray or slice_view");
+  static_assert(detail::is_solve_operand_v<B>,
+                "solve: b must be an ndarray or slice_view");
+  static_assert(A::rank() == 2,
+                "solve requires a rank-2 coefficient matrix");
+  static_assert(B::rank() == 1 || B::rank() == 2,
+                "solve requires a rank-1 or rank-2 right-hand side");
+
+  using value_type =
+      detail::promoted_type_t<typename A::value_type, typename B::value_type>;
+  static_assert(detail::is_solve_value_v<value_type>,
+                "solve supports float, double, complex<float>, and "
+                "complex<double>");
+
+  const size_type n = a.extent(0);
+  if (a.extent(1) != n)
+    NUMCXX_THROW(std::invalid_argument, "solve: a must be square");
+  if (b.extent(0) != n)
+    NUMCXX_THROW(std::invalid_argument,
+                 "solve: a and b have incompatible shapes");
+
+  const size_type nrhs = B::rank() == 1 ? 1 : b.extent(1);
+  if (n == 0) {
+    if constexpr (B::rank() == 1)
+      return ndarray<value_type, dextents<1>>(n);
+    else
+      return ndarray<value_type, dextents<2>>(n, nrhs);
+  }
+
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+  bool use_lapack =
+      n <= static_cast<size_type>(std::numeric_limits<lapack_int>::max()) &&
+      nrhs <= static_cast<size_type>(std::numeric_limits<lapack_int>::max());
+  int lapack_order = LAPACK_ROW_MAJOR;
+  if (use_lapack) {
+    int a_order;
+    if (!detail::lapack_matrix_order(a, a_order)) {
+      use_lapack = false;
+    } else if constexpr (B::rank() == 1) {
+      if (!detail::lapack_vector_contiguous(b))
+        use_lapack = false;
+      else
+        lapack_order = a_order;
+    } else {
+      int b_order;
+      if (!detail::lapack_matrix_order(b, b_order) || a_order != b_order)
+        use_lapack = false;
+      else
+        lapack_order = a_order;
+    }
+  }
+#endif
+
+  const bool column_major =
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+      use_lapack && lapack_order == LAPACK_COL_MAJOR;
+#else
+      false;
+#endif
+  std::vector<value_type> a_copy(a.size());
+  std::vector<value_type> b_copy(b.size());
+  for (size_type i = 0; i < n; ++i) {
+    for (size_type j = 0; j < n; ++j) {
+      const size_type index = column_major ? j * n + i : i * n + j;
+      a_copy[index] = static_cast<value_type>(a(i, j));
+    }
+    for (size_type j = 0; j < nrhs; ++j) {
+      const size_type index = column_major ? j * n + i : i * nrhs + j;
+      if constexpr (B::rank() == 1)
+        b_copy[index] = static_cast<value_type>(b(i));
+      else
+        b_copy[index] = static_cast<value_type>(b(i, j));
+    }
+  }
+
+#ifdef NUMCXX_DETAIL_HAS_LAPACKE
+  if (use_lapack) {
+    std::vector<lapack_int> ipiv(n);
+    const auto lapack_n = static_cast<lapack_int>(n);
+    const auto lapack_nrhs = static_cast<lapack_int>(nrhs);
+    const lapack_int lda = std::max<lapack_int>(1, lapack_n);
+    const lapack_int ldb =
+        lapack_order == LAPACK_ROW_MAJOR
+            ? std::max<lapack_int>(1, lapack_nrhs)
+            : std::max<lapack_int>(1, lapack_n);
+    const lapack_int info =
+        detail::lapack_gesv(lapack_order, lapack_n, lapack_nrhs,
+                            a_copy.data(), lda, ipiv.data(), b_copy.data(),
+                            ldb);
+    if (info < 0) {
+      const std::string message =
+          "solve: illegal argument " + std::to_string(-info) +
+          " to LAPACK gesv";
+      NUMCXX_THROW(std::invalid_argument, message.c_str());
+    }
+    if (info > 0) {
+      const std::string message =
+          "solve: matrix is singular at pivot " + std::to_string(info);
+      NUMCXX_THROW(std::runtime_error, message.c_str());
+    }
+  } else
+#endif
+  {
+    detail::gaussian_solve(a_copy, b_copy, n, nrhs);
+  }
+
+  if constexpr (B::rank() == 1) {
+    ndarray<value_type, dextents<1>> result(n);
+    for (size_type i = 0; i < n; ++i)
+      result(i) = b_copy[i];
+    return result;
+  } else {
+    ndarray<value_type, dextents<2>> result(n, nrhs);
+    for (size_type i = 0; i < n; ++i)
+      for (size_type j = 0; j < nrhs; ++j) {
+        const size_type index = column_major ? j * n + i : i * nrhs + j;
+        result(i, j) = b_copy[index];
+      }
+    return result;
   }
 }
 
