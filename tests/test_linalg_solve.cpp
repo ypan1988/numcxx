@@ -147,6 +147,10 @@ TEST(LinalgSolveTest, ReversedSliceInputsAreCopiedInLogicalOrder) {
   const auto x = numcxx::linalg::solve(a, b);
   EXPECT_NEAR(x(0), 2.0, 1e-12);
   EXPECT_NEAR(x(1), 1.0, 1e-12);
+  EXPECT_DOUBLE_EQ(a_source(0, 0), 1.0);
+  EXPECT_DOUBLE_EQ(a_source(1, 1), 4.0);
+  EXPECT_DOUBLE_EQ(b_source(0), 4.0);
+  EXPECT_DOUBLE_EQ(b_source(1), 10.0);
 }
 
 TEST(LinalgSolveTest, ComplexSystem) {

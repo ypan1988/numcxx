@@ -115,6 +115,7 @@
 #define NUMCXX_DETAIL_HAS_LAPACKE
 #endif
 #else
+// Without __has_include, assume the configured LAPACKE header is available.
 #ifndef HAVE_LAPACK_CONFIG_H
 #define NUMCXX_DETAIL_DEFINED_HAVE_LAPACK_CONFIG_H
 #define HAVE_LAPACK_CONFIG_H
@@ -2883,6 +2884,7 @@ void gaussian_solve(std::vector<T> &a, std::vector<T> &b, size_type n,
       }
     }
     if (pivot_magnitude == magnitude_type{}) {
+      // Match LAPACK gesv: report singularity only for an exactly zero pivot.
       const std::string message =
           "solve: matrix is singular at pivot " + std::to_string(k + 1);
       NUMCXX_THROW(std::runtime_error, message.c_str());
@@ -2901,6 +2903,7 @@ void gaussian_solve(std::vector<T> &a, std::vector<T> &b, size_type n,
 #pragma omp simd
       for (size_type j = k + 1; j < n; ++j)
         a[i * n + j] -= factor * a[k * n + j];
+#pragma omp simd
       for (size_type j = 0; j < nrhs; ++j)
         b[i * nrhs + j] -= factor * b[k * nrhs + j];
     }
