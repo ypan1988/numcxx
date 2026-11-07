@@ -1,12 +1,18 @@
 # API Documentation for NumCxx 0.1
 
 ## Overview
-+ [vector, matrix, cube and ndarray classes](#ndarray-classes)
++ [ndarray, vector, matrix and cube classes](#ndarray-classes)
 + [member functions and slicing](#member-functions-and-slicing)
 
 <a id="ndarray-classes"></a>
-## vector, matrix, cube and ndarray classes
-> [ndarray](#ndarray-def) · [vec](#vec-def) · [mat](#mat-def) · [cube](#cube-def)
+## NdArray, Vector, Matrix and Cube Classes
+| | |
+|---|---|
+| **[ndarray](#ndarray-def)** | dense N-d array class |
+| **[vec / vec_fixed](#vec-def)** | 1-d vector class (ndarray alias) |
+| **[mat / mat_fixed](#mat-def)** | 2-d matrix class (ndarray alias) |
+| **[cube / cube_fixed](#cube-def)** | 3-d cube class (ndarray alias) |
+| operators | +  −  *  %  /  ==  !=  <=  >=  <  >  &&  \|\| |
 
 <a id="member-functions-and-slicing"></a>
 ## member functions and slicing
