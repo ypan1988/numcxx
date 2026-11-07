@@ -915,8 +915,8 @@ public:
           indices[r] < 0 ? indices[r] + dim_size : indices[r];
       NUMCXX_ASSERT(index >= 0 && index < dim_size,
                     "broadcast_view index out of bounds");
-      offset += static_cast<size_type>(index) *
-                static_cast<size_type>(stride(r));
+      offset +=
+          static_cast<size_type>(index) * static_cast<size_type>(stride(r));
     }
     return data_[offset];
   }
@@ -987,8 +987,7 @@ private:
   friend struct detail::broadcast_view_factory;
 
   broadcast_view(const value_type *data, const extents_type &extents,
-                 const std::array<index_type, Rank> &strides,
-                 bool exhaustive)
+                 const std::array<index_type, Rank> &strides, bool exhaustive)
       : data_(data), extents_(extents), strides_(strides),
         exhaustive_(exhaustive) {}
 
@@ -1001,11 +1000,11 @@ private:
 namespace detail {
 struct broadcast_view_factory {
   template <class T, size_type Rank>
-  static auto create(const T *data, const ::numcxx::dextents<Rank> &extents,
-                     const std::array<
-                         typename ::numcxx::dextents<Rank>::index_type,
-                         Rank> &strides,
-                     bool exhaustive) {
+  static auto
+  create(const T *data, const ::numcxx::dextents<Rank> &extents,
+         const std::array<typename ::numcxx::dextents<Rank>::index_type, Rank>
+             &strides,
+         bool exhaustive) {
     return broadcast_view<T, Rank>(data, extents, strides, exhaustive);
   }
 };
@@ -1032,10 +1031,9 @@ auto make_broadcast_view(const Source &source,
                  "broadcast_to: target rank must be at least the source rank");
   } else {
     std::array<size_type, TargetRank> shape{};
-    std::transform(target_shape.begin(), target_shape.end(), shape.begin(),
-                   [](Extent extent) {
-                     return checked_broadcast_extent(extent);
-                   });
+    std::transform(
+        target_shape.begin(), target_shape.end(), shape.begin(),
+        [](Extent extent) { return checked_broadcast_extent(extent); });
 
     if constexpr (requires { source.has_reversed_dim(); })
       if (source.has_reversed_dim())
@@ -1051,8 +1049,7 @@ auto make_broadcast_view(const Source &source,
         exhaustive = false;
 
     for (size_type r = 0; r < source_rank; ++r) {
-      const size_type source_extent =
-          static_cast<size_type>(source.extent(r));
+      const size_type source_extent = static_cast<size_type>(source.extent(r));
       const size_type target_extent = shape[leading_dims + r];
       if (source_extent != target_extent && source_extent != 1) {
         const std::string message =
@@ -2221,14 +2218,16 @@ template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::const_reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) const {
   NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
-  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
+  return flat_contiguous_ ? data_handle()[i]
+                          : data_handle()[calc_flat_offset(i)];
 }
 
 template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) {
   NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
-  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
+  return flat_contiguous_ ? data_handle()[i]
+                          : data_handle()[calc_flat_offset(i)];
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -2244,8 +2243,7 @@ auto slice_view<Tp, Ex, Lp>::eval() const {
 
 template <class Tp, class Ex, class Lp>
 template <class BroadcastElement, ::numcxx::size_type Rank>
-ndarray<Tp, Ex, Lp>::ndarray(
-    const broadcast_view<BroadcastElement, Rank> &bv)
+ndarray<Tp, Ex, Lp>::ndarray(const broadcast_view<BroadcastElement, Rank> &bv)
     : elem_(extents_type(bv.extents())) {
   static_assert(Rank == Ex::rank(),
                 "Broadcast view rank must match ndarray rank");
@@ -2300,8 +2298,8 @@ template <class Source, std::integral... Dims>
 
 template <class Source, std::integral Extent, size_type Rank>
   requires detail::is_broadcast_source<std::remove_cvref_t<Source>>::value
-[[nodiscard]] auto
-broadcast_to(const Source &source, const std::array<Extent, Rank> &shape) {
+[[nodiscard]] auto broadcast_to(const Source &source,
+                                const std::array<Extent, Rank> &shape) {
   return detail::make_broadcast_view(source, shape);
 }
 
@@ -2604,8 +2602,7 @@ inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
 }
 
 template <class Op, class Expr>
-inline auto make_expr_scalar(const Expr &x,
-                             const auto &y) {
+inline auto make_expr_scalar(const Expr &x, const auto &y) {
   using scalar_type = std::remove_cvref_t<decltype(y)>;
   using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<scalar_type>>;
   OpType node(Op{}, x, nc_scalar_expr<scalar_type>(y, x.size()));
@@ -2635,17 +2632,17 @@ using complex_component_t =
     typename complex_component<std::remove_cvref_t<T>>::type;
 
 template <class T, class U,
-          bool IsComplex = complex_component<std::remove_cvref_t<T>>::is_complex ||
-                           complex_component<std::remove_cvref_t<U>>::is_complex>
+          bool IsComplex =
+              complex_component<std::remove_cvref_t<T>>::is_complex ||
+              complex_component<std::remove_cvref_t<U>>::is_complex>
 struct promoted_type {
-  using type = std::common_type_t<std::remove_cvref_t<T>,
-                                  std::remove_cvref_t<U>>;
+  using type =
+      std::common_type_t<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
 };
 
-template <class T, class U>
-struct promoted_type<T, U, true> {
-  using type = std::complex<std::common_type_t<complex_component_t<T>,
-                                               complex_component_t<U>>>;
+template <class T, class U> struct promoted_type<T, U, true> {
+  using type = std::complex<
+      std::common_type_t<complex_component_t<T>, complex_component_t<U>>>;
 };
 
 template <class T, class U>
