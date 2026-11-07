@@ -12,7 +12,7 @@
 | **[vec / vec_fixed](#vec-def)** | 1-d vector class (ndarray alias) |
 | **[mat / mat_fixed](#mat-def)** | 2-d matrix class (ndarray alias) |
 | **[cube / cube_fixed](#cube-def)** | 3-d cube class (ndarray alias) |
-| operators | +  −  *  %  /  ==  !=  <=  >=  <  >  &&  \|\| |
+| **[operators](#operators)** | +  −  *  %  /  ==  !=  <=  >=  <  >  &&  \|\| |
 
 <a id="member-functions-and-slicing"></a>
 ## member functions and slicing
@@ -106,6 +106,32 @@ fcube222 / fcube333 / fcube444 = cube_fixed<float, N, N, N>
 icube222 / icube333 / icube444 = cube_fixed<int, N, N, N>
 ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 ```
+
+<a id="operators"></a>
+### Operators: `+  -  *  %  /  ==  !=  <=  >=  <  >  &&  ||`
+
+- Overloaded operators for `ndarray`, `vec / vec_fixed`, `mat / mat_fixed`, `cube / cube_fixed`, and compatible NumCxx expressions.
+- Operations are performed element-wise.
+- Array operations require compatible shapes.
+- Scalar operations apply the scalar to each element.
+
+**Operations:**
+
+| operator | operation |
+|---|---|
+| `+` | element-wise addition of two objects, or addition of an object and a scalar |
+| `-` | element-wise subtraction of two objects, subtraction involving a scalar, or negation of an object |
+| `*` | element-wise multiplication of two objects, or multiplication of an object by a scalar |
+| `/` | element-wise division of two objects, or division involving a scalar |
+| `%` | element-wise modulo of two objects, or modulo involving a scalar |
+| `==` | element-wise equality comparison |
+| `!=` | element-wise inequality comparison |
+| `>=` | element-wise greater-than-or-equal comparison |
+| `<=` | element-wise less-than-or-equal comparison |
+| `>` | element-wise greater-than comparison |
+| `<` | element-wise less-than comparison |
+| `&&` | element-wise logical AND |
+| `\|\|` | element-wise logical OR |
 
 ## Member functions and Slicing
 
