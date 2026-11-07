@@ -21,6 +21,7 @@ set(TEST_TARGETS
     test_ndarray_unary
     test_ndarray_compound
     test_mask_view
+    test_broadcast_view
     test_et
     test_et_binary_op
     test_et_binary_fn

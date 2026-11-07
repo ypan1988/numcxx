@@ -247,6 +247,7 @@ using default_layout = layout_right;
                                         class         slice;
 template <class Tp, class Ex, class Lp> class       ndarray;
 template <class Tp, class Ex, class Lp> class    slice_view;
+template <class Tp, size_type Rank>     class broadcast_view;
 template <class Tp>                     class     mask_view;
 template <class Tp>                     class indirect_view;
 
@@ -258,6 +259,7 @@ template <class Op, class A0, class A1> struct nc_binary_op;
 template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, size_type Rank>     struct nc_is_val_expr<broadcast_view<Tp, Rank>> : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr<    mask_view<Tp        >> : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp        >> : std::true_type  {};
 template <class ValExpr>                struct nc_is_val_expr<  nc_val_expr<ValExpr   >> : std::true_type  {};
@@ -268,6 +270,7 @@ template <class Op, class A0, class A1> struct nc_is_val_expr< nc_binary_op<Op, 
 template <class Tp>                     struct nc_has_extents                            : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_has_extents<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp, class Ex, class Lp> struct nc_has_extents<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, size_type Rank>     struct nc_has_extents<broadcast_view<Tp, Rank>> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents<    mask_view<Tp        >> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents<indirect_view<Tp        >> : std::true_type  {};
 template <class ValExpr>                struct nc_has_extents<  nc_val_expr<ValExpr   >> : nc_has_extents<std::remove_cvref_t<ValExpr>> {};
@@ -441,6 +444,8 @@ public:
   ndarray(const    slice_view<ElementType, Extents, LayoutPolicy> &sv) : elem_(sv.to_mdspan()) {}
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
   ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
+  template <class BroadcastElement, ::numcxx::size_type Rank>
+  explicit ndarray(const broadcast_view<BroadcastElement, Rank> &bv);
   // template <class Expr, std::enable_if_t<nc_is_val_expr<std::decay_t<Expr>>::value, int> = 0> explicit ndarray(const Expr& expr); // TODO
   ndarray(detail::nested_initializer_list_t<element_type, extents_type::rank()> list);
 
@@ -466,6 +471,9 @@ public:
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
+  template <::numcxx::size_type Rank>
+  [[nodiscard]] auto broadcast_to(const std::array<::numcxx::size_type, Rank> &shape) const;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -669,6 +677,9 @@ public:
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
+  template <::numcxx::size_type Rank>
+  [[nodiscard]] auto broadcast_to(const std::array<::numcxx::size_type, Rank> &shape) const;
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -858,7 +869,209 @@ private:
   // std::vector<size_type> logical_offset_;
 };
 
+// A read-only, non-owning view with explicit zero-stride broadcast axes.
+// It intentionally has no mdspan conversion: layout_stride requires unique
+// mappings, while a broadcast mapping is non-unique by definition.
+template <class ElementType, size_type Rank> class broadcast_view {
+public:
+  using element_type = std::remove_const_t<ElementType>;
+  using value_type = std::remove_cv_t<ElementType>;
+  using extents_type = dextents<Rank>;
+  using index_type = typename extents_type::index_type;
+  using size_type = typename extents_type::size_type;
+  using rank_type = typename extents_type::rank_type;
+  using const_reference = const value_type &;
+
+  static constexpr rank_type rank() noexcept { return extents_type::rank(); }
+  static constexpr rank_type rank_dynamic() noexcept {
+    return extents_type::rank_dynamic();
+  }
+  static constexpr size_type static_extent(rank_type r) noexcept {
+    return extents_type::static_extent(r);
+  }
+  constexpr index_type extent(rank_type r) const noexcept {
+    return extents_.extent(r);
+  }
+  constexpr index_type stride(rank_type r) const noexcept {
+    return strides_[r];
+  }
+
+  broadcast_view(const value_type *data, const extents_type &extents,
+                 const std::array<index_type, Rank> &strides,
+                 bool exhaustive)
+      : data_(data), extents_(extents), strides_(strides),
+        exhaustive_(exhaustive) {}
+
+  template <typename... Idxs>
+    requires all_scalar_indices<Idxs...>
+  [[nodiscard]] const_reference operator()(Idxs... idxs) const {
+    static_assert(sizeof...(Idxs) == Rank,
+                  "Number of arguments must match broadcast_view rank");
+    const std::array<index_type, Rank> indices{
+        static_cast<index_type>(idxs)...};
+    size_type offset = 0;
+    for (rank_type r = 0; r < rank(); ++r) {
+      const index_type dim_size = static_cast<index_type>(extent(r));
+      const index_type index =
+          indices[r] < 0 ? indices[r] + dim_size : indices[r];
+      NUMCXX_ASSERT(index >= 0 && index < dim_size,
+                    "broadcast_view index out of bounds");
+      offset += static_cast<size_type>(index) *
+                static_cast<size_type>(stride(r));
+    }
+    return data_[offset];
+  }
+
+  [[nodiscard]] const_reference flat(size_type i) const {
+    NUMCXX_ASSERT(i < size(), "broadcast_view::flat index out of bounds");
+    std::array<size_type, Rank> indices{};
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
+      for (rank_type r = rank(); r-- > 0;) {
+        indices[r] = i % extent(r);
+        i /= extent(r);
+      }
+    } else {
+      for (rank_type r = 0; r < rank(); ++r) {
+        indices[r] = i % extent(r);
+        i /= extent(r);
+      }
+    }
+    size_type offset = 0;
+    for (rank_type r = 0; r < rank(); ++r)
+      offset += indices[r] * static_cast<size_type>(stride(r));
+    return data_[offset];
+  }
+
+  [[nodiscard]] constexpr size_type size() const noexcept {
+    size_type result = 1;
+    for (rank_type r = 0; r < rank(); ++r)
+      result *= static_cast<size_type>(extent(r));
+    return result;
+  }
+  [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
+  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
+    return extents_;
+  }
+  [[nodiscard]] constexpr const value_type *data_handle() const noexcept {
+    return data_;
+  }
+  [[nodiscard]] constexpr bool is_unique() const noexcept {
+    for (rank_type r = 0; r < rank(); ++r)
+      if (extent(r) > 1 && stride(r) == 0)
+        return false;
+    return true;
+  }
+  [[nodiscard]] constexpr bool is_exhaustive() const noexcept {
+    return exhaustive_;
+  }
+  [[nodiscard]] static constexpr bool is_always_unique() noexcept {
+    return false;
+  }
+  [[nodiscard]] static constexpr bool is_always_exhaustive() noexcept {
+    return false;
+  }
+  [[nodiscard]] static constexpr bool is_always_strided() noexcept {
+    return true;
+  }
+
+  template <std::integral... Dims>
+  [[nodiscard]] auto broadcast_to(Dims... dims) const;
+  template <::numcxx::size_type TargetRank>
+  [[nodiscard]] auto
+  broadcast_to(const std::array<::numcxx::size_type, TargetRank> &shape) const;
+
+  [[nodiscard]] auto eval() const {
+    return ndarray<value_type, extents_type>(*this);
+  }
+
+private:
+  const value_type *data_;
+  extents_type extents_;
+  std::array<index_type, Rank> strides_;
+  bool exhaustive_;
+};
+
 namespace detail {
+template <std::integral Extent>
+size_type checked_broadcast_extent(Extent extent) {
+  if constexpr (std::is_signed_v<Extent>)
+    if (extent < 0)
+      NUMCXX_THROW(std::invalid_argument,
+                   "broadcast_to: target extents must be non-negative");
+  return static_cast<size_type>(extent);
+}
+
+template <class Source, size_type TargetRank>
+auto make_broadcast_view(const Source &source,
+                         const std::array<size_type, TargetRank> &shape) {
+  constexpr size_type source_rank = Source::rank();
+  using value_type = typename Source::value_type;
+  using index_type = typename Source::index_type;
+  using extents_type = ::numcxx::dextents<TargetRank>;
+
+  if constexpr (source_rank > TargetRank) {
+    NUMCXX_THROW(std::invalid_argument,
+                 "broadcast_to: target rank must be at least the source rank");
+  } else {
+    if constexpr (requires { source.has_reversed_dim(); })
+      if (source.has_reversed_dim())
+        NUMCXX_THROW(std::invalid_argument,
+                     "broadcast_to: reversed slice_view sources are not "
+                     "supported; materialize the slice first");
+
+    std::array<index_type, TargetRank> strides{};
+    constexpr size_type leading_dims = TargetRank - source_rank;
+    bool exhaustive = source.is_exhaustive();
+    for (size_type r = 0; r < leading_dims; ++r)
+      if (shape[r] > 1)
+        exhaustive = false;
+
+    for (size_type r = 0; r < source_rank; ++r) {
+      const size_type source_extent =
+          static_cast<size_type>(source.extent(r));
+      const size_type target_extent = shape[leading_dims + r];
+      if (source_extent != target_extent && source_extent != 1)
+        NUMCXX_THROW(std::invalid_argument,
+                     "broadcast_to: source extent is not compatible with "
+                     "target shape");
+      strides[leading_dims + r] =
+          source_extent == target_extent
+              ? static_cast<index_type>(source.stride(r))
+              : index_type{};
+      if (source_extent != target_extent && target_extent > 1)
+        exhaustive = false;
+    }
+
+    const extents_type extents(shape);
+    const auto *data = [&]() {
+      if constexpr (requires { source.to_mdspan(); })
+        return source.to_mdspan().data_handle();
+      else
+        return source.data_handle();
+    }();
+    return broadcast_view<value_type, TargetRank>(data, extents, strides,
+                                                  exhaustive);
+  }
+}
+
+template <class Source, std::integral... Dims>
+auto make_broadcast_view(const Source &source, Dims... dims) {
+  static_assert(sizeof...(Dims) > 0,
+                "broadcast_to requires at least one target extent");
+  constexpr size_type target_rank = sizeof...(Dims);
+  const std::array<size_type, target_rank> shape{
+      checked_broadcast_extent(dims)...};
+  return make_broadcast_view(source, shape);
+}
+
+template <class T> struct is_broadcast_source : std::false_type {};
+template <class Tp, class Ex, class Lp>
+struct is_broadcast_source<ndarray<Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, class Ex, class Lp>
+struct is_broadcast_source<slice_view<Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, size_type Rank>
+struct is_broadcast_source<broadcast_view<Tp, Rank>> : std::true_type {};
+
 // clang-format off
 template <class Tp> class index_accessor {
 public:
@@ -1988,6 +2201,69 @@ typename slice_view<Tp, Ex, Lp>::reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) {
   NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
   return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
+}
+
+template <class Tp, class Ex, class Lp>
+template <class BroadcastElement, ::numcxx::size_type Rank>
+ndarray<Tp, Ex, Lp>::ndarray(
+    const broadcast_view<BroadcastElement, Rank> &bv)
+    : elem_(extents_type(bv.extents())) {
+  static_assert(Rank == Ex::rank(),
+                "Broadcast view rank must match ndarray rank");
+  for (size_type i = 0; i < size(); ++i)
+    flat(i) = static_cast<value_type>(bv.flat(i));
+}
+
+template <class Tp, class Ex, class Lp>
+template <std::integral... Dims>
+auto ndarray<Tp, Ex, Lp>::broadcast_to(Dims... dims) const {
+  return detail::make_broadcast_view(*this, dims...);
+}
+
+template <class Tp, class Ex, class Lp>
+template <::numcxx::size_type Rank>
+auto ndarray<Tp, Ex, Lp>::broadcast_to(
+    const std::array<::numcxx::size_type, Rank> &shape) const {
+  return detail::make_broadcast_view(*this, shape);
+}
+
+template <class Tp, class Ex, class Lp>
+template <std::integral... Dims>
+auto slice_view<Tp, Ex, Lp>::broadcast_to(Dims... dims) const {
+  return detail::make_broadcast_view(*this, dims...);
+}
+
+template <class Tp, class Ex, class Lp>
+template <::numcxx::size_type Rank>
+auto slice_view<Tp, Ex, Lp>::broadcast_to(
+    const std::array<::numcxx::size_type, Rank> &shape) const {
+  return detail::make_broadcast_view(*this, shape);
+}
+
+template <class Tp, size_type Rank>
+template <std::integral... Dims>
+auto broadcast_view<Tp, Rank>::broadcast_to(Dims... dims) const {
+  return detail::make_broadcast_view(*this, dims...);
+}
+
+template <class Tp, size_type Rank>
+template <::numcxx::size_type TargetRank>
+auto broadcast_view<Tp, Rank>::broadcast_to(
+    const std::array<::numcxx::size_type, TargetRank> &shape) const {
+  return detail::make_broadcast_view(*this, shape);
+}
+
+template <class Source, std::integral... Dims>
+  requires detail::is_broadcast_source<std::remove_cvref_t<Source>>::value
+[[nodiscard]] auto broadcast_to(const Source &source, Dims... dims) {
+  return detail::make_broadcast_view(source, dims...);
+}
+
+template <class Source, size_type Rank>
+  requires detail::is_broadcast_source<std::remove_cvref_t<Source>>::value
+[[nodiscard]] auto
+broadcast_to(const Source &source, const std::array<size_type, Rank> &shape) {
+  return detail::make_broadcast_view(source, shape);
 }
 
 // [numcxx.expression_template]
