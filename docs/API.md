@@ -1,14 +1,16 @@
-# Reference for NumCxx 0.1
-**[Vector, Matrix, Cube and NdArray Classes](#ndarray-classes)**
+# API Documentation for NumCxx 0.1
 
-> [ndarray](#ndarray-def) · [vec](#vec-def) · [mat](#mat-def) · [cube](#cube-def)
-
-**[Member functions and Slicing](#member-functions-and-slicing)**
-
-> [slice](#slice-def)
+## Overview
++ [vector, matrix, cube and ndarray classes](#ndarray-classes)
++ [member functions and slicing](#member-functions-and-slicing)
 
 <a id="ndarray-classes"></a>
-## Vector, Matrix, Cube and NdArray Classes
+## vector, matrix, cube and ndarray classes
+> [ndarray](#ndarray-def) · [vec](#vec-def) · [mat](#mat-def) · [cube](#cube-def)
+
+<a id="member-functions-and-slicing"></a>
+## member functions and slicing
+> [slice](#slice-def)
 
 <a id="ndarray-def"></a>
 ### `ndarray<T, Extents, LayoutPolicy>`
@@ -99,7 +101,6 @@ icube222 / icube333 / icube444 = cube_fixed<int, N, N, N>
 ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 ```
 
-<a id="member-functions-and-slicing"></a>
 ## Member functions and Slicing
 
 <a id="slice-def"></a>
