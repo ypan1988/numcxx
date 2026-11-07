@@ -2,21 +2,31 @@
 
 ## Overview
 + [ndarray, vector, matrix and cube classes](#ndarray-classes)
++ [views and slicing](#views-and-slicing)
 + [member functions and slicing](#member-functions-and-slicing)
 
 <a id="ndarray-classes"></a>
 ## NdArray, Vector, Matrix and Cube Classes
 | | |
 |---|---|
-| **[ndarray](#ndarray-def)** | dense N-d array class |
-| **[vec / vec_fixed](#vec-def)** | 1-d vector class (ndarray alias) |
-| **[mat / mat_fixed](#mat-def)** | 2-d matrix class (ndarray alias) |
-| **[cube / cube_fixed](#cube-def)** | 3-d cube class (ndarray alias) |
-| **[operators](#operators)** | +  −  *  %  /  ==  !=  <=  >=  <  >  &&  \|\| |
+| **[`ndarray`](#ndarray-def)** | dense N-d array class |
+| **[`vec` / `vec_fixed`](#vec-def)** | 1-d vector class (ndarray alias) |
+| **[`mat` / `mat_fixed`](#mat-def)** | 2-d matrix class (ndarray alias) |
+| **[`cube` / `cube_fixed`](#cube-def)** | 3-d cube class (ndarray alias) |
+| **[operators](#operators)** | +, −, *, %, /, ==, !=, <=, >=, <, >, &&, \|\| |
+
+<a id="views-and-slicing"></a>
+## Views and Slicing
+| | |
+|---|---|
+| **[`slice`](#slice-def)** | describes a range of elements along one dimension |
+| **[`slice_view`](#slice-view-def)** | view created by slicing an array |
+| **[`mask_view`](#mask-view-def)** | view selecting elements using a boolean mask |
+| **[`indirect_view`](#indirect-view-def)** | view selecting elements using indices |
+
 
 <a id="member-functions-and-slicing"></a>
 ## member functions and slicing
-> [slice](#slice-def)
 
 <a id="ndarray-def"></a>
 ### `ndarray<T, Extents, LayoutPolicy>`
@@ -108,7 +118,7 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 ```
 
 <a id="operators"></a>
-### Operators: `+  -  *  %  /  ==  !=  <=  >=  <  >  &&  ||`
+### Operators: `+, -, *, %, /, ==, !=, <=, >=, <, >, &&, ||`
 
 - Overloaded operators for `ndarray`, `vec / vec_fixed`, `mat / mat_fixed`, `cube / cube_fixed`, and compatible NumCxx expressions.
 - Operations are performed element-wise.
@@ -133,28 +143,30 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 | `&&` | element-wise logical AND |
 | `\|\|` | element-wise logical OR |
 
-## Member functions and Slicing
+## Views and Slicing
+
+This section covers NumCxx slicing and the view types used to access selected elements without copying data.
 
 <a id="slice-def"></a>
 ### `slice`
 
-+ `slice` describes a range of elements in one dimension using `start`, `stop`, and `step`.
-+ It follows NumPy-style slicing:
-    + `start` is included.
-    + `stop` is excluded.
-    + `step` controls the interval between selected elements.
-    + Negative indices count from the end.
-    + A negative `step` selects elements in reverse order.
+- `slice` describes a range of elements in one dimension using `start`, `stop`, and `step`.
+- It follows NumPy-style slicing:
+  - `start` is included.
+  - `stop` is excluded.
+  - `step` controls the interval between selected elements.
+  - Negative indices count from the end.
+  - A negative `step` selects elements in reverse order.
 
-+ Forms:
-    + `slice()` - select the whole dimension.
-    + `slice(start, stop)` - select from `start` up to, but not including, `stop`.
-    + `slice(start, stop, step)` - select every `step`-th element between `start` and `stop`.
+- Forms:
+  - `slice()` - select the whole dimension.
+  - `slice(start, stop)` - select from `start` up to, but not including, `stop`.
+  - `slice(start, stop, step)` - select every `step`-th element between `start` and `stop`.
 
-+ Common slices:
+- Common slices:
 
   | NumCxx | Equivalent notation | Meaning |
-  |--------|---------------------|---------|
+  |---|---|---|
   | `slice()` | `[:]` | all elements |
   | `slice(1, 5)` | `[1:5]` | elements 1 through 4 |
   | `slice(0, 10, 2)` | `[0:10:2]` | every second element |
@@ -164,19 +176,19 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
   | `slice({}, {}, 2)` | `[::2]` | every second element |
   | `slice({}, {}, -1)` | `[::-1]` | all elements in reverse order |
 
-+ Missing values are written as `{}`:
-    + `slice({}, stop)` - omit `start`.
-    + `slice(start, {})` - omit `stop`.
-    + `slice({}, {}, step)` - omit both `start` and `stop`.
+- Missing values are written as `{}`:
+  - `slice({}, stop)` - omit `start`.
+  - `slice(start, {})` - omit `stop`.
+  - `slice({}, {}, step)` - omit both `start` and `stop`.
 
-+ Slicing an `ndarray`:
-    + Use `operator()` with one argument for each dimension.
-    + An integer selects one element along a dimension.
-    + A `slice` selects a range of elements.
-    + `full_extent` selects the whole dimension.
-    + A pair such as `{1, 4}` is a convenient range equivalent to `slice(1, 4)`.
+- Slicing an `ndarray`:
+  - Use `operator()` with one argument for each dimension.
+  - An integer selects one element along a dimension.
+  - A `slice` selects a range of elements.
+  - `full_extent` selects the whole dimension.
+  - A pair such as `{1, 4}` is a convenient range equivalent to `slice(1, 4)`.
 
-+ Examples:
+- Examples:
 
       dmat A(4, 5);
 
@@ -186,17 +198,17 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
       auto rev  = A(slice({}, {}, -1), full_extent);
 
   In the examples above:
-    + `rows` selects rows 1 and 2 and keeps all columns.
-    + `cols` keeps all rows and selects every second column.
-    + `row` selects row 1 and keeps all columns.
-    + `rev` keeps all columns and reverses the row order.
+  - `rows` selects rows 1 and 2 and keeps all columns.
+  - `cols` keeps all rows and selects every second column.
+  - `row` selects row 1 and keeps all columns.
+  - `rev` keeps all columns and reverses the row order.
 
-+ A slicing operation returns a `slice_view` of the original array:
-    + The selected elements are not copied.
-    + Changes made through the view affect the original array.
-    + A new independent `ndarray` can be constructed from the view when a copy is needed.
+- A slicing operation returns a `slice_view` of the original array:
+  - The selected elements are not copied.
+  - Changes made through the view affect the original array.
+  - A new independent `ndarray` can be constructed from the view when a copy is needed.
 
-+ Example of modifying the original array through a slice:
+- Example of modifying the original array through a slice:
 
       dmat A(4, 5);
 
@@ -205,10 +217,46 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 
   This assigns `0.0` to rows 1 and 2 of `A`.
 
-+ Notes:
-    + `start` is inclusive.
-    + `stop` is exclusive.
-    + Negative indices are interpreted relative to the end of the dimension.
-    + A negative `step` selects elements in reverse order.
-    + `step` must not be zero.
-    + Out-of-range `start` and `stop` values are clipped to the valid range.
+- Notes:
+  - `start` is inclusive.
+  - `stop` is exclusive.
+  - Negative indices are interpreted relative to the end of the dimension.
+  - A negative `step` selects elements in reverse order.
+  - `step` must not be zero.
+  - Out-of-range `start` and `stop` values are clipped to the valid range.
+
+<a id="slice-view-def"></a>
+### `slice_view`
+
+- `slice_view` is a multidimensional, non-owning view created by slicing an `ndarray` or another compatible view.
+- It preserves the shape of the selected elements, except for dimensions removed by integer indexing.
+- Elements can be read or modified through the view.
+- Changes made through the view affect the original array.
+- Assigning a scalar sets every selected element to that value.
+- Construct an `ndarray` from a `slice_view` when an independent copy is required.
+- A `slice_view` must not outlive the array or view from which it was created.
+
+<a id="mask-view-def"></a>
+### `mask_view`
+
+- `mask_view` is a non-owning view that selects elements for which a mask is `true`.
+- Mask selection is element-wise.
+- The mask must be compatible with the source array.
+- Selected elements can be read or modified through the view.
+- Changes made through the view affect the original array.
+- Assigning a scalar sets every selected element to that value.
+- Construct an `ndarray` from a `mask_view` when an independent copy is required.
+- A `mask_view` must not outlive the array and mask from which it was created.
+
+<a id="indirect-view-def"></a>
+### `indirect_view`
+
+- `indirect_view` is a non-owning view that selects elements using a collection of indices.
+- Elements are accessed in the order specified by the indices.
+- Selected elements can be read or modified through the view.
+- Changes made through the view affect the original array.
+- Assigning a scalar sets every selected element to that value.
+- Construct an `ndarray` from an `indirect_view` when an independent copy is required.
+- An `indirect_view` must not outlive the array and index collection from which it was created.
+
+<br aria-hidden="true">
