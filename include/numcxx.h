@@ -244,38 +244,38 @@ using default_layout = layout_left;
 using default_layout = layout_right;
 #endif
 
-                                        class         slice;
-template <class Tp, class Ex, class Lp> class       ndarray;
-template <class Tp, class Ex, class Lp> class    slice_view;
+                                        class          slice;
+template <class Tp, class Ex, class Lp> class        ndarray;
+template <class Tp, class Ex, class Lp> class     slice_view;
+template <class Tp>                     class      mask_view;
+template <class Tp>                     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
-template <class Tp>                     class     mask_view;
-template <class Tp>                     class indirect_view;
 
 template <class ValExpr>                struct  nc_val_expr;
 template <class Op, class A0>           struct  nc_unary_op;
 template <class Op, class A0, class A1> struct nc_binary_op;
 
 // Value-expression types participate in NumCxx expression evaluation.
-template <class ValExpr>                struct nc_is_val_expr                            : std::false_type {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, size_type Rank>     struct nc_is_val_expr<broadcast_view<Tp, Rank>> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<    mask_view<Tp        >> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr<indirect_view<Tp        >> : std::true_type  {};
-template <class ValExpr>                struct nc_is_val_expr<  nc_val_expr<ValExpr   >> : std::true_type  {};
-template <class Op, class A0>           struct nc_is_val_expr<  nc_unary_op<Op, A0    >> : std::true_type  {};
-template <class Op, class A0, class A1> struct nc_is_val_expr< nc_binary_op<Op, A0, A1>> : std::true_type  {};
+template <class ValExpr>                struct nc_is_val_expr                             : std::false_type {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<    slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr<     mask_view<Tp        >> : std::true_type  {};
+template <class Tp>                     struct nc_is_val_expr< indirect_view<Tp        >> : std::true_type  {};
+template <class Tp, size_type Rank>     struct nc_is_val_expr<broadcast_view<Tp, Rank  >> : std::true_type  {};
+template <class ValExpr>                struct nc_is_val_expr<   nc_val_expr<ValExpr   >> : std::true_type  {};
+template <class Op, class A0>           struct nc_is_val_expr<   nc_unary_op<Op, A0    >> : std::true_type  {};
+template <class Op, class A0, class A1> struct nc_is_val_expr<  nc_binary_op<Op, A0, A1>> : std::true_type  {};
 
 // Types with multidimensional extents provide shape information.
-template <class Tp>                     struct nc_has_extents                            : std::false_type {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<      ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<   slice_view<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, size_type Rank>     struct nc_has_extents<broadcast_view<Tp, Rank>> : std::true_type  {};
-template <class Tp>                     struct nc_has_extents<    mask_view<Tp        >> : std::true_type  {};
-template <class Tp>                     struct nc_has_extents<indirect_view<Tp        >> : std::true_type  {};
-template <class ValExpr>                struct nc_has_extents<  nc_val_expr<ValExpr   >> : nc_has_extents<std::remove_cvref_t<ValExpr>> {};
-template <class Op, class A0>           struct nc_has_extents<  nc_unary_op<Op, A0    >> : nc_has_extents<std::remove_cvref_t<A0>     > {};
-template <class Op, class A0, class A1> struct nc_has_extents< nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_has_extents<std::remove_cvref_t<A0>>::value  ||
+template <class Tp>                     struct nc_has_extents                             : std::false_type {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<    slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp>                     struct nc_has_extents<     mask_view<Tp        >> : std::true_type  {};
+template <class Tp>                     struct nc_has_extents< indirect_view<Tp        >> : std::true_type  {};
+template <class Tp, size_type Rank>     struct nc_has_extents<broadcast_view<Tp, Rank  >> : std::true_type  {};
+template <class ValExpr>                struct nc_has_extents<   nc_val_expr<ValExpr   >> : nc_has_extents<std::remove_cvref_t<ValExpr>> {};
+template <class Op, class A0>           struct nc_has_extents<   nc_unary_op<Op, A0    >> : nc_has_extents<std::remove_cvref_t<A0>     > {};
+template <class Op, class A0, class A1> struct nc_has_extents<  nc_binary_op<Op, A0, A1>> : std::bool_constant<nc_has_extents<std::remove_cvref_t<A0>>::value  ||
                                                                                                                nc_has_extents<std::remove_cvref_t<A1>>::value> {};
 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<std::remove_cvref_t<Tp>>::value;
