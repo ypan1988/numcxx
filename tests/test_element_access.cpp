@@ -53,6 +53,23 @@ TEST(ElementAccess, ConstNdarrayElementAccess) {
   EXPECT_EQ(r, 4);
 }
 
+TEST(ElementAccess, NdarrayBracketAndAtUsePhysicalStorageOrder) {
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> a(2, 3);
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0; j < 3; ++j)
+      a(i, j) = i * 10 + j;
+
+  EXPECT_EQ(a[1], 10);
+  EXPECT_EQ(a.at(1), a[1]);
+  a.at(1) = 42;
+  EXPECT_EQ(a(1, 0), 42);
+  EXPECT_THROW((void)a.at(a.size()), std::out_of_range);
+
+  const auto &const_a = a;
+  static_assert(std::is_same_v<decltype(const_a.at(0)), const int &>);
+  EXPECT_EQ(const_a.at(1), 42);
+}
+
 /* ============================================================
  * slice_view element access
  * ============================================================ */
@@ -66,6 +83,8 @@ TEST(ElementAccess, SliceViewDirectElement) {
 
   EXPECT_EQ(v(0, 0), 11);
   EXPECT_EQ(v(1, 2), 23);
+  EXPECT_EQ(v.at(0), v[0]);
+  EXPECT_THROW((void)v.at(v.size()), std::out_of_range);
 }
 
 TEST(ElementAccess, ConstSliceViewElementAccess) {
@@ -144,6 +163,10 @@ TEST(ElementAccess, Rank1LinearAccess) {
 
   EXPECT_EQ(v[0], 10);
   EXPECT_EQ(v[2], 12);
+  EXPECT_EQ(v.at(2), v[2]);
+  v.at(1) = 42;
+  EXPECT_EQ(a(1, 1), 42);
+  EXPECT_THROW((void)v.at(v.size()), std::out_of_range);
 }
 
 /* ============================================================

@@ -149,23 +149,26 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 This section covers NumCxx slicing and the view types used to access selected elements without copying data.
 
 <a id="element-access"></a>
-### Element access via `()`, `[]` and `flat()`
+### Element access via `()`, `[]`, `at()` and `flat()`
 
-Provides access to individual elements stored in an `ndarray` or compatible view.
+Provides access to individual elements stored in an `ndarray`, `slice_view`,
+`mask_view`, or `indirect_view`.
 
 | | |
 |---|---|
 | **`(i, j, ...)`** | Access the element at the specified multidimensional indices. The number of indices must match the number of dimensions. |
-| **`[i]`** | Access the element at flattened index `i`, following the layout of the object. |
-| **`.flat(i)`** | Access the element at flattened index `i`, using the default NumCxx layout order, independent of the layout of the object. |
+| **`[i]`** | Unchecked access at flattened index `i`, following the object's physical storage layout. The index must be in range. |
+| **`.at(i)`** | Checked access at flattened index `i`, following the same physical storage layout as `[i]`. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
+| **`.flat(i)`** | Checked access at flattened index `i`, using the default NumCxx layout order, independent of the object's physical storage layout. |
 
 **Notes:**
 
 - indexing starts at `0`
 - `()` is used for multidimensional element access
-- `[]` is used for flattened access following the object's layout
-- `flat()` is used for flattened access following the default NumCxx layout
-- the same access conventions are used by compatible NumCxx views
+- `[]` follows the C++ container convention: it does not check bounds; using an out-of-range index has undefined behavior
+- `at()` checks bounds and throws `std::out_of_range` when the index is invalid
+- `[]` and `at()` use physical storage order; `flat()` uses the default NumCxx layout order
+- these conventions apply to the listed types' linear element access
 
 <a id="slice-def"></a>
 ### `slice`

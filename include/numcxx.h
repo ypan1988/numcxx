@@ -462,15 +462,24 @@ public:
   template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
   template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
-  // flattened element access using the underlying physical storage order.
-  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
-  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "ndarray::operator[] index out of bounds"); return data()[i]; }
+  // Flattened physical-order access: operator[] is unchecked; at() checks bounds.
+  [[nodiscard]] const value_type &operator[](size_type i) const { return data()[i]; }
+  [[nodiscard]]       value_type &operator[](size_type i)       { return data()[i]; }
+  [[nodiscard]] const value_type &at(size_type i) const {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range, "ndarray::at index out of bounds");
+    return (*this)[i];
+  }
+  [[nodiscard]] value_type &at(size_type i) {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range, "ndarray::at index out of bounds");
+    return (*this)[i];
+  }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const;
   [[nodiscard]]       reference flat(size_type i);
   // Internal API (not stable): unchecked flat access; requires i < size().
-  // Non-contiguous slices still compute the logical index's storage offset.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i);
 
@@ -672,14 +681,29 @@ public:
   template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
   template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
 
-  // flattened element access using the underlying physical storage order.
-  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
-  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "slice_view::operator[] index out of bounds"); return data_handle()[calc_offset(i)]; }
+  // Flattened physical-order access: operator[] is unchecked; at() checks bounds.
+  [[nodiscard]] const value_type &operator[](size_type i) const {
+    return data_handle()[calc_offset(i)];
+  }
+  [[nodiscard]] value_type &operator[](size_type i) {
+    return data_handle()[calc_offset(i)];
+  }
+  [[nodiscard]] const value_type &at(size_type i) const {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range, "slice_view::at index out of bounds");
+    return (*this)[i];
+  }
+  [[nodiscard]] value_type &at(size_type i) {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range, "slice_view::at index out of bounds");
+    return (*this)[i];
+  }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const;
   [[nodiscard]]       reference flat(size_type i);
   // Internal API (not stable): unchecked flat access; requires i < size().
+  // Non-contiguous slices still compute the logical index's storage offset.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i);
 
@@ -1183,13 +1207,33 @@ public:
   mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
 
-  // element access
-  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
-  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "mask_view::operator[] index out of bounds"); return span_[i]; }
+  // Linear access in view order: operator[] is unchecked; at() checks bounds.
+  [[nodiscard]] const value_type &operator[](size_type i) const {
+    return flat_unchecked(i);
+  }
+  [[nodiscard]] value_type &operator[](size_type i) {
+    return flat_unchecked(i);
+  }
+  [[nodiscard]] const value_type &at(size_type i) const {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range, "mask_view::at index out of bounds");
+    return (*this)[i];
+  }
+  [[nodiscard]] value_type &at(size_type i) {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range, "mask_view::at index out of bounds");
+    return (*this)[i];
+  }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
-  [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
-  [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
+  [[nodiscard]] const_reference flat(size_type i) const {
+    NUMCXX_ASSERT(i < size(), "mask_view::flat index out of bounds");
+    return flat_unchecked(i);
+  }
+  [[nodiscard]] reference flat(size_type i) {
+    NUMCXX_ASSERT(i < size(), "mask_view::flat index out of bounds");
+    return flat_unchecked(i);
+  }
   // Internal API (not stable): unchecked flat access; requires i < size().
   // Bypass mdspan::operator[] to avoid any potential bounds checking.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const {
@@ -1328,13 +1372,35 @@ public:
   indirect_view(indirect_view &&) noexcept = default;
   ~indirect_view() = default;
 
-  // element access
-  [[nodiscard]] const value_type &operator[](size_type i) const { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
-  [[nodiscard]]       value_type &operator[](size_type i)       { NUMCXX_ASSERT(i < size(), "indirect_view::operator[] index out of bounds"); return span_[i]; }
+  // Linear access in view order: operator[] is unchecked; at() checks bounds.
+  [[nodiscard]] const value_type &operator[](size_type i) const {
+    return flat_unchecked(i);
+  }
+  [[nodiscard]] value_type &operator[](size_type i) {
+    return flat_unchecked(i);
+  }
+  [[nodiscard]] const value_type &at(size_type i) const {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range,
+                   "indirect_view::at index out of bounds");
+    return (*this)[i];
+  }
+  [[nodiscard]] value_type &at(size_type i) {
+    if (i >= size())
+      NUMCXX_THROW(std::out_of_range,
+                   "indirect_view::at index out of bounds");
+    return (*this)[i];
+  }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
-  [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
-  [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
+  [[nodiscard]] const_reference flat(size_type i) const {
+    NUMCXX_ASSERT(i < size(), "indirect_view::flat index out of bounds");
+    return flat_unchecked(i);
+  }
+  [[nodiscard]] reference flat(size_type i) {
+    NUMCXX_ASSERT(i < size(), "indirect_view::flat index out of bounds");
+    return flat_unchecked(i);
+  }
   // Internal API (not stable): unchecked flat access; requires i < size().
   // Bypass mdspan::operator[] to avoid any potential bounds checking.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const {

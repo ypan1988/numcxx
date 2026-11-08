@@ -19,6 +19,8 @@ TEST(MaskViewConstructionTest, FromNdarrayWithBoolExpr) {
   EXPECT_DOUBLE_EQ(masked[1], 7.0);
   EXPECT_DOUBLE_EQ(masked[2], 8.0);
   EXPECT_DOUBLE_EQ(masked[3], 9.0);
+  EXPECT_EQ(masked.at(1), masked[1]);
+  EXPECT_THROW((void)masked.at(masked.size()), std::out_of_range);
 }
 
 TEST(MaskViewConstructionTest, FromNdarrayWithComplexBoolExpr) {
@@ -54,6 +56,8 @@ TEST(MaskViewExpressionTest, MaskAndIndirectViewsSupportUncheckedFlatEvaluation)
   EXPECT_EQ(arr[0], 20);
   EXPECT_EQ(arr[2], 22);
   EXPECT_EQ(arr[4], 44);
+  EXPECT_EQ(indirect.at(1), indirect[1]);
+  EXPECT_THROW((void)indirect.at(indirect.size()), std::out_of_range);
   indirect *= 2;
   EXPECT_EQ(arr[0], 40);
   EXPECT_EQ(arr[2], 44);
