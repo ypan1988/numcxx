@@ -92,10 +92,17 @@ TEST(NdarrayETLayoutTest, FlatAccessIsMutableAndLayoutIndependent) {
   A.flat(1) = 20;
   EXPECT_EQ(A(0, 1), 20);
   EXPECT_EQ(A.flat(2), 3);
+  static_assert(std::is_same_v<decltype(A.flat_unchecked(0)), int &>);
+  A.flat_unchecked(2) = 30;
+  EXPECT_EQ(A(1, 0), 30);
+  EXPECT_EQ(A.flat(2), A.flat_unchecked(2));
 
   const auto &const_A = A;
   static_assert(std::is_same_v<decltype(const_A.flat(0)), const int &>);
+  static_assert(
+      std::is_same_v<decltype(const_A.flat_unchecked(0)), const int &>);
   EXPECT_EQ(const_A.flat(1), 20);
+  EXPECT_EQ(const_A.flat_unchecked(2), 30);
 }
 
 // ------------------------------------------------------------
@@ -149,9 +156,26 @@ TEST(NdarrayETLayoutTest, SliceViewFlatUsesDefaultOrderForReversedStrides) {
     const auto index =
         numcxx::unravel_index<numcxx::default_layout>(i, view.extents());
     EXPECT_EQ(view.flat(i), view(index[0], index[1]));
+    EXPECT_EQ(view.flat_unchecked(i), view.flat(i));
     view.flat(i) = static_cast<int>(100 + i);
+    EXPECT_EQ(view.flat_unchecked(i), static_cast<int>(100 + i));
     EXPECT_EQ(view(index[0], index[1]), static_cast<int>(100 + i));
   }
+}
+
+TEST(NdarrayETLayoutTest, ExpressionUncheckedFlatUsesDefaultLayoutOrder) {
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> A(2, 3);
+  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_right> B(2, 3);
+  for (numcxx::size_type i = 0; i < A.extent(0); ++i) {
+    for (numcxx::size_type j = 0; j < A.extent(1); ++j) {
+      A(i, j) = static_cast<int>(10 * i + j);
+      B(i, j) = static_cast<int>(100 * i + j);
+    }
+  }
+
+  const auto expression = A + B;
+  for (numcxx::size_type i = 0; i < expression.size(); ++i)
+    EXPECT_EQ(expression.flat_unchecked(i), A.flat(i) + B.flat(i));
 }
 
 TEST(NdarrayETLayoutTest, NonDefaultLayoutExpressionAssignmentUsesLogicalOrder) {

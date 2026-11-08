@@ -36,6 +36,23 @@ TEST(MaskViewConstructionTest, FromNdarrayWithComplexBoolExpr) {
   EXPECT_EQ(masked[3], 12);
 }
 
+TEST(MaskViewExpressionTest, MaskAndIndirectViewsSupportUncheckedFlatEvaluation) {
+  numcxx::ivec arr = numcxx::arange<int>(0, 6);
+
+  auto masked = arr[arr > 2];
+  EXPECT_EQ(masked.flat_unchecked(1), 4);
+  masked = masked + 10;
+  EXPECT_EQ(arr[3], 13);
+  EXPECT_EQ(arr[5], 15);
+
+  auto indirect = arr[{0, 2, 4}];
+  EXPECT_EQ(indirect.flat_unchecked(1), 2);
+  indirect = indirect + 20;
+  EXPECT_EQ(arr[0], 20);
+  EXPECT_EQ(arr[2], 22);
+  EXPECT_EQ(arr[4], 34);
+}
+
 // TEST(MaskViewConstructionTest, FromNdarrayWithEqualityMask) {
 //     numcxx::dvec arr{1.0, 2.0, 3.0, 2.0, 1.0, 2.0};
 

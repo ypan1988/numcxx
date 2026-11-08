@@ -469,6 +469,9 @@ public:
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const;
   [[nodiscard]]       reference flat(size_type i);
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const;
+  [[nodiscard]]       reference flat_unchecked(size_type i);
 
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
@@ -597,7 +600,7 @@ private:
     const size_type n = size();
 #pragma omp simd
     for (size_type i = 0; i < n; ++i)
-      op(flat(i), expr.flat(i));
+      op(flat_unchecked(i), expr.flat_unchecked(i));
     return *this;
   }
 
@@ -675,6 +678,9 @@ public:
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const;
   [[nodiscard]]       reference flat(size_type i);
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const;
+  [[nodiscard]]       reference flat_unchecked(size_type i);
 
   // subset operations (slice_view)
   template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
@@ -860,7 +866,7 @@ private:
     detail::check_shape_match(*this, expr);
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
-      op(flat(i), expr.flat(i));
+      op(flat_unchecked(i), expr.flat_unchecked(i));
     return *this;
   }
 
@@ -925,6 +931,11 @@ public:
 
   [[nodiscard]] const_reference flat(size_type i) const {
     NUMCXX_ASSERT(i < size(), "broadcast_view::flat index out of bounds");
+    return flat_unchecked(i);
+  }
+
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
     std::array<size_type, Rank> indices{};
     if constexpr (std::is_same_v<default_layout, layout_right>) {
       for (rank_type r = rank(); r-- > 0;) {
@@ -1177,6 +1188,13 @@ public:
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
   [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
+    return span_.accessor().offset(span_.data_handle(), i)[0];
+  }
+  [[nodiscard]] reference flat_unchecked(size_type i) {
+    return span_.accessor().offset(span_.data_handle(), i)[0];
+  }
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -1228,7 +1246,7 @@ private:
 
     const auto &mapping = data_span.mapping();
     for (size_type i = 0; i < expr.size(); ++i) {
-      if (static_cast<bool>(expr.flat(i)))
+      if (static_cast<bool>(expr.flat_unchecked(i)))
         offsets.push_back(mapping(i));
     }
 
@@ -1253,7 +1271,7 @@ private:
   mask_view &apply_expr_op(Op &&op, const Expr &expr) {
     detail::check_shape_match(*this, expr);
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr.flat(i));
+      op(flat_unchecked(i), expr.flat_unchecked(i));
     return *this;
   }
 
@@ -1314,6 +1332,13 @@ public:
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
   [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
+    return span_.accessor().offset(span_.data_handle(), i)[0];
+  }
+  [[nodiscard]] reference flat_unchecked(size_type i) {
+    return span_.accessor().offset(span_.data_handle(), i)[0];
+  }
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -1382,7 +1407,7 @@ private:
   indirect_view &apply_expr_op(Op &&op, const Expr &expr) {
     detail::check_shape_match(*this, expr);
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], expr.flat(i));
+      op(flat_unchecked(i), expr.flat_unchecked(i));
     return *this;
   }
 
@@ -2174,8 +2199,14 @@ template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::const_reference
 ndarray<Tp, Ex, Lp>::flat(size_type i) const {
   NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
+  return flat_unchecked(i);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename ndarray<Tp, Ex, Lp>::const_reference
+ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
   if constexpr (std::is_same_v<layout_type, default_layout>)
-    return (*this)[i];
+    return data()[i];
   else {
     auto idx = unravel_index<default_layout>(i, extents());
 
@@ -2191,8 +2222,14 @@ ndarray<Tp, Ex, Lp>::flat(size_type i) const {
 template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat(size_type i) {
   NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
+  return flat_unchecked(i);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename ndarray<Tp, Ex, Lp>::reference
+ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) {
   if constexpr (std::is_same_v<layout_type, default_layout>)
-    return (*this)[i];
+    return data()[i];
   else {
     auto idx = unravel_index<default_layout>(i, extents());
 
@@ -2209,6 +2246,12 @@ template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::const_reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) const {
   NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
+  return flat_unchecked(i);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename slice_view<Tp, Ex, Lp>::const_reference
+slice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
   return flat_contiguous_ ? data_handle()[i]
                           : data_handle()[calc_flat_offset(i)];
 }
@@ -2217,6 +2260,12 @@ template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) {
   NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
+  return flat_unchecked(i);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename slice_view<Tp, Ex, Lp>::reference
+slice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) {
   return flat_contiguous_ ? data_handle()[i]
                           : data_handle()[calc_flat_offset(i)];
 }
@@ -2228,7 +2277,7 @@ auto slice_view<Tp, Ex, Lp>::eval() const {
     return result_type(extent(Is)...);
   }(std::make_index_sequence<rank()>{});
   for (size_type i = 0; i < size(); ++i)
-    result.flat(i) = flat(i);
+    result.flat_unchecked(i) = flat_unchecked(i);
   return result;
 }
 
@@ -2239,7 +2288,7 @@ ndarray<Tp, Ex, Lp>::ndarray(const broadcast_view<BroadcastElement, Rank> &bv)
   static_assert(Rank == Ex::rank(),
                 "Broadcast view rank must match ndarray rank");
   for (size_type i = 0; i < size(); ++i)
-    flat(i) = static_cast<value_type>(bv.flat(i));
+    flat_unchecked(i) = static_cast<value_type>(bv.flat_unchecked(i));
 }
 
 template <class Tp, class Ex, class Lp>
@@ -2336,7 +2385,14 @@ public:
 
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
-  [[nodiscard]] value_type flat(size_type i) const { return expr_.flat(i); }
+  [[nodiscard]] value_type flat(size_type i) const {
+    NUMCXX_ASSERT(i < size(), "nc_val_expr::flat index out of bounds");
+    return flat_unchecked(i);
+  }
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  [[nodiscard]] value_type flat_unchecked(size_type i) const {
+    return expr_.flat_unchecked(i);
+  }
 
   // TODO:
   // - Support lazy slicing of expressions, e.g. (a + b)(slice(...)).
@@ -2354,7 +2410,7 @@ public:
     ndarray_type res(extents());
     const size_type n = res.size();
     for (size_type i = 0; i < n; ++i) {
-      res[i] = flat(i);
+      res.flat_unchecked(i) = flat_unchecked(i);
     }
     return res;
   }
@@ -2369,17 +2425,17 @@ public:
 
   value_type sum() const {
     const size_type n = size();
-    value_type r = n ? flat(0) : value_type();
+    value_type r = n ? flat_unchecked(0) : value_type();
     for (size_type i = 1; i < n; ++i)
-      r += flat(i);
+      r += flat_unchecked(i);
     return r;
   }
 
   value_type min() const {
     const size_type n = size();
-    value_type r = n ? flat(0) : value_type();
+    value_type r = n ? flat_unchecked(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      const value_type x = flat(i);
+      const value_type x = flat_unchecked(i);
       if (x < r)
         r = x;
     }
@@ -2388,9 +2444,9 @@ public:
 
   value_type max() const {
     const size_type n = size();
-    value_type r = n ? flat(0) : value_type();
+    value_type r = n ? flat_unchecked(0) : value_type();
     for (size_type i = 1; i < n; ++i) {
-      const value_type x = flat(i);
+      const value_type x = flat_unchecked(i);
       if (r < x)
         r = x;
     }
@@ -2410,6 +2466,7 @@ public:
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
   value_type flat(size_type) const { return t_; }
+  [[nodiscard]] value_type flat_unchecked(size_type) const { return t_; }
   size_type size() const { return s_; }
 
 private:
@@ -2481,7 +2538,14 @@ template <class Op, class A0> struct nc_unary_op {
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
-  value_type flat(size_type i) const { return op_(a0_.flat(i)); }
+  value_type flat(size_type i) const {
+    NUMCXX_ASSERT(i < size(), "nc_unary_op::flat index out of bounds");
+    return flat_unchecked(i);
+  }
+
+  [[nodiscard]] value_type flat_unchecked(size_type i) const {
+    return op_(a0_.flat_unchecked(i));
+  }
 
   [[nodiscard]] constexpr size_type size() const noexcept { return a0_.size(); }
 
@@ -2532,7 +2596,14 @@ template <class Op, class A0, class A1> struct nc_binary_op {
       detail::check_shape_match(a0, a1);
   }
 
-  value_type flat(size_type i) const { return op_(a0_.flat(i), a1_.flat(i)); }
+  value_type flat(size_type i) const {
+    NUMCXX_ASSERT(i < size(), "nc_binary_op::flat index out of bounds");
+    return flat_unchecked(i);
+  }
+
+  [[nodiscard]] value_type flat_unchecked(size_type i) const {
+    return op_(a0_.flat_unchecked(i), a1_.flat_unchecked(i));
+  }
 
   [[nodiscard]] constexpr size_type size() const noexcept {
     if constexpr (nc_has_extents_v<RmA0>) {
