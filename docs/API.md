@@ -2,8 +2,8 @@
 
 ## Overview
 + [ndarray, vector, matrix and cube classes](#ndarray-classes)
-+ [views and slicing](#views-and-slicing)
-+ [member functions and slicing](#member-functions-and-slicing)
++ [indexing and slicing](#indexing-and-slicing)
++ [member functions and variables](#member-functions-and-variables)
 
 <a id="ndarray-classes"></a>
 ## NdArray, Vector, Matrix and Cube Classes
@@ -15,18 +15,19 @@
 | **[`cube` / `cube_fixed`](#cube-def)** | 3-d cube class (ndarray alias) |
 | **[operators](#operators)** | +, −, *, %, /, ==, !=, <=, >=, <, >, &&, \|\| |
 
-<a id="views-and-slicing"></a>
-## Views and Slicing
+<a id="indexing-and-slicing"></a>
+## Indexing and Slicing
 | | |
 |---|---|
+| **[element access](#element-access)** | element access via `()`, `[]` and `flat()` |
 | **[`slice`](#slice-def)** | describes a range of elements along one dimension |
 | **[`slice_view`](#slice-view-def)** | view created by slicing an array |
 | **[`mask_view`](#mask-view-def)** | view selecting elements using a boolean mask |
 | **[`indirect_view`](#indirect-view-def)** | view selecting elements using indices |
 
 
-<a id="member-functions-and-slicing"></a>
-## member functions and slicing
+<a id="member-functions-and-variables"></a>
+## Member Functions and Variables
 
 <a id="ndarray-def"></a>
 ### `ndarray<T, Extents, LayoutPolicy>`
@@ -143,9 +144,28 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 | `&&` | element-wise logical AND |
 | `\|\|` | element-wise logical OR |
 
-## Views and Slicing
+## Indexing and Slicing
 
 This section covers NumCxx slicing and the view types used to access selected elements without copying data.
+
+<a id="element-access"></a>
+### Element access via `()`, `[]` and `flat()`
+
+Provides access to individual elements stored in an `ndarray` or compatible view.
+
+| | |
+|---|---|
+| **`(i, j, ...)`** | Access the element at the specified multidimensional indices. The number of indices must match the number of dimensions. |
+| **`[i]`** | Access the element at flattened index `i`, following the layout of the object. |
+| **`.flat(i)`** | Access the element at flattened index `i`, using the default NumCxx layout order, independent of the layout of the object. |
+
+**Notes:**
+
+- indexing starts at `0`
+- `()` is used for multidimensional element access
+- `[]` is used for flattened access following the object's layout
+- `flat()` is used for flattened access following the default NumCxx layout
+- the same access conventions are used by compatible NumCxx views
 
 <a id="slice-def"></a>
 ### `slice`
