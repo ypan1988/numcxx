@@ -66,6 +66,7 @@ TEST(BroadcastViewTest, PreservesLogicalFlatOrderAcrossSourceLayouts) {
   EXPECT_EQ(view.flat(1), 2);
   EXPECT_EQ(view.flat(2), 3);
   EXPECT_EQ(view.flat(3), 4);
+  EXPECT_THROW((void)view.flat(view.size()), std::out_of_range);
 }
 
 TEST(BroadcastViewTest, SupportsNonContiguousSliceSource) {

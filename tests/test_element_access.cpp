@@ -70,6 +70,38 @@ TEST(ElementAccess, NdarrayBracketAndAtUsePhysicalStorageOrder) {
   EXPECT_EQ(const_a.at(1), 42);
 }
 
+TEST(ElementAccess, CheckedLinearAccessUsesStandardizedOutOfRangeErrors) {
+  numcxx::ivec a(3);
+
+  try {
+    (void)a.at(a.size());
+    FAIL() << "Expected ndarray::at to throw";
+  } catch (const std::out_of_range &e) {
+    EXPECT_STREQ(
+        e.what(),
+        "ndarray::at: index 3 out of bounds for size 3");
+  }
+
+  try {
+    (void)a.flat(a.size());
+    FAIL() << "Expected ndarray::flat to throw";
+  } catch (const std::out_of_range &e) {
+    EXPECT_STREQ(
+        e.what(),
+        "ndarray::flat: index 3 out of bounds for size 3");
+  }
+
+  auto view = a(slice{0, 2});
+  try {
+    (void)view.flat(view.size());
+    FAIL() << "Expected slice_view::flat to throw";
+  } catch (const std::out_of_range &e) {
+    EXPECT_STREQ(
+        e.what(),
+        "slice_view::flat: index 2 out of bounds for size 2");
+  }
+}
+
 /* ============================================================
  * slice_view element access
  * ============================================================ */

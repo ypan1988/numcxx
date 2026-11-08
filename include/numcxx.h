@@ -197,6 +197,32 @@ inline void throw_exception(const char *msg) {
 #endif
 }
 
+template <class Exception>
+[[noreturn]]
+inline void throw_exception(const std::string &msg) {
+#ifdef NUMCXX_NO_EXCEPTIONS
+  fail("Exception", msg.c_str());
+#else
+  throw Exception(msg);
+#endif
+}
+
+template <std::integral Index>
+[[noreturn]]
+inline void throw_index_out_of_range(Index i, NUMCXX_SIZE_TYPE size,
+                                     const char *what) {
+  const std::string message =
+      std::string(what) + ": index " + std::to_string(i) +
+      " out of bounds for size " + std::to_string(size);
+  NUMCXX_THROW(std::out_of_range, message);
+}
+
+inline void checked_index(NUMCXX_SIZE_TYPE i, NUMCXX_SIZE_TYPE size,
+                          const char *what) {
+  if (i >= size)
+    throw_index_out_of_range(i, size, what);
+}
+
 //===----------------------------------------------------------------------===//
 // Backend Configuration
 //===----------------------------------------------------------------------===//
@@ -466,13 +492,11 @@ public:
   [[nodiscard]] const value_type &operator[](size_type i) const { return data()[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { return data()[i]; }
   [[nodiscard]] const value_type &at(size_type i) const {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range, "ndarray::at index out of bounds");
+    detail::checked_index(i, size(), "ndarray::at");
     return (*this)[i];
   }
   [[nodiscard]] value_type &at(size_type i) {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range, "ndarray::at index out of bounds");
+    detail::checked_index(i, size(), "ndarray::at");
     return (*this)[i];
   }
 
@@ -689,13 +713,11 @@ public:
     return data_handle()[calc_offset(i)];
   }
   [[nodiscard]] const value_type &at(size_type i) const {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range, "slice_view::at index out of bounds");
+    detail::checked_index(i, size(), "slice_view::at");
     return (*this)[i];
   }
   [[nodiscard]] value_type &at(size_type i) {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range, "slice_view::at index out of bounds");
+    detail::checked_index(i, size(), "slice_view::at");
     return (*this)[i];
   }
 
@@ -955,7 +977,7 @@ public:
   }
 
   [[nodiscard]] const_reference flat(size_type i) const {
-    NUMCXX_ASSERT(i < size(), "broadcast_view::flat index out of bounds");
+    detail::checked_index(i, size(), "broadcast_view::flat");
     return flat_unchecked(i);
   }
 
@@ -1215,23 +1237,21 @@ public:
     return flat_unchecked(i);
   }
   [[nodiscard]] const value_type &at(size_type i) const {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range, "mask_view::at index out of bounds");
+    detail::checked_index(i, size(), "mask_view::at");
     return (*this)[i];
   }
   [[nodiscard]] value_type &at(size_type i) {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range, "mask_view::at index out of bounds");
+    detail::checked_index(i, size(), "mask_view::at");
     return (*this)[i];
   }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const {
-    NUMCXX_ASSERT(i < size(), "mask_view::flat index out of bounds");
+    detail::checked_index(i, size(), "mask_view::flat");
     return flat_unchecked(i);
   }
   [[nodiscard]] reference flat(size_type i) {
-    NUMCXX_ASSERT(i < size(), "mask_view::flat index out of bounds");
+    detail::checked_index(i, size(), "mask_view::flat");
     return flat_unchecked(i);
   }
   // Internal API (not stable): unchecked flat access; requires i < size().
@@ -1380,25 +1400,21 @@ public:
     return flat_unchecked(i);
   }
   [[nodiscard]] const value_type &at(size_type i) const {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range,
-                   "indirect_view::at index out of bounds");
+    detail::checked_index(i, size(), "indirect_view::at");
     return (*this)[i];
   }
   [[nodiscard]] value_type &at(size_type i) {
-    if (i >= size())
-      NUMCXX_THROW(std::out_of_range,
-                   "indirect_view::at index out of bounds");
+    detail::checked_index(i, size(), "indirect_view::at");
     return (*this)[i];
   }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const {
-    NUMCXX_ASSERT(i < size(), "indirect_view::flat index out of bounds");
+    detail::checked_index(i, size(), "indirect_view::flat");
     return flat_unchecked(i);
   }
   [[nodiscard]] reference flat(size_type i) {
-    NUMCXX_ASSERT(i < size(), "indirect_view::flat index out of bounds");
+    detail::checked_index(i, size(), "indirect_view::flat");
     return flat_unchecked(i);
   }
   // Internal API (not stable): unchecked flat access; requires i < size().
@@ -2268,7 +2284,7 @@ auto unravel_index(size_type i, const Extents &extents) {
 template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::const_reference
 ndarray<Tp, Ex, Lp>::flat(size_type i) const {
-  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
+  detail::checked_index(i, size(), "ndarray::flat");
   return flat_unchecked(i);
 }
 
@@ -2291,7 +2307,7 @@ ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
 
 template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat(size_type i) {
-  NUMCXX_ASSERT(i < size(), "ndarray::flat index out of bounds");
+  detail::checked_index(i, size(), "ndarray::flat");
   return flat_unchecked(i);
 }
 
@@ -2315,7 +2331,7 @@ ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) {
 template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::const_reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) const {
-  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
+  detail::checked_index(i, size(), "slice_view::flat");
   return flat_unchecked(i);
 }
 
@@ -2329,7 +2345,7 @@ slice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
 template <typename Tp, typename Ex, typename Lp>
 typename slice_view<Tp, Ex, Lp>::reference
 slice_view<Tp, Ex, Lp>::flat(size_type i) {
-  NUMCXX_ASSERT(i < size(), "slice_view::flat index out of bounds");
+  detail::checked_index(i, size(), "slice_view::flat");
   return flat_unchecked(i);
 }
 
@@ -2456,7 +2472,7 @@ public:
   explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
 
   [[nodiscard]] value_type flat(size_type i) const {
-    NUMCXX_ASSERT(i < size(), "nc_val_expr::flat index out of bounds");
+    detail::checked_index(i, size(), "nc_val_expr::flat");
     return flat_unchecked(i);
   }
   // Internal API (not stable): unchecked flat access; requires i < size().

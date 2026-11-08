@@ -190,6 +190,7 @@ TEST(NdarrayETLayoutTest, ExpressionUncheckedFlatUsesDefaultLayoutOrder) {
   const auto expression = A + B;
   for (numcxx::size_type i = 0; i < expression.size(); ++i)
     EXPECT_EQ(expression.flat_unchecked(i), A.flat(i) + B.flat(i));
+  EXPECT_THROW((void)expression.flat(expression.size()), std::out_of_range);
 }
 
 TEST(NdarrayETLayoutTest, NonDefaultLayoutExpressionAssignmentUsesLogicalOrder) {

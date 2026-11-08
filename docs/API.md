@@ -159,7 +159,7 @@ Provides access to individual elements stored in an `ndarray`, `slice_view`,
 | **`(i, j, ...)`** | Access the element at the specified multidimensional indices. The number of indices must match the number of dimensions. |
 | **`[i]`** | Unchecked access at flattened index `i`, following the object's physical storage layout. The index must be in range. |
 | **`.at(i)`** | Checked access at flattened index `i`, following the same physical storage layout as `[i]`. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
-| **`.flat(i)`** | Checked access at flattened index `i`, using the default NumCxx layout order, independent of the object's physical storage layout. |
+| **`.flat(i)`** | Checked access at flattened index `i`, using the default NumCxx layout order, independent of the object's physical storage layout. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
 
 **Notes:**
 
@@ -167,8 +167,10 @@ Provides access to individual elements stored in an `ndarray`, `slice_view`,
 - `()` is used for multidimensional element access
 - `[]` follows the C++ container convention: it does not check bounds; using an out-of-range index has undefined behavior
 - `at()` checks bounds and throws `std::out_of_range` when the index is invalid
+- Checked accessors report invalid indices as `"<accessor>: index <i> out of bounds for size <size>"`, where `<accessor>` identifies the type and function (for example, `ndarray::flat`)
 - `[]` and `at()` use physical storage order; `flat()` uses the default NumCxx layout order
 - these conventions apply to the listed types' linear element access
+- `operator()` behavior is unchanged and is outside the scope of the linear `[]`, `at()`, and `flat()` access conventions
 
 <a id="slice-def"></a>
 ### `slice`
