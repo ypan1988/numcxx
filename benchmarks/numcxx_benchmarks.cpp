@@ -65,6 +65,7 @@ void BM_MatrixMultiplication(benchmark::State &state) {
                           static_cast<std::int64_t>(size));
 }
 
+BENCHMARK(BM_ElementwiseAdditionManual)->RangeMultiplier(16)->Range(256, 65536);
 BENCHMARK(BM_ElementwiseAddition)->RangeMultiplier(16)->Range(256, 65536);
 BENCHMARK(BM_MatrixMultiplication)->RangeMultiplier(2)->Range(32, 128);
 
