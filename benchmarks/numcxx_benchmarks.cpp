@@ -6,6 +6,25 @@
 #include <cstdint>
 
 namespace {
+void BM_ElementwiseAdditionManual(benchmark::State &state) {
+  const auto size = static_cast<std::size_t>(state.range(0));
+  numcxx::dvec lhs(size), rhs(size), result(size);
+  for (std::size_t i = 0; i < size; ++i) {
+    lhs[i] = static_cast<double>(i);
+    rhs[i] = static_cast<double>(size - i);
+  }
+
+  for (auto _ : state) {
+    const double *pl = lhs.data();
+    const double *pr = rhs.data();
+    double *pd = result.data();
+    for (std::size_t i = 0; i < size; ++i)
+      pd[i] = pl[i] + pr[i];
+    benchmark::DoNotOptimize(result.data());
+    benchmark::ClobberMemory();
+  }
+  state.SetItemsProcessed(state.iterations() * static_cast<std::int64_t>(size));
+}
 
 void BM_ElementwiseAddition(benchmark::State &state) {
   const auto size = static_cast<std::size_t>(state.range(0));
