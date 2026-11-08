@@ -470,6 +470,7 @@ public:
   [[nodiscard]] const_reference flat(size_type i) const;
   [[nodiscard]]       reference flat(size_type i);
   // Internal API (not stable): unchecked flat access; requires i < size().
+  // Non-contiguous slices still compute the logical index's storage offset.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i);
 
@@ -857,7 +858,7 @@ private:
   slice_view &apply_scalar_op(Op &&op, const value_type &x) {
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], x);
+      op(flat_unchecked(i), x);
     return *this;
   }
 
@@ -935,6 +936,7 @@ public:
   }
 
   // Internal API (not stable): unchecked flat access; requires i < size().
+  // Broadcast indexing still computes the multidimensional storage offset.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const {
     std::array<size_type, Rank> indices{};
     if constexpr (std::is_same_v<default_layout, layout_right>) {
@@ -1189,6 +1191,7 @@ public:
   [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
   [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
   // Internal API (not stable): unchecked flat access; requires i < size().
+  // Bypass mdspan::operator[] to avoid any potential bounds checking.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const {
     return span_.accessor().offset(span_.data_handle(), i)[0];
   }
@@ -1263,7 +1266,7 @@ private:
   template <typename Op>
   mask_view &apply_scalar_op(Op &&op, const value_type &x) {
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], x);
+      op(flat_unchecked(i), x);
     return *this;
   }
 
@@ -1333,6 +1336,7 @@ public:
   [[nodiscard]] const_reference flat(size_type i) const { return (*this)[i]; }
   [[nodiscard]]       reference flat(size_type i)       { return (*this)[i]; }
   // Internal API (not stable): unchecked flat access; requires i < size().
+  // Bypass mdspan::operator[] to avoid any potential bounds checking.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const {
     return span_.accessor().offset(span_.data_handle(), i)[0];
   }
@@ -1399,7 +1403,7 @@ private:
   template <typename Op>
   indirect_view &apply_scalar_op(Op &&op, const value_type &x) {
     for (size_type i = 0; i < size(); ++i)
-      op((*this)[i], x);
+      op(flat_unchecked(i), x);
     return *this;
   }
 
@@ -2465,7 +2469,7 @@ public:
   using value_type = std::remove_cv_t<Tp>;
 
   explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
-  value_type flat(size_type) const { return t_; }
+  [[nodiscard]] value_type flat(size_type) const { return t_; }
   [[nodiscard]] value_type flat_unchecked(size_type) const { return t_; }
   size_type size() const { return s_; }
 
@@ -2538,10 +2542,7 @@ template <class Op, class A0> struct nc_unary_op {
 
   nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
 
-  value_type flat(size_type i) const {
-    NUMCXX_ASSERT(i < size(), "nc_unary_op::flat index out of bounds");
-    return flat_unchecked(i);
-  }
+  [[nodiscard]] value_type flat(size_type i) const { return flat_unchecked(i); }
 
   [[nodiscard]] value_type flat_unchecked(size_type i) const {
     return op_(a0_.flat_unchecked(i));
@@ -2596,10 +2597,7 @@ template <class Op, class A0, class A1> struct nc_binary_op {
       detail::check_shape_match(a0, a1);
   }
 
-  value_type flat(size_type i) const {
-    NUMCXX_ASSERT(i < size(), "nc_binary_op::flat index out of bounds");
-    return flat_unchecked(i);
-  }
+  [[nodiscard]] value_type flat(size_type i) const { return flat_unchecked(i); }
 
   [[nodiscard]] value_type flat_unchecked(size_type i) const {
     return op_(a0_.flat_unchecked(i), a1_.flat_unchecked(i));

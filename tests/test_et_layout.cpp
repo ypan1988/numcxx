@@ -128,6 +128,20 @@ TEST(NdarrayETLayoutTest, SliceViewWithLayout) {
   EXPECT_DOUBLE_EQ(B(2), 4);
 }
 
+TEST(NdarrayETLayoutTest, SliceViewScalarCompoundAssignmentUsesLogicalOrder) {
+  numcxx::ivec values = numcxx::arange<int>(0, 6);
+  auto view = values(numcxx::slice(1, 5, 2));
+
+  view += 10;
+
+  EXPECT_EQ(values[0], 0);
+  EXPECT_EQ(values[1], 11);
+  EXPECT_EQ(values[2], 2);
+  EXPECT_EQ(values[3], 13);
+  EXPECT_EQ(values[4], 4);
+  EXPECT_EQ(values[5], 5);
+}
+
 TEST(NdarrayETLayoutTest, StridedSliceExpressionAssignmentUsesLogicalOrder) {
   numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_right> A(3, 4);
   for (numcxx::size_type i = 0; i < A.extent(0); ++i)

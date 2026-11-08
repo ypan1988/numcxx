@@ -44,13 +44,20 @@ TEST(MaskViewExpressionTest, MaskAndIndirectViewsSupportUncheckedFlatEvaluation)
   masked = masked + 10;
   EXPECT_EQ(arr[3], 13);
   EXPECT_EQ(arr[5], 15);
+  masked += 10;
+  EXPECT_EQ(arr[3], 23);
+  EXPECT_EQ(arr[5], 25);
 
   auto indirect = arr[{0, 2, 4}];
   EXPECT_EQ(indirect.flat_unchecked(1), 2);
   indirect = indirect + 20;
   EXPECT_EQ(arr[0], 20);
   EXPECT_EQ(arr[2], 22);
-  EXPECT_EQ(arr[4], 34);
+  EXPECT_EQ(arr[4], 44);
+  indirect *= 2;
+  EXPECT_EQ(arr[0], 40);
+  EXPECT_EQ(arr[2], 44);
+  EXPECT_EQ(arr[4], 88);
 }
 
 // TEST(MaskViewConstructionTest, FromNdarrayWithEqualityMask) {
