@@ -302,11 +302,8 @@ template <class... Args> concept slice_view_arguments = all_slice_specifiers<Arg
 namespace detail {
 
 template <class Ex   > concept static_extents = requires { Ex::rank_dynamic(); } && (Ex::rank_dynamic() == 0);
-template <class Array> concept static_ndarray = static_extents<typename Array::extents_type>;
-
-template <class Ex, class = void> inline constexpr bool is_static_extents_v = false;
-template <class Ex   >            inline constexpr bool is_static_extents_v<Ex, std::void_t<decltype(Ex::rank_dynamic())>> = (Ex::rank_dynamic() == 0);
-template <class Array>            inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
+template <class Array> concept   static_array = static_extents<typename Array::extents_type>;
+template <class Array> concept  dynamic_array = !static_array<Array>;
 
 template <class T> struct is_boolean_expr : std::bool_constant<
     requires(const T &expr) { static_cast<bool>(expr.flat(size_type{})); }> {};
@@ -1486,7 +1483,7 @@ ndarray<Tp, Ex, Lp>::ndarray(
   constexpr std::size_t Rank = extents_type::rank();
   auto derived = detail::derive_extents<Rank>(list);
 
-  if constexpr (detail::is_static_extents_v<Ex>) {
+  if constexpr (detail::static_extents<Ex>) {
     // static extents: validate
     Ex expected;
     for (rank_type i = 0; i < Rank; ++i) {
@@ -1580,32 +1577,28 @@ template <typename T> ndarray<T, dextents<1>> arange(T stop) {
   return arange<T>(T(0), stop, T(1));
 }
 
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::static_array Array>
 Array ones() {
   Array arr{};
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
 
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::dynamic_array Array>
 Array ones(std::initializer_list<size_type> shape) {
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
 
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::static_array Array>
 Array zeros() {
   Array arr{};
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
 }
 
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::dynamic_array Array>
 Array zeros(std::initializer_list<size_type> shape) {
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
@@ -1624,7 +1617,8 @@ inline std::mt19937 &get_engine() {
 inline void seed(unsigned int value) { get_engine().seed(value); }
 
 namespace detail {
-using ::numcxx::detail::is_static_ndarray_v;
+using ::numcxx::detail::static_array;
+using ::numcxx::detail::dynamic_array;
 using ::numcxx::detail::make_dynamic_array;
 
 template <typename Array, typename Distribution>
@@ -1646,8 +1640,7 @@ void fill_random(Array &arr, Distribution &&dist) {
 ///
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::static_array Array>
 Array rand() {
   using T = typename Array::value_type;
   static_assert(
@@ -1660,8 +1653,7 @@ Array rand() {
 }
 
 /// @copydoc rand()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::dynamic_array Array>
 Array rand(std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
   static_assert(
@@ -1682,8 +1674,7 @@ Array rand(std::initializer_list<size_type> shape) {
 ///
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::static_array Array>
 Array randn() {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>,
@@ -1695,8 +1686,7 @@ Array randn() {
 }
 
 /// @copydoc randn()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::dynamic_array Array>
 Array randn(std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>,
@@ -1719,8 +1709,7 @@ Array randn(std::initializer_list<size_type> shape) {
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
 /// @note Requires `low < high`.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::static_array Array>
 Array uniform(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
   static_assert(std::is_floating_point_v<T>,
@@ -1732,8 +1721,7 @@ Array uniform(typename Array::value_type low, typename Array::value_type high) {
 }
 
 /// @copydoc uniform()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::dynamic_array Array>
 Array uniform(typename Array::value_type low, typename Array::value_type high,
               std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
@@ -1757,8 +1745,7 @@ Array uniform(typename Array::value_type low, typename Array::value_type high,
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
 /// @note Requires `low < high`. The value `high` itself is never generated.
-template <typename Array,
-          std::enable_if_t<detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::static_array Array>
 Array randint(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
   static_assert(std::is_integral_v<T>, "randint() requires integral type");
@@ -1773,8 +1760,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high) {
 }
 
 /// @copydoc randint()
-template <typename Array,
-          std::enable_if_t<!detail::is_static_ndarray_v<Array>, int> = 0>
+template <detail::dynamic_array Array>
 Array randint(typename Array::value_type low, typename Array::value_type high,
               std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
