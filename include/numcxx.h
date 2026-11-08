@@ -301,17 +301,12 @@ template <class... Args> concept slice_view_arguments = all_slice_specifiers<Arg
 
 namespace detail {
 
+template <class Ex   > concept static_extents = requires { Ex::rank_dynamic(); } && (Ex::rank_dynamic() == 0);
+template <class Array> concept static_ndarray = static_extents<typename Array::extents_type>;
+
 template <class Ex, class = void> inline constexpr bool is_static_extents_v = false;
 template <class Ex   >            inline constexpr bool is_static_extents_v<Ex, std::void_t<decltype(Ex::rank_dynamic())>> = (Ex::rank_dynamic() == 0);
 template <class Array>            inline constexpr bool is_static_ndarray_v = is_static_extents_v<typename Array::extents_type>;
-
-template <class Ex>          struct static_extents_size;
-template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
-
-template <class Tp, class Ex, bool IsStaticExtents = is_static_extents_v<Ex>> struct mdarray_container_selector;
-template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > { using type = std::array <Tp, static_extents_size<Ex>::value>; };
-template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
-template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
 
 template <class T> struct is_boolean_expr : std::bool_constant<
     requires(const T &expr) { static_cast<bool>(expr.flat(size_type{})); }> {};
@@ -395,6 +390,16 @@ public:
 };
 
 // [numcxx.ndarray]
+namespace detail {
+template <class Ex>          struct static_extents_size;
+template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
+
+template <class Tp, class Ex, bool = static_extents<Ex>> struct mdarray_container_selector;
+template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > { using type = std::array <Tp, static_extents_size<Ex>::value>; };
+template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
+template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
+}
+
 template <class ElementType, class Extents, class LayoutPolicy = default_layout>
 class ndarray {
 public:
