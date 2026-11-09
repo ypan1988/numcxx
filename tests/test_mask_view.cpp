@@ -78,7 +78,7 @@ TEST(MaskViewExpressionTest, MaskAndIndirectViewsSupportUncheckedFlatEvaluation)
 //     EXPECT_DOUBLE_EQ(masked[2], 2.0);
 // }
 
-// TEST(MaskViewConstructionTest, FromSliceViewWithMask) {
+// TEST(MaskViewConstructionTest, FromGsliceViewWithMask) {
 //     numcxx::dmat a(4, 4);
 //     // Fill with row-major order: 0,1,2,...,15
 //     for (numcxx::size_type i = 0; i < a.size(); ++i) {

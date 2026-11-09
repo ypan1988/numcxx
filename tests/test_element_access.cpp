@@ -124,9 +124,6 @@ TEST(ElementAccess, SliceAndGsliceSubscripts) {
                 typename std::decay_t<decltype(const_view)>::element_type>);
   EXPECT_EQ(const_view(1, 2), 42);
 
-  static_assert(std::is_same_v<
-                numcxx::slice_view<int, numcxx::dextents<2>>,
-                numcxx::gslice_view<int, numcxx::dextents<2>>>);
 }
 
 TEST(ElementAccess, NdarrayScalarReturnType) {
@@ -205,7 +202,7 @@ TEST(ElementAccess, CheckedLinearAccessUsesStandardizedOutOfRangeErrors) {
  * gslice_view element access
  * ============================================================ */
 
-TEST(ElementAccess, SliceViewDirectElement) {
+TEST(ElementAccess, GsliceViewDirectElement) {
   numcxx::imat a(3, 4);
   fill_2d(a);
 
@@ -218,7 +215,7 @@ TEST(ElementAccess, SliceViewDirectElement) {
   EXPECT_THROW((void)v.at(v.size()), std::out_of_range);
 }
 
-TEST(ElementAccess, ConstSliceViewElementAccess) {
+TEST(ElementAccess, ConstGsliceViewElementAccess) {
   numcxx::imat a(2, 2);
   a(0, 0) = 5;
   a(0, 1) = 6;

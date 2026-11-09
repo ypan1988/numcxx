@@ -106,9 +106,9 @@ TEST(NdarrayETLayoutTest, FlatAccessIsMutableAndLayoutIndependent) {
 }
 
 // ------------------------------------------------------------
-// Slice view + layout
+// Gslice view + layout
 // ------------------------------------------------------------
-TEST(NdarrayETLayoutTest, SliceViewWithLayout) {
+TEST(NdarrayETLayoutTest, GsliceViewWithLayout) {
   numcxx::dmat A(2, 3);
 
   A(0, 0) = 1;
@@ -128,7 +128,7 @@ TEST(NdarrayETLayoutTest, SliceViewWithLayout) {
   EXPECT_DOUBLE_EQ(B(2), 4);
 }
 
-TEST(NdarrayETLayoutTest, SliceViewScalarCompoundAssignmentUsesLogicalOrder) {
+TEST(NdarrayETLayoutTest, GsliceViewScalarCompoundAssignmentUsesLogicalOrder) {
   numcxx::ivec values = numcxx::arange<int>(0, 6);
   auto view = values(numcxx::slice(1, 5, 2));
 
@@ -159,7 +159,7 @@ TEST(NdarrayETLayoutTest, StridedSliceExpressionAssignmentUsesLogicalOrder) {
   }
 }
 
-TEST(NdarrayETLayoutTest, SliceViewFlatUsesDefaultOrderForReversedStrides) {
+TEST(NdarrayETLayoutTest, GsliceViewFlatUsesDefaultOrderForReversedStrides) {
   numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> A(3, 5);
   for (numcxx::size_type i = 0; i < A.extent(0); ++i)
     for (numcxx::size_type j = 0; j < A.extent(1); ++j)

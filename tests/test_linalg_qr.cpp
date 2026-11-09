@@ -127,7 +127,7 @@ TEST(LinalgQRTest, ColumnMajorInput) {
   ExpectOrthonormalColumns(q, 1e-12);
 }
 
-TEST(LinalgQRTest, StridedAndReversedSliceViews) {
+TEST(LinalgQRTest, StridedAndReversedGsliceViews) {
   numcxx::dmat source(4, 3);
   for (numcxx::size_type i = 0; i < 4; ++i)
     for (numcxx::size_type j = 0; j < 3; ++j)

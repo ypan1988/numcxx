@@ -274,8 +274,6 @@ using default_layout = layout_right;
                                         class          slice;
 template <class Tp, class Ex, class Lp> class        ndarray;
 template <class Tp, class Ex, class Lp> class     gslice_view;
-template <class Tp, class Ex, class Lp = default_layout>
-using slice_view = gslice_view<Tp, Ex, Lp>;
 template <class Tp>                     class      mask_view;
 template <class Tp>                     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
@@ -335,9 +333,6 @@ concept gslice_view_arguments =
     ((all_slice_specifiers<Args...> && !all_scalar_indices<Args...> &&
       sizeof...(Args) <= Rank) ||
      (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
-
-template <size_type Rank, class... Args>
-concept slice_view_arguments = gslice_view_arguments<Rank, Args...>;
 
 template <class... Args>
   requires(sizeof...(Args) > 0 && (slice_specifier<Args> && ...))
