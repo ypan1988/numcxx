@@ -1,4 +1,4 @@
-﻿//===-------------------------------numcxx.h-------------------------------===//
+//===-------------------------------numcxx.h-------------------------------===//
 //
 // Portions of this file are derived from the LLVM libc++ `valarray` code.
 // Original libc++ source code is licensed under the Apache License v2.0 with
@@ -273,7 +273,9 @@ using default_layout = layout_right;
 
                                         class          slice;
 template <class Tp, class Ex, class Lp> class        ndarray;
-template <class Tp, class Ex, class Lp> class     slice_view;
+template <class Tp, class Ex, class Lp> class     gslice_view;
+template <class Tp, class Ex, class Lp = default_layout>
+using slice_view = gslice_view<Tp, Ex, Lp>;
 template <class Tp>                     class      mask_view;
 template <class Tp>                     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
@@ -285,7 +287,7 @@ template <class Op, class A0, class A1> struct nc_binary_op;
 // Value-expression types participate in NumCxx expression evaluation.
 template <class ValExpr>                struct nc_is_val_expr                             : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<    slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<    gslice_view<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr<     mask_view<Tp        >> : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr< indirect_view<Tp        >> : std::true_type  {};
 template <class Tp, size_type Rank>     struct nc_is_val_expr<broadcast_view<Tp, Rank  >> : std::true_type  {};
@@ -296,7 +298,7 @@ template <class Op, class A0, class A1> struct nc_is_val_expr<  nc_binary_op<Op,
 // Types with multidimensional extents provide shape information.
 template <class Tp>                     struct nc_has_extents                             : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_has_extents<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<    slice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<    gslice_view<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents<     mask_view<Tp        >> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents< indirect_view<Tp        >> : std::true_type  {};
 template <class Tp, size_type Rank>     struct nc_has_extents<broadcast_view<Tp, Rank  >> : std::true_type  {};
@@ -328,11 +330,32 @@ template <size_type Rank, class... Idxs>
 concept elem_access_arguments =
     all_scalar_indices<Idxs...> && sizeof...(Idxs) == Rank;
 template <size_type Rank, class... Args>
-concept slice_view_arguments =
+concept gslice_view_arguments =
     sizeof...(Args) > 0 &&
     ((all_slice_specifiers<Args...> && !all_scalar_indices<Args...> &&
       sizeof...(Args) <= Rank) ||
      (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
+
+template <size_type Rank, class... Args>
+concept slice_view_arguments = gslice_view_arguments<Rank, Args...>;
+
+template <class... Args>
+  requires(sizeof...(Args) > 0 && (slice_specifier<Args> && ...))
+class gslice {
+public:
+  constexpr explicit gslice(std::remove_cvref_t<Args>... args)
+      : arguments_(std::move(args)...) {}
+
+  [[nodiscard]] constexpr const auto &arguments() const noexcept {
+    return arguments_;
+  }
+
+private:
+  std::tuple<std::remove_cvref_t<Args>...> arguments_;
+};
+
+template <class... Args>
+gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
 
 namespace detail {
 
@@ -478,7 +501,7 @@ public:
   constexpr ndarray(const ndarray &v) = default;
   constexpr ndarray(ndarray &&v) noexcept = default;
   template <class... SizeTypes> explicit constexpr ndarray(SizeTypes... dyn_exts) : elem_(Extents(dyn_exts...)) {}
-  ndarray(const    slice_view<ElementType, Extents, LayoutPolicy> &sv) : elem_(sv.to_mdspan()) {}
+  ndarray(const    gslice_view<ElementType, Extents, LayoutPolicy> &sv) : elem_(sv.to_mdspan()) {}
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
   ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
   template <class BroadcastElement, ::numcxx::size_type Rank>
@@ -516,9 +539,35 @@ public:
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i);
 
-  // subset operations (slice_view)
-  template <typename... Args> requires slice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires slice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
+  // subset operations (gslice_view)
+  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
+  [[nodiscard]] auto operator[](const slice &selection) const {
+    return (*this)(selection);
+  }
+  [[nodiscard]] auto operator[](const slice &selection) {
+    return (*this)(selection);
+  }
+  template <class... Args>
+    requires(elem_access_arguments<Extents::rank(), Args...> ||
+             gslice_view_arguments<Extents::rank(), Args...>)
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const {
+    return std::apply(
+        [this](const auto &...indices) -> decltype(auto) {
+          return (*this)(indices...);
+        },
+        selection.arguments());
+  }
+  template <class... Args>
+    requires(elem_access_arguments<Extents::rank(), Args...> ||
+             gslice_view_arguments<Extents::rank(), Args...>)
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) {
+    return std::apply(
+        [this](const auto &...indices) -> decltype(auto) {
+          return (*this)(indices...);
+        },
+        selection.arguments());
+  }
   template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type Rank>
   [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
@@ -617,7 +666,7 @@ public:
 
 private:
   template <class, class, class> friend class       ndarray;
-  template <class, class, class> friend class    slice_view;
+  template <class, class, class> friend class    gslice_view;
   template <class>               friend class     mask_view;
   template <class>               friend class indirect_view;
   template <class>               friend class   nc_val_expr;
@@ -657,9 +706,9 @@ private:
 
 // extern template void ndarray<size_type>::resize(size_type, size_type);
 
-// [numcxx.slice_view]
+// [numcxx.gslice_view]
 template <class ElementType, class Extents, class LayoutPolicy = default_layout>
-class slice_view {
+class gslice_view {
 public:
   // clang-format off
   // element
@@ -694,21 +743,21 @@ public:
          constexpr index_type        extent(rank_type r) const noexcept { return span_.extent(r)               ; }
 
   //--------------------------------------------------------------------------------
-  // [numcxx.slice_view.cons], slice_view constructors, destructor, and assignment
+  // [numcxx.gslice_view.cons], gslice_view constructors, destructor, and assignment
 
   // construct/destroy:
-  slice_view() = delete;
-  slice_view(const slice_view &) = default;
-  slice_view(slice_view &&) noexcept = default;
-  explicit slice_view(mdspan_type span, std::array<bool, extents_type::rank()> reverse = {})
+  gslice_view() = delete;
+  gslice_view(const gslice_view &) = default;
+  gslice_view(gslice_view &&) noexcept = default;
+  explicit gslice_view(mdspan_type span, std::array<bool, extents_type::rank()> reverse = {})
     : span_(span), reverse_dims_(reverse),
       has_reversed_dim_(std::any_of(reverse.begin(), reverse.end(), [](bool b) { return b; })),
       flat_contiguous_(is_flat_contiguous(span, reverse)) {}
-  ~slice_view() = default;
+  ~gslice_view() = default;
 
   // assignment:
-  slice_view &operator=(const slice_view &) = default;
-  slice_view &operator=(slice_view &&) noexcept = default;
+  gslice_view &operator=(const gslice_view &) = default;
+  gslice_view &operator=(gslice_view &&) noexcept = default;
 
   // element access using N-dimensional indices.
   template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
@@ -722,11 +771,11 @@ public:
     return data_handle()[calc_offset(i)];
   }
   [[nodiscard]] const value_type &at(size_type i) const {
-    detail::checked_index(i, size(), "slice_view::at");
+    detail::checked_index(i, size(), "gslice_view::at");
     return (*this)[i];
   }
   [[nodiscard]] value_type &at(size_type i) {
-    detail::checked_index(i, size(), "slice_view::at");
+    detail::checked_index(i, size(), "gslice_view::at");
     return (*this)[i];
   }
 
@@ -738,9 +787,35 @@ public:
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i);
 
-  // subset operations (slice_view)
-  template <typename... Args> requires slice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires slice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
+  // subset operations (gslice_view)
+  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
+  [[nodiscard]] auto operator[](const slice &selection) const {
+    return (*this)(selection);
+  }
+  [[nodiscard]] auto operator[](const slice &selection) {
+    return (*this)(selection);
+  }
+  template <class... Args>
+    requires(elem_access_arguments<Extents::rank(), Args...> ||
+             gslice_view_arguments<Extents::rank(), Args...>)
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const {
+    return std::apply(
+        [this](const auto &...indices) -> decltype(auto) {
+          return (*this)(indices...);
+        },
+        selection.arguments());
+  }
+  template <class... Args>
+    requires(elem_access_arguments<Extents::rank(), Args...> ||
+             gslice_view_arguments<Extents::rank(), Args...>)
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) {
+    return std::apply(
+        [this](const auto &...indices) -> decltype(auto) {
+          return (*this)(indices...);
+        },
+        selection.arguments());
+  }
   template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type Rank>
   [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
@@ -785,29 +860,29 @@ public:
   auto operator!() const { return apply_unary_op<std::logical_not>     (); }
 
   // computed assignment:
-  slice_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
-  slice_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
-  slice_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
-  slice_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
-  slice_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
-  slice_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
-  slice_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
-  slice_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
-  slice_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
-  slice_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
-  slice_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
+  gslice_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
+  gslice_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
+  gslice_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
+  gslice_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
+  gslice_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
+  gslice_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
+  gslice_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
+  gslice_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
+  gslice_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
+  gslice_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
+  gslice_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
 
-  template <value_expression Expr> slice_view &operator=  (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
-  template <value_expression Expr> slice_view &operator+= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
-  template <value_expression Expr> slice_view &operator-= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
-  template <value_expression Expr> slice_view &operator*= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
-  template <value_expression Expr> slice_view &operator/= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
-  template <value_expression Expr> slice_view &operator%= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
-  template <value_expression Expr> slice_view &operator&= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
-  template <value_expression Expr> slice_view &operator|= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
-  template <value_expression Expr> slice_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
-  template <value_expression Expr> slice_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
-  template <value_expression Expr> slice_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+  template <value_expression Expr> gslice_view &operator=  (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
+  template <value_expression Expr> gslice_view &operator+= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
+  template <value_expression Expr> gslice_view &operator-= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
+  template <value_expression Expr> gslice_view &operator*= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
+  template <value_expression Expr> gslice_view &operator/= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
+  template <value_expression Expr> gslice_view &operator%= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
+  template <value_expression Expr> gslice_view &operator&= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
+  template <value_expression Expr> gslice_view &operator|= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
+  template <value_expression Expr> gslice_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
+  template <value_expression Expr> gslice_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
+  template <value_expression Expr> gslice_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
 
   // observers
   [[nodiscard]] constexpr              size_type         size() const noexcept { return span_.size()       ; }
@@ -910,7 +985,7 @@ private:
   }
 
   template <typename Op>
-  slice_view &apply_scalar_op(Op &&op, const value_type &x) {
+  gslice_view &apply_scalar_op(Op &&op, const value_type &x) {
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), x);
@@ -918,7 +993,7 @@ private:
   }
 
   template <class Op, class Expr>
-  slice_view &apply_expr_op(Op &&op, const Expr &expr) {
+  gslice_view &apply_expr_op(Op &&op, const Expr &expr) {
     detail::check_shape_match(*this, expr);
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
@@ -1108,7 +1183,7 @@ auto make_broadcast_view(const Source &source,
     if constexpr (requires { source.has_reversed_dim(); })
       if (source.has_reversed_dim())
         NUMCXX_THROW(std::invalid_argument,
-                     "broadcast_to: reversed slice_view sources are not "
+                     "broadcast_to: reversed gslice_view sources are not "
                      "supported; materialize with eval() first");
 
     std::array<index_type, TargetRank> strides{};
@@ -1163,7 +1238,7 @@ template <class T> struct is_broadcast_source : std::false_type {};
 template <class Tp, class Ex, class Lp>
 struct is_broadcast_source<ndarray<Tp, Ex, Lp>> : std::true_type {};
 template <class Tp, class Ex, class Lp>
-struct is_broadcast_source<slice_view<Tp, Ex, Lp>> : std::true_type {};
+struct is_broadcast_source<gslice_view<Tp, Ex, Lp>> : std::true_type {};
 template <class Tp, size_type Rank>
 struct is_broadcast_source<broadcast_view<Tp, Rank>> : std::true_type {};
 
@@ -2135,7 +2210,7 @@ auto make_reverse_dims(const std::array<bool, N> &is_index_arr,
 
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_slice_view_impl(MdSpan &&src,
+auto make_gslice_view_impl(MdSpan &&src,
                           const std::array<bool, N> &src_reverse_dims,
                           Args &&...args) {
   auto [sub_mdspan, is_index_arr, reversed_arr] = make_submdspan_impl(
@@ -2144,7 +2219,7 @@ auto make_slice_view_impl(MdSpan &&src,
   constexpr std::size_t new_rank = sub_mdspan_type::rank();
   const auto reverse_dims =
       make_reverse_dims<new_rank>(is_index_arr, reversed_arr);
-  return slice_view<typename sub_mdspan_type::element_type,
+  return gslice_view<typename sub_mdspan_type::element_type,
                     typename sub_mdspan_type::extents_type,
                     typename sub_mdspan_type::layout_type>(sub_mdspan,
                                                            reverse_dims);
@@ -2152,25 +2227,25 @@ auto make_slice_view_impl(MdSpan &&src,
 
 template <typename MdSpan, typename... Args>
 [[nodiscard]]
-auto make_slice_view(MdSpan &&src, Args &&...args) {
-  // ndarray (or slice_view with has_reversed_dim_ == false)
+auto make_gslice_view(MdSpan &&src, Args &&...args) {
+  // ndarray (or gslice_view with has_reversed_dim_ == false)
   // has no inherited reversed dimensions.
   const std::array<bool, sizeof...(Args)> no_reverse_dims{};
-  return make_slice_view_impl(std::forward<MdSpan>(src), no_reverse_dims,
+  return make_gslice_view_impl(std::forward<MdSpan>(src), no_reverse_dims,
                               std::forward<Args>(args)...);
 }
 
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_slice_view_with_reverse_dims(
+auto make_gslice_view_with_reverse_dims(
     MdSpan &&src, const std::array<bool, N> &src_reverse_dims, Args &&...args) {
-  return make_slice_view_impl(std::forward<MdSpan>(src), src_reverse_dims,
+  return make_gslice_view_impl(std::forward<MdSpan>(src), src_reverse_dims,
                               std::forward<Args>(args)...);
 }
 
 template <std::size_t Rank, typename MdSpan, typename... Args>
 [[nodiscard]]
-auto make_slice_view_padded(MdSpan &&src, Args &&...args) {
+auto make_gslice_view_padded(MdSpan &&src, Args &&...args) {
   if constexpr (sizeof...(Args) > Rank) {
     static_assert(sizeof...(Args) <= Rank,
                   "Number of arguments cannot exceed array rank");
@@ -2182,7 +2257,7 @@ auto make_slice_view_padded(MdSpan &&src, Args &&...args) {
         }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
     return std::apply(
         [&src](auto &&...indices) {
-          return make_slice_view(std::forward<MdSpan>(src),
+          return make_gslice_view(std::forward<MdSpan>(src),
                                  std::forward<decltype(indices)>(indices)...);
         },
         std::move(padded_args));
@@ -2191,7 +2266,7 @@ auto make_slice_view_padded(MdSpan &&src, Args &&...args) {
 
 template <std::size_t Rank, typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_slice_view_padded_with_reverse_dims(
+auto make_gslice_view_padded_with_reverse_dims(
     MdSpan &&src, const std::array<bool, N> &src_reverse_dims,
     Args &&...args) {
   static_assert(N == Rank, "src_reverse_dims must match array rank");
@@ -2206,7 +2281,7 @@ auto make_slice_view_padded_with_reverse_dims(
         }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
     return std::apply(
         [&src, &src_reverse_dims](auto &&...indices) {
-          return make_slice_view_with_reverse_dims(
+          return make_gslice_view_with_reverse_dims(
               std::forward<MdSpan>(src), src_reverse_dims,
               std::forward<decltype(indices)>(indices)...);
         },
@@ -2240,7 +2315,7 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
-auto slice_view<Tp, Extents, Lp>::operator()(Idxs &&...idxs) const
+auto gslice_view<Tp, Extents, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
   return has_reversed_dim_
              ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
@@ -2253,7 +2328,7 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
-auto slice_view<Tp, Extents, Lp>::operator()(Idxs &&...idxs) -> reference {
+auto gslice_view<Tp, Extents, Lp>::operator()(Idxs &&...idxs) -> reference {
   return has_reversed_dim_
              ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
                                                 std::forward<Idxs>(idxs)...)
@@ -2263,41 +2338,41 @@ auto slice_view<Tp, Extents, Lp>::operator()(Idxs &&...idxs) -> reference {
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Extents::rank(), Args...>
+  requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) const {
-  return detail::slice_utils::make_slice_view_padded<Extents::rank()>(
+  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
       to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Extents::rank(), Args...>
+  requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) {
-  return detail::slice_utils::make_slice_view_padded<Extents::rank()>(
+  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
       to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto slice_view<Tp, Extents, Lp>::operator()(Args &&...args) const {
+  requires gslice_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) const {
   return has_reversed_dim_
-             ? detail::slice_utils::make_slice_view_padded_with_reverse_dims<
+             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<
                    Extents::rank()>(to_mdspan(), reverse_dims_,
                                std::forward<Args>(args)...)
-             : detail::slice_utils::make_slice_view_padded<Extents::rank()>(
+             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
                    to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto slice_view<Tp, Extents, Lp>::operator()(Args &&...args) {
+  requires gslice_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) {
   return has_reversed_dim_
-             ? detail::slice_utils::make_slice_view_padded_with_reverse_dims<
+             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<
                    Extents::rank()>(to_mdspan(), reverse_dims_,
                                std::forward<Args>(args)...)
-             : detail::slice_utils::make_slice_view_padded<Extents::rank()>(
+             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
                    to_mdspan(), std::forward<Args>(args)...);
 }
 
@@ -2371,35 +2446,35 @@ ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) {
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename slice_view<Tp, Ex, Lp>::const_reference
-slice_view<Tp, Ex, Lp>::flat(size_type i) const {
-  detail::checked_index(i, size(), "slice_view::flat");
+typename gslice_view<Tp, Ex, Lp>::const_reference
+gslice_view<Tp, Ex, Lp>::flat(size_type i) const {
+  detail::checked_index(i, size(), "gslice_view::flat");
   return flat_unchecked(i);
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename slice_view<Tp, Ex, Lp>::const_reference
-slice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
+typename gslice_view<Tp, Ex, Lp>::const_reference
+gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
   return flat_contiguous_ ? data_handle()[i]
                           : data_handle()[calc_flat_offset(i)];
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename slice_view<Tp, Ex, Lp>::reference
-slice_view<Tp, Ex, Lp>::flat(size_type i) {
-  detail::checked_index(i, size(), "slice_view::flat");
+typename gslice_view<Tp, Ex, Lp>::reference
+gslice_view<Tp, Ex, Lp>::flat(size_type i) {
+  detail::checked_index(i, size(), "gslice_view::flat");
   return flat_unchecked(i);
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename slice_view<Tp, Ex, Lp>::reference
-slice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) {
+typename gslice_view<Tp, Ex, Lp>::reference
+gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) {
   return flat_contiguous_ ? data_handle()[i]
                           : data_handle()[calc_flat_offset(i)];
 }
 
 template <typename Tp, typename Ex, typename Lp>
-auto slice_view<Tp, Ex, Lp>::eval() const {
+auto gslice_view<Tp, Ex, Lp>::eval() const {
   using result_type = ndarray<value_type, dextents<rank()>, default_layout>;
   auto result = [&]<size_type... Is>(std::index_sequence<Is...>) {
     return result_type(extent(Is)...);
@@ -2434,13 +2509,13 @@ auto ndarray<Tp, Ex, Lp>::broadcast_to(
 
 template <class Tp, class Ex, class Lp>
 template <std::integral... Dims>
-auto slice_view<Tp, Ex, Lp>::broadcast_to(Dims... dims) const {
+auto gslice_view<Tp, Ex, Lp>::broadcast_to(Dims... dims) const {
   return detail::make_broadcast_view(*this, dims...);
 }
 
 template <class Tp, class Ex, class Lp>
 template <std::integral Extent, ::numcxx::size_type Rank>
-auto slice_view<Tp, Ex, Lp>::broadcast_to(
+auto gslice_view<Tp, Ex, Lp>::broadcast_to(
     const std::array<Extent, Rank> &shape) const {
   return detail::make_broadcast_view(*this, shape);
 }
@@ -2616,8 +2691,8 @@ struct nc_operand_storage<ndarray<Tp, Ex, Lp>> {
 };
 
 template <class Tp, class Ex, class Lp>
-struct nc_operand_storage<slice_view<Tp, Ex, Lp>> {
-  using type = const slice_view<Tp, Ex, Lp> &;
+struct nc_operand_storage<gslice_view<Tp, Ex, Lp>> {
+  using type = const gslice_view<Tp, Ex, Lp> &;
 };
 
 template <class Tp> struct nc_operand_storage<mask_view<Tp>> {
@@ -3147,12 +3222,12 @@ void print(const M &arr, FILE *file = stdout) {
 //
 #ifdef NUMCXX_DETAIL_HAS_CBLAS
 namespace detail {
-template <class Matrix> struct is_slice_view : std::false_type {};
+template <class Matrix> struct is_gslice_view : std::false_type {};
 template <class ElementType, class Extents, class LayoutPolicy>
-struct is_slice_view<slice_view<ElementType, Extents, LayoutPolicy>>
+struct is_gslice_view<gslice_view<ElementType, Extents, LayoutPolicy>>
     : std::true_type {};
 template <class Matrix>
-inline constexpr bool is_slice_view_v = is_slice_view<std::remove_cvref_t<Matrix>>::value;
+inline constexpr bool is_gslice_view_v = is_gslice_view<std::remove_cvref_t<Matrix>>::value;
 
 // Determine whether a matrix can be passed directly to CBLAS and, if so,
 // return its row-major or column-major storage order.
@@ -3163,7 +3238,7 @@ bool cblas_matrix_order(const Matrix &matrix, CBLAS_ORDER &order) {
   if (!mapping.is_exhaustive() || !mapping.is_strided())
     return false;
 
-  if constexpr (is_slice_view_v<Matrix>) {
+  if constexpr (is_gslice_view_v<Matrix>) {
     if (matrix.has_reversed_dim())
       return false;
   }
@@ -3267,7 +3342,7 @@ template <class T> struct is_solve_operand : std::false_type {};
 template <class T, class Extents, class LayoutPolicy>
 struct is_solve_operand<ndarray<T, Extents, LayoutPolicy>> : std::true_type {};
 template <class T, class Extents, class LayoutPolicy>
-struct is_solve_operand<slice_view<T, Extents, LayoutPolicy>>
+struct is_solve_operand<gslice_view<T, Extents, LayoutPolicy>>
     : std::true_type {};
 template <class T>
 inline constexpr bool is_solve_operand_v =
@@ -3678,16 +3753,16 @@ namespace linalg {
 ///
 /// Computes the matrix product of two rank-2 arrays or views.
 ///
-/// @tparam A Type with rank() == 2 and to_mdspan() (ndarray, slice_view)
-/// @tparam B Type with rank() == 2 and to_mdspan() (ndarray, slice_view)
+/// @tparam A Type with rank() == 2 and to_mdspan() (ndarray, gslice_view)
+/// @tparam B Type with rank() == 2 and to_mdspan() (ndarray, gslice_view)
 /// @param  a Left matrix of shape (M × K)
 /// @param  b Right matrix of shape (K × N)
 /// @returns Result matrix of shape (M × N) in default_layout
 ///
 /// @throws std::invalid_argument If the inner dimensions do not match
 template <class A, class B> auto matmul(const A &a, const B &b) {
-  static_assert(nc_has_extents_v<A>, "lhs must be ndarray/slice_view type");
-  static_assert(nc_has_extents_v<B>, "rhs must be ndarray/slice_view type");
+  static_assert(nc_has_extents_v<A>, "lhs must be ndarray/gslice_view type");
+  static_assert(nc_has_extents_v<B>, "rhs must be ndarray/gslice_view type");
   static_assert(A::rank() == 2, "matmul requires rank-2 lhs");
   static_assert(B::rank() == 2, "matmul requires rank-2 rhs");
 
@@ -3737,7 +3812,7 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
 /// - 1D x 2D: vector-matrix product (1D)
 /// - 2D x 2D: matrix multiplication (2D)
 ///
-/// @tparam A Type with to_mdspan() (ndarray, slice_view, ...)
+/// @tparam A Type with to_mdspan() (ndarray, gslice_view, ...)
 /// @tparam B Type with to_mdspan()
 /// @param a First operand
 /// @param b Second operand
@@ -3745,8 +3820,8 @@ template <class A, class B> auto matmul(const A &a, const B &b) {
 ///
 /// @throws std::invalid_argument If shapes are incompatible
 template <class A, class B> auto dot(const A &a, const B &b) {
-  static_assert(nc_has_extents_v<A>, "lhs must be ndarray/slice_view type");
-  static_assert(nc_has_extents_v<B>, "rhs must be ndarray/slice_view type");
+  static_assert(nc_has_extents_v<A>, "lhs must be ndarray/gslice_view type");
+  static_assert(nc_has_extents_v<B>, "rhs must be ndarray/gslice_view type");
 
   constexpr int rankA = A::rank();
   constexpr int rankB = B::rank();
@@ -3829,8 +3904,8 @@ template <class A, class B> auto dot(const A &a, const B &b) {
 
 /// Solve A @ x = b using LU factorization with partial pivoting.
 ///
-/// @tparam A Rank-2 ndarray or slice_view with square extents
-/// @tparam B Rank-1 or rank-2 ndarray or slice_view
+/// @tparam A Rank-2 ndarray or gslice_view with square extents
+/// @tparam B Rank-1 or rank-2 ndarray or gslice_view
 /// @param a Coefficient matrix of shape (M, M)
 /// @param b Right-hand side of shape (M,) or (M, K)
 /// @returns x with the same shape as b, in default_layout
@@ -3838,9 +3913,9 @@ template <class A, class B> auto dot(const A &a, const B &b) {
 /// @throws std::runtime_error If the coefficient matrix is singular
 template <class A, class B> auto solve(const A &a, const B &b) {
   static_assert(detail::is_solve_operand_v<A>,
-                "solve: a must be an ndarray or slice_view");
+                "solve: a must be an ndarray or gslice_view");
   static_assert(detail::is_solve_operand_v<B>,
-                "solve: b must be an ndarray or slice_view");
+                "solve: b must be an ndarray or gslice_view");
   static_assert(A::rank() == 2,
                 "solve requires a rank-2 coefficient matrix");
   static_assert(B::rank() == 1 || B::rank() == 2,
@@ -3962,7 +4037,7 @@ template <class A, class B> auto solve(const A &a, const B &b) {
 
 /// Cholesky decomposition of a Hermitian positive-definite matrix.
 ///
-/// @tparam A Rank-2 ndarray or slice_view with square extents
+/// @tparam A Rank-2 ndarray or gslice_view with square extents
 /// @param a Input matrix of shape (M, M). Only the lower triangle when
 ///          upper is false, or the upper triangle when upper is true, and
 ///          the diagonal are read; no Hermitian check is performed.
@@ -3974,7 +4049,7 @@ template <class A, class B> auto solve(const A &a, const B &b) {
 /// @throws std::runtime_error If the input matrix is not positive-definite
 template <class A> auto cholesky(const A &a, bool upper = false) {
   static_assert(detail::is_solve_operand_v<A>,
-                "cholesky: a must be an ndarray or slice_view");
+                "cholesky: a must be an ndarray or gslice_view");
   static_assert(A::rank() == 2, "cholesky requires a rank-2 matrix");
 
   using value_type = typename A::value_type;
@@ -4052,7 +4127,7 @@ enum class qr_impl_mode { reduced, complete, r_only };
 template <class A>
 auto qr_impl(const A &a, qr_impl_mode mode) {
   static_assert(numcxx::detail::is_solve_operand_v<A>,
-                "qr: a must be an ndarray or slice_view");
+                "qr: a must be an ndarray or gslice_view");
   static_assert(A::rank() == 2, "qr requires a rank-2 matrix");
 
   using value_type = typename A::value_type;

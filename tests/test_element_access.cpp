@@ -1,4 +1,4 @@
-﻿#include <gtest/gtest.h>
+#include <gtest/gtest.h>
 #include <type_traits>
 
 #include "numcxx.h"
@@ -86,6 +86,49 @@ TEST(ElementAccess, PartialIndexingFillsTrailingAxesInColumnMajor) {
   check_partial_indexing<numcxx::layout_left>();
 }
 
+TEST(ElementAccess, SliceAndGsliceSubscripts) {
+  numcxx::imat a(3, 4);
+  fill_2d(a);
+
+  auto call_view = a(slice{1, 3}, slice{1, 4});
+  auto gslice_view = a[numcxx::gslice(slice{1, 3}, slice{1, 4})];
+  static_assert(std::decay_t<decltype(gslice_view)>::extents_type::rank() ==
+                2);
+  EXPECT_EQ(gslice_view.extent(0), call_view.extent(0));
+  EXPECT_EQ(gslice_view.extent(1), call_view.extent(1));
+  EXPECT_EQ(gslice_view(1, 2), call_view(1, 2));
+  gslice_view(1, 2) = 99;
+  EXPECT_EQ(a(2, 3), 99);
+
+  auto nested_view = gslice_view[numcxx::gslice(1, slice{1, 3})];
+  static_assert(std::decay_t<decltype(nested_view)>::extents_type::rank() ==
+                1);
+  EXPECT_EQ(nested_view(0), 22);
+  EXPECT_EQ(nested_view(1), 99);
+
+  auto one_slice = a[slice{0, 2}];
+  EXPECT_EQ(one_slice.extent(0), 2);
+  EXPECT_EQ(one_slice.extent(1), 4);
+
+  auto row = a[numcxx::gslice(1)];
+  static_assert(std::decay_t<decltype(row)>::extents_type::rank() == 1);
+  EXPECT_EQ(row(3), 13);
+
+  a[numcxx::gslice(1, 2)] = 42;
+  EXPECT_EQ(a(1, 2), 42);
+
+  const auto &const_a = a;
+  auto const_view =
+      const_a[numcxx::gslice(slice{0, 2}, numcxx::full_extent)];
+  static_assert(std::is_const_v<
+                typename std::decay_t<decltype(const_view)>::element_type>);
+  EXPECT_EQ(const_view(1, 2), 42);
+
+  static_assert(std::is_same_v<
+                numcxx::slice_view<int, numcxx::dextents<2>>,
+                numcxx::gslice_view<int, numcxx::dextents<2>>>);
+}
+
 TEST(ElementAccess, NdarrayScalarReturnType) {
   numcxx::imat a(3, 4);
   fill_2d(a);
@@ -150,16 +193,16 @@ TEST(ElementAccess, CheckedLinearAccessUsesStandardizedOutOfRangeErrors) {
   auto view = a(slice{0, 2});
   try {
     (void)view.flat(view.size());
-    FAIL() << "Expected slice_view::flat to throw";
+    FAIL() << "Expected gslice_view::flat to throw";
   } catch (const std::out_of_range &e) {
     EXPECT_STREQ(
         e.what(),
-        "slice_view::flat: index 2 out of bounds for size 2");
+        "gslice_view::flat: index 2 out of bounds for size 2");
   }
 }
 
 /* ============================================================
- * slice_view element access
+ * gslice_view element access
  * ============================================================ */
 
 TEST(ElementAccess, SliceViewDirectElement) {
@@ -232,10 +275,10 @@ TEST(ElementAccess, ChainedSlicingToElement) {
   numcxx::imat a(3, 4);
   fill_2d(a);
 
-  // ndarray -> slice_view -> element
+  // ndarray -> gslice_view -> element
   EXPECT_EQ(a(slice{1, 3}, slice{0, 4})(1, 2), 22);
 
-  // ndarray -> slice_view -> rank-1 view -> scalar via [0]
+  // ndarray -> gslice_view -> rank-1 view -> scalar via [0]
   EXPECT_EQ(a(slice{1, 3}, slice{0, 4})(slice{0, 1}, 3)[0], 13);
 }
 
