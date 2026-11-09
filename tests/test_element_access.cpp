@@ -30,6 +30,62 @@ TEST(ElementAccess, NdarrayDirectElement) {
   EXPECT_EQ(a(2, 3), 23);
 }
 
+template <class Layout> static void check_partial_indexing() {
+  numcxx::ndarray<int, numcxx::dextents<3>, Layout> a(2, 3, 4);
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0; j < 3; ++j)
+      for (int k = 0; k < 4; ++k)
+        a(i, j, k) = i * 100 + j * 10 + k;
+
+  auto plane = a(1);
+  static_assert(std::decay_t<decltype(plane)>::extents_type::rank() == 2);
+  EXPECT_EQ(plane.extent(0), 3);
+  EXPECT_EQ(plane.extent(1), 4);
+  EXPECT_EQ(plane(2, 3), 123);
+
+  auto line = a(1, 2);
+  static_assert(std::decay_t<decltype(line)>::extents_type::rank() == 1);
+  EXPECT_EQ(line.extent(0), 4);
+  EXPECT_EQ(line(3), 123);
+
+  auto sliced_line = a(1, slice{1, 3});
+  static_assert(std::decay_t<decltype(sliced_line)>::extents_type::rank() ==
+                2);
+  EXPECT_EQ(sliced_line.extent(0), 2);
+  EXPECT_EQ(sliced_line.extent(1), 4);
+  EXPECT_EQ(sliced_line(1, 0), 120);
+
+  auto slice_with_omitted_axes = a(slice{0, 2}, 1);
+  static_assert(
+      std::decay_t<decltype(slice_with_omitted_axes)>::extents_type::rank() ==
+      2);
+  EXPECT_EQ(slice_with_omitted_axes.extent(0), 2);
+  EXPECT_EQ(slice_with_omitted_axes.extent(1), 4);
+  EXPECT_EQ(slice_with_omitted_axes(1, 3), 113);
+
+  plane(2, 3) = 900;
+  EXPECT_EQ(a(1, 2, 3), 900);
+  EXPECT_EQ(a(1)(2, 3), 900);
+  EXPECT_EQ(a(1, 2)(3), 900);
+
+  const auto &const_a = a;
+  auto const_plane = const_a(1);
+  static_assert(std::is_const_v<
+                typename std::decay_t<decltype(const_plane)>::element_type>);
+  EXPECT_EQ(const_plane(2, 3), 900);
+
+  auto reversed_plane = a(slice({}, {}, -1))(0);
+  EXPECT_EQ(reversed_plane(1, 2), 112);
+}
+
+TEST(ElementAccess, PartialIndexingFillsTrailingAxesInRowMajor) {
+  check_partial_indexing<numcxx::layout_right>();
+}
+
+TEST(ElementAccess, PartialIndexingFillsTrailingAxesInColumnMajor) {
+  check_partial_indexing<numcxx::layout_left>();
+}
+
 TEST(ElementAccess, NdarrayScalarReturnType) {
   numcxx::imat a(3, 4);
   fill_2d(a);

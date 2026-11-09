@@ -34,6 +34,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -323,7 +324,15 @@ template <class Tp> concept slice_specifier = scalar_index<Tp> || std::same_as<s
 
 template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
-template <class... Args> concept slice_view_arguments = all_slice_specifiers<Args...> && !all_scalar_indices<Args...>;
+template <size_type Rank, class... Idxs>
+concept elem_access_arguments =
+    all_scalar_indices<Idxs...> && sizeof...(Idxs) == Rank;
+template <size_type Rank, class... Args>
+concept slice_view_arguments =
+    sizeof...(Args) > 0 &&
+    ((all_slice_specifiers<Args...> && !all_scalar_indices<Args...> &&
+      sizeof...(Args) <= Rank) ||
+     (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
 
 namespace detail {
 
@@ -485,8 +494,8 @@ public:
   ndarray& operator=(detail::nested_initializer_list_t<value_type, extents_type::rank()> list);
 
   // element access using N-dimensional indices.
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires elem_access_arguments<Ex::rank(), Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires elem_access_arguments<Ex::rank(), Idxs...> [[nodiscard]] reference operator()(Idxs&&... idxs);
 
   // Flattened physical-order access: operator[] is unchecked; at() checks bounds.
   [[nodiscard]] const value_type &operator[](size_type i) const { return data()[i]; }
@@ -508,8 +517,8 @@ public:
   [[nodiscard]]       reference flat_unchecked(size_type i);
 
   // subset operations (slice_view)
-  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args> requires slice_view_arguments<Ex::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires slice_view_arguments<Ex::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
   template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type Rank>
   [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
@@ -702,8 +711,8 @@ public:
   slice_view &operator=(slice_view &&) noexcept = default;
 
   // element access using N-dimensional indices.
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires all_scalar_indices<Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs)      ;
+  template <typename... Idxs> requires elem_access_arguments<Ex::rank(), Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
+  template <typename... Idxs> requires elem_access_arguments<Ex::rank(), Idxs...> [[nodiscard]] reference operator()(Idxs&&... idxs);
 
   // Flattened physical-order access: operator[] is unchecked; at() checks bounds.
   [[nodiscard]] const value_type &operator[](size_type i) const {
@@ -730,8 +739,8 @@ public:
   [[nodiscard]]       reference flat_unchecked(size_type i);
 
   // subset operations (slice_view)
-  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires slice_view_arguments<Args...> [[nodiscard]] auto operator()(Args&&... args)      ;
+  template <typename... Args> requires slice_view_arguments<Ex::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires slice_view_arguments<Ex::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
   template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type Rank>
   [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
@@ -2159,39 +2168,80 @@ auto make_slice_view_with_reverse_dims(
                               std::forward<Args>(args)...);
 }
 
+template <std::size_t Rank, typename MdSpan, typename... Args>
+[[nodiscard]]
+auto make_slice_view_padded(MdSpan &&src, Args &&...args) {
+  if constexpr (sizeof...(Args) > Rank) {
+    static_assert(sizeof...(Args) <= Rank,
+                  "Number of arguments cannot exceed array rank");
+  } else {
+    auto padded_args = std::tuple_cat(
+        std::forward_as_tuple(std::forward<Args>(args)...),
+        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+          return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
+        }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+    return std::apply(
+        [&src](auto &&...indices) {
+          return make_slice_view(std::forward<MdSpan>(src),
+                                 std::forward<decltype(indices)>(indices)...);
+        },
+        std::move(padded_args));
+  }
+}
+
+template <std::size_t Rank, typename MdSpan, std::size_t N, typename... Args>
+[[nodiscard]]
+auto make_slice_view_padded_with_reverse_dims(
+    MdSpan &&src, const std::array<bool, N> &src_reverse_dims,
+    Args &&...args) {
+  static_assert(N == Rank, "src_reverse_dims must match array rank");
+  if constexpr (sizeof...(Args) > Rank) {
+    static_assert(sizeof...(Args) <= Rank,
+                  "Number of arguments cannot exceed array rank");
+  } else {
+    auto padded_args = std::tuple_cat(
+        std::forward_as_tuple(std::forward<Args>(args)...),
+        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+          return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
+        }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+    return std::apply(
+        [&src, &src_reverse_dims](auto &&...indices) {
+          return make_slice_view_with_reverse_dims(
+              std::forward<MdSpan>(src), src_reverse_dims,
+              std::forward<decltype(indices)>(indices)...);
+        },
+        std::move(padded_args));
+  }
+}
+
 } // namespace slice_utils
 } // namespace detail
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires all_scalar_indices<Idxs...>
+  requires elem_access_arguments<Ex::rank(), Idxs...>
 [[nodiscard]]
-auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const -> const_reference {
-  static_assert(sizeof...(Idxs) == extents_type::rank(),
-                "Number of arguments must match array rank");
+auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
+    -> const_reference {
   return detail::index_utils::get_element(to_mdspan(),
                                           std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires all_scalar_indices<Idxs...>
+  requires elem_access_arguments<Ex::rank(), Idxs...>
 [[nodiscard]]
 auto ndarray<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
-  static_assert(sizeof...(Idxs) == extents_type::rank(),
-                "Number of arguments must match array rank");
   return detail::index_utils::get_element(to_mdspan(),
                                           std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires all_scalar_indices<Idxs...>
+  requires elem_access_arguments<Ex::rank(), Idxs...>
 [[nodiscard]]
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
     -> const_reference {
-  static_assert(sizeof...(Idxs) == extents_type::rank(),
-                "Number of arguments must match array rank");
   return has_reversed_dim_
              ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
                                                 std::forward<Idxs>(idxs)...)
@@ -2201,11 +2251,9 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) const
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Idxs>
-  requires all_scalar_indices<Idxs...>
+  requires elem_access_arguments<Ex::rank(), Idxs...>
 [[nodiscard]]
 auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
-  static_assert(sizeof...(Idxs) == extents_type::rank(),
-                "Number of arguments must match array rank");
   return has_reversed_dim_
              ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
                                                 std::forward<Idxs>(idxs)...)
@@ -2215,47 +2263,41 @@ auto slice_view<Tp, Ex, Lp>::operator()(Idxs &&...idxs) -> reference {
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Args...>
+  requires slice_view_arguments<Ex::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) const {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments must match array rank");
-  return detail::slice_utils::make_slice_view(to_mdspan(),
-                                              std::forward<Args>(args)...);
+  return detail::slice_utils::make_slice_view_padded<Ex::rank()>(
+      to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Args...>
+  requires slice_view_arguments<Ex::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Ex, Lp>::operator()(Args &&...args) {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments must match array rank");
-  return detail::slice_utils::make_slice_view(to_mdspan(),
-                                              std::forward<Args>(args)...);
+  return detail::slice_utils::make_slice_view_padded<Ex::rank()>(
+      to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Args...>
+  requires slice_view_arguments<Ex::rank(), Args...>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) const {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments must match array rank");
   return has_reversed_dim_
-             ? detail::slice_utils::make_slice_view_with_reverse_dims(
-                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-             : detail::slice_utils::make_slice_view(
+             ? detail::slice_utils::make_slice_view_padded_with_reverse_dims<
+                   Ex::rank()>(to_mdspan(), reverse_dims_,
+                               std::forward<Args>(args)...)
+             : detail::slice_utils::make_slice_view_padded<Ex::rank()>(
                    to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 template <typename... Args>
-  requires slice_view_arguments<Args...>
+  requires slice_view_arguments<Ex::rank(), Args...>
 [[nodiscard]] auto slice_view<Tp, Ex, Lp>::operator()(Args &&...args) {
-  static_assert(sizeof...(Args) == extents_type::rank(),
-                "Number of arguments must match array rank");
   return has_reversed_dim_
-             ? detail::slice_utils::make_slice_view_with_reverse_dims(
-                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-             : detail::slice_utils::make_slice_view(
+             ? detail::slice_utils::make_slice_view_padded_with_reverse_dims<
+                   Ex::rank()>(to_mdspan(), reverse_dims_,
+                               std::forward<Args>(args)...)
+             : detail::slice_utils::make_slice_view_padded<Ex::rank()>(
                    to_mdspan(), std::forward<Args>(args)...);
 }
 
