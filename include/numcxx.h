@@ -273,7 +273,7 @@ using default_layout = layout_right;
 
                                         class          slice;
 template <class Tp, class Ex, class Lp> class        ndarray;
-template <class Tp, class Ex, class Lp> class     gslice_view;
+template <class Tp, class Ex, class Lp> class    gslice_view;
 template <class Tp>                     class      mask_view;
 template <class Tp>                     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
@@ -285,7 +285,7 @@ template <class Op, class A0, class A1> struct nc_binary_op;
 // Value-expression types participate in NumCxx expression evaluation.
 template <class ValExpr>                struct nc_is_val_expr                             : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_is_val_expr<    gslice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_is_val_expr<   gslice_view<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr<     mask_view<Tp        >> : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr< indirect_view<Tp        >> : std::true_type  {};
 template <class Tp, size_type Rank>     struct nc_is_val_expr<broadcast_view<Tp, Rank  >> : std::true_type  {};
@@ -296,7 +296,7 @@ template <class Op, class A0, class A1> struct nc_is_val_expr<  nc_binary_op<Op,
 // Types with multidimensional extents provide shape information.
 template <class Tp>                     struct nc_has_extents                             : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_has_extents<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
-template <class Tp, class Ex, class Lp> struct nc_has_extents<    gslice_view<Tp, Ex, Lp>> : std::true_type  {};
+template <class Tp, class Ex, class Lp> struct nc_has_extents<   gslice_view<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents<     mask_view<Tp        >> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents< indirect_view<Tp        >> : std::true_type  {};
 template <class Tp, size_type Rank>     struct nc_has_extents<broadcast_view<Tp, Rank  >> : std::true_type  {};
@@ -324,33 +324,10 @@ template <class Tp> concept slice_specifier = scalar_index<Tp> || std::same_as<s
 
 template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
-template <size_type Rank, class... Idxs>
-concept elem_access_arguments =
-    all_scalar_indices<Idxs...> && sizeof...(Idxs) == Rank;
-template <size_type Rank, class... Args>
-concept gslice_view_arguments =
-    sizeof...(Args) > 0 &&
-    ((all_slice_specifiers<Args...> && !all_scalar_indices<Args...> &&
-      sizeof...(Args) <= Rank) ||
-     (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
-
-template <class... Args>
-  requires(sizeof...(Args) > 0 && (slice_specifier<Args> && ...))
-class gslice {
-public:
-  constexpr explicit gslice(std::remove_cvref_t<Args>... args)
-      : arguments_(std::move(args)...) {}
-
-  [[nodiscard]] constexpr const auto &arguments() const noexcept {
-    return arguments_;
-  }
-
-private:
-  std::tuple<std::remove_cvref_t<Args>...> arguments_;
-};
-
-template <class... Args>
-gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
+template <size_type Rank, class... Idxs> concept elem_access_arguments = all_scalar_indices<Idxs...> && sizeof...(Idxs) == Rank;
+template <size_type Rank, class... Args> concept gslice_view_arguments = sizeof...(Args) > 0 && (
+                                                                        (all_slice_specifiers<Args...> && !all_scalar_indices<Args...> && sizeof...(Args) <= Rank) ||
+                                                                        (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
 
 namespace detail {
 
@@ -384,7 +361,7 @@ template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { re
 
 template <typename Tp, std::size_t Rank> struct nested_initializer_list        { using type = std::initializer_list<typename nested_initializer_list<Tp, Rank - 1>::type>; };
 template <typename Tp                  > struct nested_initializer_list<Tp, 1> { using type = std::initializer_list<Tp>;                                                   };
-template <typename Tp                  > struct nested_initializer_list<Tp, 0> { using type = std::initializer_list<Tp>; };
+template <typename Tp                  > struct nested_initializer_list<Tp, 0> { using type = std::initializer_list<Tp>;                                                   };
 template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
 } // namespace detail
 
@@ -438,6 +415,30 @@ public:
   };
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
 };
+
+// [numcxx.gslice]
+/// Generalized N-dimensional slice descriptor.
+///
+/// Stores the index and slice specifiers for each dimension as a single
+/// selector object, enabling valarray-style selection via operator[].
+template <class... Args>
+  requires(sizeof...(Args) > 0 && (slice_specifier<Args> && ...))
+class gslice {
+public:
+  constexpr explicit gslice(std::remove_cvref_t<Args>... args)
+      : arguments_(std::move(args)...) {}
+
+  // Returns the stored N-dimensional index and slice specifiers.
+  [[nodiscard]] constexpr const auto &arguments() const noexcept {
+    return arguments_;
+  }
+
+private:
+  std::tuple<std::remove_cvref_t<Args>...> arguments_;
+};
+
+// Deduce and store selector types by value.
+template <class... Args> gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
 
 // [numcxx.ndarray]
 namespace detail {
