@@ -355,6 +355,16 @@ void check_shape_match(const Lhs &lhs, const Rhs &rhs) {
   }
 }
 
+template <class Array, class Tuple>
+[[nodiscard]] constexpr decltype(auto)
+apply_indices(Array &array, const Tuple &indices) {
+  return std::apply(
+      [&array](const auto &...args) -> decltype(auto) {
+        return array(args...);
+      },
+      indices);
+}
+
 template <class Op, class Expr> auto make_unary_op(const Expr &);
 template <class Tp> struct nc_unary_plus { Tp operator()(const Tp &x) const { return +x; } };
 template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { return ~x; } };
@@ -575,35 +585,16 @@ public:
   // subset operations (gslice_view)
   template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
   template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
-  [[nodiscard]] auto operator[](const slice &selection) const {
-    return (*this)(selection);
-  }
-  [[nodiscard]] auto operator[](const slice &selection) {
-    return (*this)(selection);
-  }
-  template <class... Args>
-    requires(elem_access_arguments<Extents::rank(), Args...> ||
-             gslice_view_arguments<Extents::rank(), Args...>)
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const {
-    return std::apply(
-        [this](const auto &...indices) -> decltype(auto) {
-          return (*this)(indices...);
-        },
-        selection.arguments());
-  }
-  template <class... Args>
-    requires(elem_access_arguments<Extents::rank(), Args...> ||
-             gslice_view_arguments<Extents::rank(), Args...>)
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) {
-    return std::apply(
-        [this](const auto &...indices) -> decltype(auto) {
-          return (*this)(indices...);
-        },
-        selection.arguments());
-  }
-  template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
-  template <std::integral Extent, ::numcxx::size_type Rank>
-  [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
+  
+  [[nodiscard]] auto operator[](const slice &selection) const { return (*this)(selection); }
+  [[nodiscard]] auto operator[](const slice &selection)       { return (*this)(selection); }
+  
+  template <class... Args> requires(elem_access_arguments<Extents::rank(), Args...> ||
+                                    gslice_view_arguments<Extents::rank(), Args...>)
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
+  template <class... Args> requires(elem_access_arguments<Extents::rank(), Args...> ||
+                                    gslice_view_arguments<Extents::rank(), Args...>)
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -637,6 +628,9 @@ public:
   operator[](const ndarray<size_type, dextents<1>> &offsets) {
     return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
+
+  template <std::integral... Dims                         > [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
+  template <std::integral Extent, ::numcxx::size_type Rank> [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
