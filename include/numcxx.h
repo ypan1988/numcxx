@@ -715,7 +715,11 @@ public:
   [[nodiscard]] auto argmin(::numcxx::index_type axis) const;
   [[nodiscard]] auto argmax(::numcxx::index_type axis) const;
 
-  // TODO: Add any/all reductions after choosing a bool-array storage model.
+  [[nodiscard]] bool any() const;
+  [[nodiscard]] bool all() const;
+  // Axis reductions return 0/1 values in an unsigned-char ndarray.
+  [[nodiscard]] auto any(::numcxx::index_type axis) const;
+  [[nodiscard]] auto all(::numcxx::index_type axis) const;
   // void resize(size_type n, value_type x = value_type());
 
 private:
@@ -1028,6 +1032,8 @@ public:
   [[nodiscard]] auto mean() const { return eval().mean(); }
   [[nodiscard]] auto var() const { return eval().var(); }
   [[nodiscard]] auto std() const { return eval().std(); }
+  [[nodiscard]] bool any() const { return eval().any(); }
+  [[nodiscard]] bool all() const { return eval().all(); }
   [[nodiscard]] auto argmin() const { return eval().argmin(); }
   [[nodiscard]] auto argmax() const { return eval().argmax(); }
 
@@ -1038,6 +1044,8 @@ public:
   [[nodiscard]] auto mean(::numcxx::index_type axis) const { return eval().mean(axis); }
   [[nodiscard]] auto var(::numcxx::index_type axis) const { return eval().var(axis); }
   [[nodiscard]] auto std(::numcxx::index_type axis) const { return eval().std(axis); }
+  [[nodiscard]] auto any(::numcxx::index_type axis) const { return eval().any(axis); }
+  [[nodiscard]] auto all(::numcxx::index_type axis) const { return eval().all(axis); }
   [[nodiscard]] auto argmin(::numcxx::index_type axis) const {
     return eval().argmin(axis);
   }
@@ -2588,6 +2596,34 @@ ndarray<Tp, Ex, Lp>::std() const {
 }
 
 template <typename Tp, typename Ex, typename Lp>
+bool ndarray<Tp, Ex, Lp>::any() const {
+  for (size_type i = 0; i < size(); ++i) {
+    const value_type &value = flat_unchecked(i);
+    if constexpr (requires { value.real(); value.imag(); }) {
+      if (value.real() != 0 || value.imag() != 0)
+        return true;
+    } else if (static_cast<bool>(value)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+bool ndarray<Tp, Ex, Lp>::all() const {
+  for (size_type i = 0; i < size(); ++i) {
+    const value_type &value = flat_unchecked(i);
+    if constexpr (requires { value.real(); value.imag(); }) {
+      if (value.real() == 0 && value.imag() == 0)
+        return false;
+    } else if (!static_cast<bool>(value)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::size_type ndarray<Tp, Ex, Lp>::argmin() const {
   if (size() == 0)
     NUMCXX_THROW(std::runtime_error,
@@ -2714,6 +2750,36 @@ auto ndarray<Tp, Ex, Lp>::std(::numcxx::index_type axis) const
   for (size_type i = 0; i < result.size(); ++i)
     result.flat_unchecked(i) = std::sqrt(result.flat_unchecked(i));
   return result;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::any(::numcxx::index_type axis) const {
+  return reduce_axis_impl(
+      axis, "ndarray::any(axis)", static_cast<unsigned char>(0),
+      [](const value_type &x, size_type, size_type) {
+        if constexpr (requires { x.real(); x.imag(); })
+          return static_cast<unsigned char>(x.real() != 0 || x.imag() != 0);
+        else
+          return static_cast<unsigned char>(static_cast<bool>(x));
+      },
+      [](unsigned char a, unsigned char b) {
+        return static_cast<unsigned char>(a || b);
+      });
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::all(::numcxx::index_type axis) const {
+  return reduce_axis_impl(
+      axis, "ndarray::all(axis)", static_cast<unsigned char>(1),
+      [](const value_type &x, size_type, size_type) {
+        if constexpr (requires { x.real(); x.imag(); })
+          return static_cast<unsigned char>(x.real() != 0 || x.imag() != 0);
+        else
+          return static_cast<unsigned char>(static_cast<bool>(x));
+      },
+      [](unsigned char a, unsigned char b) {
+        return static_cast<unsigned char>(a && b);
+      });
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -2988,6 +3054,8 @@ public:
   [[nodiscard]] auto mean() const { return eval().mean(); }
   [[nodiscard]] auto var() const { return eval().var(); }
   [[nodiscard]] auto std() const { return eval().std(); }
+  [[nodiscard]] bool any() const { return eval().any(); }
+  [[nodiscard]] bool all() const { return eval().all(); }
   [[nodiscard]] auto argmin() const { return eval().argmin(); }
   [[nodiscard]] auto argmax() const { return eval().argmax(); }
 
@@ -2998,6 +3066,8 @@ public:
   [[nodiscard]] auto mean(::numcxx::index_type axis) const { return eval().mean(axis); }
   [[nodiscard]] auto var(::numcxx::index_type axis) const { return eval().var(axis); }
   [[nodiscard]] auto std(::numcxx::index_type axis) const { return eval().std(axis); }
+  [[nodiscard]] auto any(::numcxx::index_type axis) const { return eval().any(axis); }
+  [[nodiscard]] auto all(::numcxx::index_type axis) const { return eval().all(axis); }
   [[nodiscard]] auto argmin(::numcxx::index_type axis) const {
     return eval().argmin(axis);
   }
@@ -4675,6 +4745,11 @@ template <class T, size_type M, size_type N, size_type K> using cube_fixed = nda
 using ivec     =  vec<int>     ;
 using imat     =  mat<int>     ;
 using icube    = cube<int>     ;
+
+// Logical arrays store 0/1 bytes to avoid vector<bool>'s proxy references.
+using bvec     =  vec<unsigned char>;
+using bmat     =  mat<unsigned char>;
+using bcube    = cube<unsigned char>;
 
 // unsigned int
 using uvec     =  vec<unsigned>;
