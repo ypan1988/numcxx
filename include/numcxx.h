@@ -328,6 +328,8 @@ template <size_type Rank, class... Idxs> concept elem_access_arguments = all_sca
 template <size_type Rank, class... Args> concept gslice_view_arguments = sizeof...(Args) > 0 && (
                                                                         (all_slice_specifiers<Args...> && !all_scalar_indices<Args...> && sizeof...(Args) <= Rank) ||
                                                                         (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
+template <size_type Rank, class... Args> concept gslice_arguments      = elem_access_arguments<Rank, Args...> ||
+                                                                         gslice_view_arguments<Rank, Args...>;
 
 namespace detail {
 
@@ -561,40 +563,29 @@ public:
 
   // element access using N-dimensional indices.
   template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]] reference operator()(Idxs&&... idxs);
+  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs);
+
+  // flattened element access using the default_layout order, independent of the actual storage layout.
+  [[nodiscard]] const_reference flat(size_type i) const;
+  [[nodiscard]]       reference flat(size_type i)      ;
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const;
+  [[nodiscard]]       reference flat_unchecked(size_type i)      ;
 
   // Flattened physical-order access: operator[] is unchecked; at() checks bounds.
   [[nodiscard]] const value_type &operator[](size_type i) const { return data()[i]; }
   [[nodiscard]]       value_type &operator[](size_type i)       { return data()[i]; }
-  [[nodiscard]] const value_type &at(size_type i) const {
-    detail::checked_index(i, size(), "ndarray::at");
-    return (*this)[i];
-  }
-  [[nodiscard]] value_type &at(size_type i) {
-    detail::checked_index(i, size(), "ndarray::at");
-    return (*this)[i];
-  }
-
-  // flattened element access using the default_layout order, independent of the actual storage layout.
-  [[nodiscard]] const_reference flat(size_type i) const;
-  [[nodiscard]]       reference flat(size_type i);
-  // Internal API (not stable): unchecked flat access; requires i < size().
-  [[nodiscard]] const_reference flat_unchecked(size_type i) const;
-  [[nodiscard]]       reference flat_unchecked(size_type i);
+  [[nodiscard]] const value_type &at        (size_type i) const { detail::checked_index(i, size(), "ndarray::at"); return (*this)[i]; }
+  [[nodiscard]]       value_type &at        (size_type i)       { detail::checked_index(i, size(), "ndarray::at"); return (*this)[i]; }
 
   // subset operations (gslice_view)
-  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
+  template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]]          auto  operator()(Args&&... args) const;
+  template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]]          auto  operator()(Args&&... args)      ;
   
-  [[nodiscard]] auto operator[](const slice &selection) const { return (*this)(selection); }
-  [[nodiscard]] auto operator[](const slice &selection)       { return (*this)(selection); }
-  
-  template <class... Args> requires(elem_access_arguments<Extents::rank(), Args...> ||
-                                    gslice_view_arguments<Extents::rank(), Args...>)
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
-  template <class... Args> requires(elem_access_arguments<Extents::rank(), Args...> ||
-                                    gslice_view_arguments<Extents::rank(), Args...>)
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
+                                                                                    [[nodiscard]]          auto  operator[](const  slice          &selection) const { return (*this)(selection)                                 ; }
+                                                                                    [[nodiscard]]          auto  operator[](const  slice          &selection)       { return (*this)(selection)                                 ; }
+  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...> [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
+  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...> [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
@@ -917,8 +908,7 @@ public:
     return (*this)(selection);
   }
   template <class... Args>
-    requires(elem_access_arguments<Extents::rank(), Args...> ||
-             gslice_view_arguments<Extents::rank(), Args...>)
+    requires(gslice_arguments<Extents::rank(), Args...>)
   [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const {
     return std::apply(
         [this](const auto &...indices) -> decltype(auto) {
