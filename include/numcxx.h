@@ -384,7 +384,7 @@ template <class Tp> struct nc_bit_not    { Tp operator()(const Tp &x) const { re
 
 template <typename Tp, std::size_t Rank> struct nested_initializer_list        { using type = std::initializer_list<typename nested_initializer_list<Tp, Rank - 1>::type>; };
 template <typename Tp                  > struct nested_initializer_list<Tp, 1> { using type = std::initializer_list<Tp>;                                                   };
-template <typename Tp                  > struct nested_initializer_list<Tp, 0>; // undefined on purpose
+template <typename Tp                  > struct nested_initializer_list<Tp, 0> { using type = std::initializer_list<Tp>; };
 template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
 } // namespace detail
 
@@ -442,13 +442,50 @@ public:
 // [numcxx.ndarray]
 namespace detail {
 template <class Ex>          struct static_extents_size;
-template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ...)> {};
+template <size_type... Dims> struct static_extents_size<numcxx::extents<Dims...>> : std::integral_constant<size_type, (Dims * ... * size_type{1})> {};
 
 template <class Tp, class Ex, bool = static_extents<Ex>> struct mdarray_container_selector;
 template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, true > { using type = std::array <Tp, static_extents_size<Ex>::value>; };
 template <class Tp, class Ex> struct mdarray_container_selector<Tp, Ex, false> { using type = std::vector<Tp>                                ; };
 template <class Tp, class Ex> using  mdarray_container_t = typename mdarray_container_selector<Tp, Ex>::type;
+
+template <class Tp> struct reduction_mean_type {
+  using type = std::conditional_t<std::is_integral_v<Tp>, double, Tp>;
+  using real_type = type;
+};
+template <class Tp> struct reduction_mean_type<std::complex<Tp>> {
+  using type = std::complex<Tp>;
+  using real_type = Tp;
+};
+template <class Tp>
+using reduction_mean_type_t = typename reduction_mean_type<Tp>::type;
+template <class Tp>
+using reduction_real_type_t = typename reduction_mean_type<Tp>::real_type;
+
+template <class Tp>
+bool reduction_less(const Tp &lhs, const Tp &rhs) {
+  if constexpr (requires { lhs.real(); lhs.imag(); }) {
+    const bool lhs_real_nan = std::isnan(lhs.real());
+    const bool rhs_real_nan = std::isnan(rhs.real());
+    if (lhs_real_nan != rhs_real_nan)
+      return !lhs_real_nan;
+    if (!lhs_real_nan && lhs.real() != rhs.real())
+      return lhs.real() < rhs.real();
+
+    const bool lhs_imag_nan = std::isnan(lhs.imag());
+    const bool rhs_imag_nan = std::isnan(rhs.imag());
+    if (lhs_imag_nan != rhs_imag_nan)
+      return !lhs_imag_nan;
+    return !lhs_imag_nan && lhs.imag() < rhs.imag();
+  } else {
+    return lhs < rhs;
+  }
 }
+}
+
+template <typename Layout = default_layout, typename Extents>
+std::array<size_type, Extents::rank()>
+unravel_index(size_type i, const Extents &extents);
 
 template <class ElementType, class Extents, class LayoutPolicy = default_layout>
 class ndarray {
@@ -633,7 +670,7 @@ public:
 
   // observers
   [[nodiscard]] constexpr          size_type     size() const noexcept { return elem_.size()   ; }
-  [[nodiscard]] constexpr               bool    empty() const noexcept { return elem_.empty()  ; }
+  [[nodiscard]] constexpr               bool    empty() const noexcept { return size() == 0    ; }
   [[nodiscard]] constexpr const extents_type& extents() const noexcept { return elem_.extents(); }
   [[nodiscard]] constexpr      const_pointer     data() const noexcept { return elem_.data()   ; }
   [[nodiscard]] constexpr            pointer     data()       noexcept { return elem_.data()   ; }
@@ -656,7 +693,29 @@ public:
   [[nodiscard]] value_type sum() const { return std::accumulate(data(), data() + size(), value_type{})             ; }
   [[nodiscard]] value_type min() const { return empty() ? value_type{} : *std::min_element(data(), data() + size()); }
   [[nodiscard]] value_type max() const { return empty() ? value_type{} : *std::max_element(data(), data() + size()); }
+  [[nodiscard]] value_type prod() const {
+    if (empty())
+      return value_type{1};
+    return std::accumulate(data(), data() + size(), value_type{1},
+                           std::multiplies<>{});
+  }
+  [[nodiscard]] detail::reduction_mean_type_t<value_type> mean() const;
+  [[nodiscard]] detail::reduction_real_type_t<value_type> var() const;
+  [[nodiscard]] detail::reduction_real_type_t<value_type> std() const;
+  [[nodiscard]] size_type argmin() const;
+  [[nodiscard]] size_type argmax() const;
 
+  [[nodiscard]] auto sum(::numcxx::index_type axis) const;
+  [[nodiscard]] auto min(::numcxx::index_type axis) const;
+  [[nodiscard]] auto max(::numcxx::index_type axis) const;
+  [[nodiscard]] auto prod(::numcxx::index_type axis) const;
+  [[nodiscard]] auto mean(::numcxx::index_type axis) const;
+  [[nodiscard]] auto var(::numcxx::index_type axis) const;
+  [[nodiscard]] auto std(::numcxx::index_type axis) const;
+  [[nodiscard]] auto argmin(::numcxx::index_type axis) const;
+  [[nodiscard]] auto argmax(::numcxx::index_type axis) const;
+
+  // TODO: Add any/all reductions after choosing a bool-array storage model.
   // void resize(size_type n, value_type x = value_type());
 
 private:
@@ -666,6 +725,73 @@ private:
   template <class>               friend class indirect_view;
   template <class>               friend class   nc_val_expr;
   // clang-format on
+
+  ::numcxx::index_type normalize_reduction_axis(
+      ::numcxx::index_type axis, const char *function_name) const {
+    const ::numcxx::index_type rank_value =
+        static_cast<::numcxx::index_type>(extents_type::rank());
+    if (axis < 0)
+      axis += rank_value;
+    if (axis < 0 || axis >= rank_value)
+      NUMCXX_THROW(std::out_of_range,
+                   std::string(function_name) + ": axis out of range");
+    return axis;
+  }
+
+  template <class ResultValue, class Transform, class Operation>
+  auto reduce_axis_impl(::numcxx::index_type axis, const char *function_name,
+                        ResultValue identity, Transform transform,
+                        Operation operation,
+                        bool use_first = false) const {
+    using result_extents_type =
+        dextents<(extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>;
+    using result_type = ndarray<ResultValue, result_extents_type>;
+
+    axis = normalize_reduction_axis(axis, function_name);
+
+    std::array<size_type,
+               (extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>
+        output_shape{};
+    for (size_type src = 0, dst = 0; src < extents_type::rank(); ++src)
+      if (src != static_cast<size_type>(axis))
+        output_shape[dst++] = static_cast<size_type>(extent(src));
+
+    auto result = [&]<size_type... Is>(std::index_sequence<Is...>) {
+      return result_type(static_cast<index_type>(output_shape[Is])...);
+    }(std::make_index_sequence<
+       (extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>{});
+
+    for (size_type output_flat = 0; output_flat < result.size();
+         ++output_flat) {
+      const auto output_indices =
+          unravel_index<default_layout>(output_flat, result.extents());
+      std::array<size_type, extents_type::rank()> input_indices{};
+      for (size_type src = 0, dst = 0; src < extents_type::rank(); ++src)
+        if (src != static_cast<size_type>(axis))
+          input_indices[src] = output_indices[dst++];
+
+      ResultValue value = identity;
+      bool initialized = false;
+      for (size_type reduced = 0;
+           reduced < static_cast<size_type>(extent(axis)); ++reduced) {
+        input_indices[axis] = reduced;
+        const value_type &element = data()[std::apply(
+            [&](auto... indices) {
+              return elem_.mapping()(indices...);
+            },
+            input_indices)];
+        const ResultValue transformed =
+            transform(element, output_flat, reduced);
+        if (use_first && !initialized)
+          value = transformed;
+        else
+          value = operation(value, transformed);
+        initialized = true;
+      }
+      result.flat_unchecked(output_flat) = value;
+    }
+    return result;
+  }
 
   template <template <class> class Op> auto apply_unary_op() const {
     return detail::make_unary_op<Op<value_type>>(*this);
@@ -894,6 +1020,30 @@ public:
   [[nodiscard]] constexpr  index_type stride(rank_type     r) const    { return span_.stride(r)                     ; }
   [[nodiscard]] constexpr bool has_reversed_dim() const noexcept { return has_reversed_dim_; }
   [[nodiscard]] auto eval() const;
+
+  [[nodiscard]] auto sum() const { return eval().sum(); }
+  [[nodiscard]] auto min() const { return eval().min(); }
+  [[nodiscard]] auto max() const { return eval().max(); }
+  [[nodiscard]] auto prod() const { return eval().prod(); }
+  [[nodiscard]] auto mean() const { return eval().mean(); }
+  [[nodiscard]] auto var() const { return eval().var(); }
+  [[nodiscard]] auto std() const { return eval().std(); }
+  [[nodiscard]] auto argmin() const { return eval().argmin(); }
+  [[nodiscard]] auto argmax() const { return eval().argmax(); }
+
+  [[nodiscard]] auto sum(::numcxx::index_type axis) const { return eval().sum(axis); }
+  [[nodiscard]] auto min(::numcxx::index_type axis) const { return eval().min(axis); }
+  [[nodiscard]] auto max(::numcxx::index_type axis) const { return eval().max(axis); }
+  [[nodiscard]] auto prod(::numcxx::index_type axis) const { return eval().prod(axis); }
+  [[nodiscard]] auto mean(::numcxx::index_type axis) const { return eval().mean(axis); }
+  [[nodiscard]] auto var(::numcxx::index_type axis) const { return eval().var(axis); }
+  [[nodiscard]] auto std(::numcxx::index_type axis) const { return eval().std(axis); }
+  [[nodiscard]] auto argmin(::numcxx::index_type axis) const {
+    return eval().argmin(axis);
+  }
+  [[nodiscard]] auto argmax(::numcxx::index_type axis) const {
+    return eval().argmax(axis);
+  }
 
   // mdspan interoperability
          constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_              ; }
@@ -2371,8 +2521,9 @@ template <typename... Args>
                    to_mdspan(), std::forward<Args>(args)...);
 }
 
-template <typename Layout = default_layout, typename Extents>
-auto unravel_index(size_type i, const Extents &extents) {
+template <typename Layout, typename Extents>
+std::array<size_type, Extents::rank()>
+unravel_index(size_type i, const Extents &extents) {
   constexpr std::size_t rank = Extents::rank();
   std::array<size_type, rank> idx{};
 
@@ -2391,6 +2542,226 @@ auto unravel_index(size_type i, const Extents &extents) {
   }
 
   return idx;
+}
+
+// [numcxx.reduction]
+template <typename Tp, typename Ex, typename Lp>
+detail::reduction_mean_type_t<typename ndarray<Tp, Ex, Lp>::value_type>
+ndarray<Tp, Ex, Lp>::mean() const {
+  using result_type = detail::reduction_mean_type_t<value_type>;
+  if (size() == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::mean(): cannot reduce an empty array");
+  result_type total{};
+  for (size_type i = 0; i < size(); ++i)
+    total += static_cast<result_type>(flat_unchecked(i));
+  return total / static_cast<result_type>(size());
+}
+
+template <typename Tp, typename Ex, typename Lp>
+detail::reduction_real_type_t<typename ndarray<Tp, Ex, Lp>::value_type>
+ndarray<Tp, Ex, Lp>::var() const {
+  using mean_type = detail::reduction_mean_type_t<value_type>;
+  using result_type = detail::reduction_real_type_t<value_type>;
+  if (size() == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::var(): cannot reduce an empty array");
+  const mean_type average = mean();
+  result_type total{};
+  for (size_type i = 0; i < size(); ++i) {
+    const mean_type delta =
+        static_cast<mean_type>(flat_unchecked(i)) - average;
+    const result_type magnitude =
+        static_cast<result_type>(std::abs(delta));
+    total += magnitude * magnitude;
+  }
+  return total / static_cast<result_type>(size());
+}
+
+template <typename Tp, typename Ex, typename Lp>
+detail::reduction_real_type_t<typename ndarray<Tp, Ex, Lp>::value_type>
+ndarray<Tp, Ex, Lp>::std() const {
+  if (size() == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::std(): cannot reduce an empty array");
+  return std::sqrt(var());
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename ndarray<Tp, Ex, Lp>::size_type ndarray<Tp, Ex, Lp>::argmin() const {
+  if (size() == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::argmin(): cannot reduce an empty array");
+  size_type result = 0;
+  for (size_type i = 1; i < size(); ++i)
+    if (detail::reduction_less(flat_unchecked(i), flat_unchecked(result)))
+      result = i;
+  return result;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+typename ndarray<Tp, Ex, Lp>::size_type ndarray<Tp, Ex, Lp>::argmax() const {
+  if (size() == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::argmax(): cannot reduce an empty array");
+  size_type result = 0;
+  for (size_type i = 1; i < size(); ++i)
+    if (detail::reduction_less(flat_unchecked(result), flat_unchecked(i)))
+      result = i;
+  return result;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::sum(::numcxx::index_type axis) const
+{
+  return reduce_axis_impl(axis, "ndarray::sum(axis)", value_type{},
+                          [](const value_type &x, size_type, size_type) {
+                            return x;
+                          },
+                          std::plus<>{});
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::min(::numcxx::index_type axis) const
+{
+  return reduce_axis_impl(
+      axis, "ndarray::min(axis)", value_type{},
+      [](const value_type &x, size_type, size_type) { return x; },
+      [](const value_type &a, const value_type &b) {
+        return detail::reduction_less(b, a) ? b : a;
+      },
+      true);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::max(::numcxx::index_type axis) const
+{
+  return reduce_axis_impl(
+      axis, "ndarray::max(axis)", value_type{},
+      [](const value_type &x, size_type, size_type) { return x; },
+      [](const value_type &a, const value_type &b) {
+        return detail::reduction_less(a, b) ? b : a;
+      },
+      true);
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::prod(::numcxx::index_type axis) const
+{
+  return reduce_axis_impl(axis, "ndarray::prod(axis)", value_type{1},
+                          [](const value_type &x, size_type, size_type) {
+                            return x;
+                          },
+                          std::multiplies<>{});
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::mean(::numcxx::index_type axis) const
+{
+  using result_type = detail::reduction_mean_type_t<value_type>;
+  axis = normalize_reduction_axis(axis, "ndarray::mean(axis)");
+  const size_type count = static_cast<size_type>(extent(axis));
+  if (count == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::mean(axis): cannot reduce over empty axis");
+  auto result = reduce_axis_impl(
+      axis, "ndarray::mean(axis)", result_type{},
+      [](const value_type &x, size_type, size_type) {
+        return static_cast<result_type>(x);
+      },
+      std::plus<>{});
+  const result_type divisor = static_cast<result_type>(count);
+  for (size_type i = 0; i < result.size(); ++i)
+    result.flat_unchecked(i) /= divisor;
+  return result;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::var(::numcxx::index_type axis) const
+{
+  using mean_type = detail::reduction_mean_type_t<value_type>;
+  using result_type = detail::reduction_real_type_t<value_type>;
+  axis = normalize_reduction_axis(axis, "ndarray::var(axis)");
+  const size_type count = static_cast<size_type>(extent(axis));
+  if (count == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::var(axis): cannot reduce over empty axis");
+  const auto averages = mean(axis);
+  auto result = reduce_axis_impl(
+      axis, "ndarray::var(axis)", result_type{},
+      [&](const value_type &x, size_type output_flat, size_type) {
+        const mean_type delta =
+            static_cast<mean_type>(x) - averages.flat_unchecked(output_flat);
+        const result_type magnitude =
+            static_cast<result_type>(std::abs(delta));
+        return magnitude * magnitude;
+      },
+      std::plus<>{});
+  const result_type divisor = static_cast<result_type>(count);
+  for (size_type i = 0; i < result.size(); ++i)
+    result.flat_unchecked(i) /= divisor;
+  return result;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::std(::numcxx::index_type axis) const
+{
+  axis = normalize_reduction_axis(axis, "ndarray::std(axis)");
+  if (extent(axis) == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::std(axis): cannot reduce over empty axis");
+  auto result = var(axis);
+  for (size_type i = 0; i < result.size(); ++i)
+    result.flat_unchecked(i) = std::sqrt(result.flat_unchecked(i));
+  return result;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::argmin(::numcxx::index_type axis) const
+{
+  using item_type = std::pair<value_type, size_type>;
+  axis = normalize_reduction_axis(axis, "ndarray::argmin(axis)");
+  if (extent(axis) == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::argmin(axis): cannot reduce over empty axis");
+  auto pairs = reduce_axis_impl(
+      axis, "ndarray::argmin(axis)", item_type{},
+      [](const value_type &x, size_type, size_type reduced) {
+        return item_type{x, reduced};
+      },
+      [](const item_type &a, const item_type &b) {
+        return detail::reduction_less(b.first, a.first) ? b : a;
+      },
+      true);
+  ndarray<size_type, typename decltype(pairs)::extents_type> result(
+      pairs.extents());
+  for (size_type i = 0; i < result.size(); ++i)
+    result.flat_unchecked(i) = pairs.flat_unchecked(i).second;
+  return result;
+}
+
+template <typename Tp, typename Ex, typename Lp>
+auto ndarray<Tp, Ex, Lp>::argmax(::numcxx::index_type axis) const
+{
+  using item_type = std::pair<value_type, size_type>;
+  axis = normalize_reduction_axis(axis, "ndarray::argmax(axis)");
+  if (extent(axis) == 0)
+    NUMCXX_THROW(std::runtime_error,
+                 "ndarray::argmax(axis): cannot reduce over empty axis");
+  auto pairs = reduce_axis_impl(
+      axis, "ndarray::argmax(axis)", item_type{},
+      [](const value_type &x, size_type, size_type reduced) {
+        return item_type{x, reduced};
+      },
+      [](const item_type &a, const item_type &b) {
+        return detail::reduction_less(a.first, b.first) ? b : a;
+      },
+      true);
+  ndarray<size_type, typename decltype(pairs)::extents_type> result(
+      pairs.extents());
+  for (size_type i = 0; i < result.size(); ++i)
+    result.flat_unchecked(i) = pairs.flat_unchecked(i).second;
+  return result;
 }
 
 template <typename Tp, typename Ex, typename Lp>
@@ -2611,6 +2982,27 @@ public:
       res.flat_unchecked(i) = flat_unchecked(i);
     }
     return res;
+  }
+
+  [[nodiscard]] auto prod() const { return eval().prod(); }
+  [[nodiscard]] auto mean() const { return eval().mean(); }
+  [[nodiscard]] auto var() const { return eval().var(); }
+  [[nodiscard]] auto std() const { return eval().std(); }
+  [[nodiscard]] auto argmin() const { return eval().argmin(); }
+  [[nodiscard]] auto argmax() const { return eval().argmax(); }
+
+  [[nodiscard]] auto sum(::numcxx::index_type axis) const { return eval().sum(axis); }
+  [[nodiscard]] auto min(::numcxx::index_type axis) const { return eval().min(axis); }
+  [[nodiscard]] auto max(::numcxx::index_type axis) const { return eval().max(axis); }
+  [[nodiscard]] auto prod(::numcxx::index_type axis) const { return eval().prod(axis); }
+  [[nodiscard]] auto mean(::numcxx::index_type axis) const { return eval().mean(axis); }
+  [[nodiscard]] auto var(::numcxx::index_type axis) const { return eval().var(axis); }
+  [[nodiscard]] auto std(::numcxx::index_type axis) const { return eval().std(axis); }
+  [[nodiscard]] auto argmin(::numcxx::index_type axis) const {
+    return eval().argmin(axis);
+  }
+  [[nodiscard]] auto argmax(::numcxx::index_type axis) const {
+    return eval().argmax(axis);
   }
 
   [[nodiscard]] constexpr size_type size() const noexcept {
@@ -3013,24 +3405,7 @@ using promoted_type_t = typename promoted_type<T, U>::type;
   };
   template <class Tp> struct nc_less_expr {
     bool operator()(const Tp &x, const Tp &y) const {
-      if constexpr (detail::complex_component<Tp>::is_complex) {
-        const bool x_real_nan = std::isnan(x.real());
-        const bool y_real_nan = std::isnan(y.real());
-        if (x_real_nan != y_real_nan)
-          return !x_real_nan;
-        if (!x_real_nan) {
-          if (x.real() != y.real())
-            return x.real() < y.real();
-        }
-
-        const bool x_imag_nan = std::isnan(x.imag());
-        const bool y_imag_nan = std::isnan(y.imag());
-        if (x_imag_nan != y_imag_nan)
-          return !x_imag_nan;
-        return !x_imag_nan && x.imag() < y.imag();
-      } else {
-        return x < y;
-      }
+      return detail::reduction_less(x, y);
     }
   };
   template <class Tp> struct nc_less_equal_expr {

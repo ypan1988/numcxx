@@ -13,6 +13,7 @@ set(TEST_TARGETS
     test_slice_normalize
     test_slicing
     test_basic
+    test_reduction
     test_storage
     test_ndarray_fixed
     test_assign
