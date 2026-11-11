@@ -4,6 +4,7 @@
 + [ndarray, vector, matrix and cube classes](#ndarray-classes)
 + [indexing and slicing](#indexing-and-slicing)
 + [member functions and variables](#member-functions-and-variables)
++ [reductions](#reductions)
 
 <a id="ndarray-classes"></a>
 ## NdArray, Vector, Matrix and Cube Classes
@@ -21,7 +22,8 @@
 |---|---|
 | **[element access](#element-access)** | element access via `()`, `[]` and `flat()` |
 | **[`slice`](#slice-def)** | describes a range of elements along one dimension |
-| **[`slice_view`](#slice-view-def)** | view created by slicing an array |
+| **[`gslice`](#gslice-def)** | packages multidimensional index and slice arguments |
+| **[`gslice_view`](#gslice-view-def)** | view created by slicing an array |
 | **[`mask_view`](#mask-view-def)** | view selecting elements using a boolean mask |
 | **[`indirect_view`](#indirect-view-def)** | view selecting elements using indices |
 
@@ -41,7 +43,7 @@
     + `ndarray(SizeTypes... dyn_exts)` - with dynamic extents (rank must match `Extents::rank()`).
     + `ndarray(const ndarray &other)` - copy constructor.
     + `ndarray(ndarray &&other)` - move constructor.
-    + `ndarray(const slice_view<T, Ex, Lp> &sv)` - from a slice view.
+    + `ndarray(const gslice_view<T, Ex, Lp> &sv)` - from a slice view.
     + `ndarray(const mask_view<T> &mv)` - from a mask view.
     + `ndarray(const indirect_view<T> &iv)` - from an indirect view.
 
@@ -144,6 +146,37 @@ ucube222 / ucube333 / ucube444 = cube_fixed<unsigned, N, N, N>
 | `&&` | element-wise logical AND |
 | `\|\|` | element-wise logical OR |
 
+Value expressions can directly construct an `ndarray` or be assigned to an
+already-sized array. Construction deduces dynamic extents from the expression;
+assignment requires the destination shape to match.
+
+<a id="reductions"></a>
+## Reductions
+
+`ndarray` provides full-array reductions (`sum`, `min`, `max`, `prod`, `mean`,
+`var`, `std`, `any`, `all`, `argmin`, and `argmax`) and single-axis overloads
+that take an `index_type`. Axis reductions remove the selected dimension and
+return an owning `ndarray` in the default layout. Negative axes count from the
+last dimension; an out-of-range axis throws `std::out_of_range` when exceptions
+are enabled. `gslice_view` and value expressions provide these reductions by
+evaluating to an `ndarray` first.
+
+- `mean` returns a floating-point result for integral inputs. `var` uses
+  population variance (`ddof = 0`); complex input produces real variance and
+  standard deviation.
+- Empty `sum` and `min` / `max` return the existing value-initialized result,
+  while empty `prod` is `1`.
+- `mean`, `var`, `std`, `argmin`, and `argmax` throw `std::runtime_error` when
+  no elements are available to reduce.
+- `argmin` and `argmax` return the first matching index in logical
+  default-layout order for full reductions, or the index within the selected
+  axis for axis reductions.
+- `any` and `all` treat nonzero values as true. Full reductions return `bool`;
+  axis reductions return an unsigned-char array containing only `0` and `1`.
+  Empty inputs follow the logical identities: `any` is false and `all` is true.
+- `bvec`, `bmat`, and `bcube` are dynamic `unsigned char` arrays intended for
+  logical values; zero means false and nonzero means true.
+
 ## Indexing and Slicing
 
 This section covers NumCxx slicing and the view types used to access selected elements without copying data.
@@ -151,26 +184,33 @@ This section covers NumCxx slicing and the view types used to access selected el
 <a id="element-access"></a>
 ### Element access via `()`, `[]`, `at()` and `flat()`
 
-Provides access to individual elements stored in an `ndarray`, `slice_view`,
+Provides access to individual elements stored in an `ndarray`, `gslice_view`,
 `mask_view`, or `indirect_view`.
 
 | | |
 |---|---|
-| **`(i, j, ...)`** | Access the element at the specified multidimensional indices. The number of indices must match the number of dimensions. |
-| **`[i]`** | Unchecked access at flattened index `i`, following the object's physical storage layout. The index must be in range. |
+| **`(i, j, ...)`** | Access an element or a subarray using up to one index per dimension. Omitted trailing dimensions are retained in a view. |
+| **`[i]`** | Unchecked access at flattened index `i`, following the object's physical storage layout. |
+| **`[slice]`** | Slice one dimension and retain later dimensions in a `gslice_view`. |
+| **`[gslice(...)]`** | Apply a packaged multidimensional selection, equivalent to `(...)`. |
 | **`.at(i)`** | Checked access at flattened index `i`, following the same physical storage layout as `[i]`. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
 | **`.flat(i)`** | Checked access at flattened index `i`, using the default NumCxx layout order, independent of the object's physical storage layout. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
 
 **Notes:**
 
 - indexing starts at `0`
-- `()` is used for multidimensional element access
-- `[]` follows the C++ container convention: it does not check bounds; using an out-of-range index has undefined behavior
+- `()` handles multiple indices and remains the multidimensional indexing and slicing syntax.
+- When every dimension is indexed by an integer, `()` returns an element reference.
+- When one or more dimensions remain, `()` returns a view; omitted trailing dimensions are treated as `full_extent`. For example, `A(1)` is equivalent to `A(1, full_extent)` for a 2-D array.
+- `[]` takes one selector: an integer for flattened access, a `slice` for single-axis slicing, a `gslice` for packaged multidimensional indexing, a boolean expression for mask selection, or an index collection for indirect selection.
+- `A[gslice(i, s, t)]` is equivalent to `A(i, s, t)`. A complete set of integer arguments selects an element; otherwise the result is a view.
+- Indices always refer to logical axes in order, for both row-major and column-major arrays.
+- NumCxx supports integer indices, `slice`, `full_extent`, and integral pair ranges. This is basic partial indexing, not full NumPy indexing; features such as ellipsis, new axes, and advanced array indices are not supported.
+- Integer `[]` access follows the C++ container convention: it does not check bounds; using an out-of-range index has undefined behavior.
 - `at()` checks bounds and throws `std::out_of_range` when the index is invalid
 - Checked accessors report invalid indices as `"<accessor>: index <i> out of bounds for size <size>"`, where `<accessor>` identifies the type and function (for example, `ndarray::flat`)
-- `[]` and `at()` use physical storage order; `flat()` uses the default NumCxx layout order
+- Linear `[]` and `at()` use physical storage order; `flat()` uses the default NumCxx layout order.
 - these conventions apply to the listed types' linear element access
-- `operator()` behavior is unchanged and is outside the scope of the linear `[]`, `at()`, and `flat()` access conventions
 
 <a id="slice-def"></a>
 ### `slice`
@@ -207,10 +247,11 @@ Provides access to individual elements stored in an `ndarray`, `slice_view`,
   - `slice({}, {}, step)` - omit both `start` and `stop`.
 
 - Slicing an `ndarray`:
-  - Use `operator()` with one argument for each dimension.
+  - Use `operator()` with no more than one argument per dimension, or put the arguments in a `gslice` and pass it to `operator[]`.
   - An integer selects one element along a dimension.
   - A `slice` selects a range of elements.
   - `full_extent` selects the whole dimension.
+  - Dimensions omitted from the end of the argument list are selected in full.
   - A pair such as `{1, 4}` is a convenient range equivalent to `slice(1, 4)`.
 
 - Examples:
@@ -221,6 +262,7 @@ Provides access to individual elements stored in an `ndarray`, `slice_view`,
       auto cols = A(full_extent, slice(0, 5, 2));
       auto row  = A(1, full_extent);
       auto rev  = A(slice({}, {}, -1), full_extent);
+      auto rows_by_subscript = A[gslice(slice(1, 3), full_extent)];
 
   In the examples above:
   - `rows` selects rows 1 and 2 and keeps all columns.
@@ -228,7 +270,7 @@ Provides access to individual elements stored in an `ndarray`, `slice_view`,
   - `row` selects row 1 and keeps all columns.
   - `rev` keeps all columns and reverses the row order.
 
-- A slicing operation returns a `slice_view` of the original array:
+- A slicing operation returns a `gslice_view` of the original array:
   - The selected elements are not copied.
   - Changes made through the view affect the original array.
   - A new independent `ndarray` can be constructed from the view when a copy is needed.
@@ -250,16 +292,25 @@ Provides access to individual elements stored in an `ndarray`, `slice_view`,
   - `step` must not be zero.
   - Out-of-range `start` and `stop` values are clipped to the valid range.
 
-<a id="slice-view-def"></a>
-### `slice_view`
+<a id="gslice-def"></a>
+### `gslice`
 
-- `slice_view` is a multidimensional, non-owning view created by slicing an `ndarray` or another compatible view.
+- `gslice` owns a value copy of one or more scalar indices, `slice` objects, `full_extent` markers, or integral pair ranges.
+- It packages the same multidimensional arguments accepted by `operator()`, so they can be passed as one selector to `operator[]`.
+- `A[gslice(1, slice(0, 4, 2))]` is equivalent to `A(1, slice(0, 4, 2))`.
+- A complete set of scalar indices accesses an element; partial or slicing selections produce a `gslice_view`.
+- `gslice` is a NumCxx argument-pack type; its representation is distinct from `std::gslice`.
+
+<a id="gslice-view-def"></a>
+### `gslice_view`
+
+- `gslice_view` is a multidimensional, non-owning view created by slicing an `ndarray` or another compatible view.
 - It preserves the shape of the selected elements, except for dimensions removed by integer indexing.
 - Elements can be read or modified through the view.
 - Changes made through the view affect the original array.
 - Assigning a scalar sets every selected element to that value.
-- Construct an `ndarray` from a `slice_view` when an independent copy is required.
-- A `slice_view` must not outlive the array or view from which it was created.
+- Construct an `ndarray` from a `gslice_view` when an independent copy is required.
+- A `gslice_view` must not outlive the array or view from which it was created.
 
 <a id="mask-view-def"></a>
 ### `mask_view`

@@ -307,6 +307,12 @@ template <class Op, class A0, class A1> struct nc_has_extents<  nc_binary_op<Op,
 
 template <class Tp> inline constexpr bool nc_is_val_expr_v = nc_is_val_expr<std::remove_cvref_t<Tp>>::value;
 template <class Tp> inline constexpr bool nc_has_extents_v = nc_has_extents<std::remove_cvref_t<Tp>>::value;
+template <class Tp> struct nc_is_broadcast_view : std::false_type {};
+template <class Tp, size_type Rank>
+struct nc_is_broadcast_view<broadcast_view<Tp, Rank>> : std::true_type {};
+template <class Tp>
+inline constexpr bool nc_is_broadcast_view_v =
+    nc_is_broadcast_view<std::remove_cvref_t<Tp>>::value;
 
 // Value expressions support element-wise evaluation and have extents.
 template <class Tp> concept  value_expression = nc_is_val_expr_v<Tp>;
@@ -551,7 +557,13 @@ public:
   ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
   template <class BroadcastElement, ::numcxx::size_type Rank>
   explicit ndarray(const broadcast_view<BroadcastElement, Rank> &bv);
-  // template <class Expr, std::enable_if_t<nc_is_val_expr<std::decay_t<Expr>>::value, int> = 0> explicit ndarray(const Expr& expr); // TODO
+  // Broadcast views remain explicit-only to preserve their materialization API.
+  template <value_expression Expr>
+    requires (!std::same_as<std::remove_cvref_t<Expr>,
+                            ndarray<ElementType, Extents, LayoutPolicy>> &&
+              !nc_is_broadcast_view_v<Expr> &&
+              (std::remove_cvref_t<Expr>::rank() == Extents::rank()))
+  ndarray(const Expr &expr);
   ndarray(detail::nested_initializer_list_t<element_type, extents_type::rank()> list);
 
   ~ndarray() = default;
@@ -805,6 +817,22 @@ private:
     for (size_type i = 0; i < n; ++i)
       op(flat_unchecked(i), expr.flat_unchecked(i));
     return *this;
+  }
+
+  template <class Expr, size_type... Is>
+  static mdarray_type make_expression_storage(
+      const Expr &expr, std::index_sequence<Is...>) {
+    if constexpr (detail::static_extents<extents_type>) {
+      mdarray_type storage(extents_type{});
+      for (rank_type r = 0; r < extents_type::rank(); ++r)
+        if (expr.extent(r) != storage.extent(r))
+          NUMCXX_THROW(std::invalid_argument,
+                       "expression shape does not match static extents");
+      return storage;
+    } else {
+      return mdarray_type(extents_type(
+          static_cast<index_type>(expr.extent(Is))...));
+    }
   }
 
 private:
@@ -2538,6 +2566,19 @@ unravel_index(size_type i, const Extents &extents) {
 }
 
 // [numcxx.reduction]
+template <class ElementType, class Extents, class LayoutPolicy>
+template <value_expression Expr>
+  requires (!std::same_as<std::remove_cvref_t<Expr>,
+                          ndarray<ElementType, Extents, LayoutPolicy>> &&
+            !nc_is_broadcast_view_v<Expr> &&
+            (std::remove_cvref_t<Expr>::rank() == Extents::rank()))
+ndarray<ElementType, Extents, LayoutPolicy>::ndarray(const Expr &expr)
+    : elem_(make_expression_storage(
+          expr, std::make_index_sequence<extents_type::rank()>{})) {
+  for (size_type i = 0; i < size(); ++i)
+    flat_unchecked(i) = static_cast<value_type>(expr.flat_unchecked(i));
+}
+
 template <typename Tp, typename Ex, typename Lp>
 detail::reduction_mean_type_t<typename ndarray<Tp, Ex, Lp>::value_type>
 ndarray<Tp, Ex, Lp>::mean() const {
