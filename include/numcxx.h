@@ -574,9 +574,9 @@ public:
   ndarray& operator=(detail::nested_initializer_list_t<value_type, extents_type::rank()> list);
 
   // element access using N-dimensional indices.
-  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
   [[nodiscard]] const_reference operator() (Idxs&&... idxs) const;
-  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
   [[nodiscard]]       reference operator() (Idxs&&... idxs)      ;
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
@@ -591,15 +591,20 @@ public:
   [[nodiscard]] const_reference at            (size_type i) const { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
   [[nodiscard]]       reference at            (size_type i)       { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
 
-
-  // subset operations (gslice_view)
-  template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]]          auto  operator()(Args&&... args) const;
-  template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]]          auto  operator()(Args&&... args)      ;
+  // subset operations using N-dimensional slice specifiers.
+  template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]]          auto  operator()(Args&&... args) const;
+  template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]]          auto  operator()(Args&&... args)      ;
   
-                                                                                    [[nodiscard]]          auto  operator[](const  slice          &selection) const { return (*this)(selection)                                 ; }
-                                                                                    [[nodiscard]]          auto  operator[](const  slice          &selection)       { return (*this)(selection)                                 ; }
-  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...> [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
-  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...> [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
+  // subset operations with slice.
+  [[nodiscard]]          auto  operator[](const  slice          &selection) const { return (*this)(selection)                                 ; }
+  [[nodiscard]]          auto  operator[](const  slice          &selection)       { return (*this)(selection)                                 ; }
+  // subset operations with gslice.
+  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
+  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
   // subset operations (mask_view):
   template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
