@@ -574,21 +574,23 @@ public:
   ndarray& operator=(detail::nested_initializer_list_t<value_type, extents_type::rank()> list);
 
   // element access using N-dimensional indices.
-  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]]       reference operator()(Idxs&&... idxs);
+  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const;
+  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)      ;
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
-  [[nodiscard]] const_reference flat(size_type i) const;
-  [[nodiscard]]       reference flat(size_type i)      ;
-  // Internal API (not stable): unchecked flat access; requires i < size().
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i)      ;
+  [[nodiscard]] const_reference flat          (size_type i) const { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
+  [[nodiscard]]       reference flat          (size_type i)       { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
 
-  // Flattened physical-order access: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const value_type &operator[](size_type i) const { return data()[i]; }
-  [[nodiscard]]       value_type &operator[](size_type i)       { return data()[i]; }
-  [[nodiscard]] const value_type &at        (size_type i) const { detail::checked_index(i, size(), "ndarray::at"); return (*this)[i]; }
-  [[nodiscard]]       value_type &at        (size_type i)       { detail::checked_index(i, size(), "ndarray::at"); return (*this)[i]; }
+  // flattened element access using the physical order: operator[] is unchecked; at() checks bounds.
+  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                    return         data()[i]; }
+  [[nodiscard]]       reference operator[]    (size_type i)       {                                                    return         data()[i]; }
+  [[nodiscard]] const_reference at            (size_type i) const { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
+  [[nodiscard]]       reference at            (size_type i)       { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
+
 
   // subset operations (gslice_view)
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]]          auto  operator()(Args&&... args) const;
@@ -2858,13 +2860,6 @@ auto ndarray<Tp, Ex, Lp>::argmax(::numcxx::index_type axis) const
 
 template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::const_reference
-ndarray<Tp, Ex, Lp>::flat(size_type i) const {
-  detail::checked_index(i, size(), "ndarray::flat");
-  return flat_unchecked(i);
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename ndarray<Tp, Ex, Lp>::const_reference
 ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
   if constexpr (std::is_same_v<layout_type, default_layout>)
     return data()[i];
@@ -2878,12 +2873,6 @@ ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
         },
         idx);
   }
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat(size_type i) {
-  detail::checked_index(i, size(), "ndarray::flat");
-  return flat_unchecked(i);
 }
 
 template <typename Tp, typename Ex, typename Lp>
