@@ -579,13 +579,13 @@ public:
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
   [[nodiscard]]       reference operator() (Idxs&&... idxs)      ;
 
-  // flattened element access in default_layout order, independent of the actual storage layout.
+  // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i)      ;
   [[nodiscard]] const_reference flat          (size_type i) const { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
   [[nodiscard]]       reference flat          (size_type i)       { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
 
-  // flattened element access in physical order: operator[] is unchecked; at() checks bounds.
+  // flattened element access in physical storage order: operator[] is unchecked; at() checks bounds.
   [[nodiscard]] const_reference operator[]    (size_type i) const {                                                    return         data()[i]; }
   [[nodiscard]]       reference operator[]    (size_type i)       {                                                    return         data()[i]; }
   [[nodiscard]] const_reference at            (size_type i) const { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
@@ -600,7 +600,7 @@ public:
   // subset operations with slice.
   [[nodiscard]]          auto  operator[](const  slice          &selection) const { return (*this)(selection)                                  ; }
   [[nodiscard]]          auto  operator[](const  slice          &selection)       { return (*this)(selection)                                  ; }
-  // subset operations with gslice.
+  // subset operations with gslice (i.e., N-dimensional indices and slice specifiers).
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
   [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()) ; }
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
