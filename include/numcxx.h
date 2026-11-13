@@ -579,13 +579,13 @@ public:
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
   [[nodiscard]]       reference operator() (Idxs&&... idxs)      ;
 
-  // flattened element access using the default_layout order, independent of the actual storage layout.
+  // flattened element access in default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i)      ;
   [[nodiscard]] const_reference flat          (size_type i) const { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
   [[nodiscard]]       reference flat          (size_type i)       { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
 
-  // flattened element access using the physical order: operator[] is unchecked; at() checks bounds.
+  // flattened element access in physical order: operator[] is unchecked; at() checks bounds.
   [[nodiscard]] const_reference operator[]    (size_type i) const {                                                    return         data()[i]; }
   [[nodiscard]]       reference operator[]    (size_type i)       {                                                    return         data()[i]; }
   [[nodiscard]] const_reference at            (size_type i) const { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
@@ -606,28 +606,26 @@ public:
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
   [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()) ; }
 
-  // subset operations (mask_view):
-  template <value_expression BoolExpr>
-    requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
+  // subset operations with boolean mask.
+  template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<element_type> operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
-  template <value_expression BoolExpr>
-    requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
+  template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<element_type> operator[](BoolExpr &&expr) {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
 
-  // subset operations (indirect_view):
+  // subset operations with initializer-list offsets.
   [[nodiscard]] indirect_view<element_type> operator[](std::initializer_list<size_type> offsets) const {
     return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
   }
   [[nodiscard]] indirect_view<element_type> operator[](std::initializer_list<size_type> offsets) {
     return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
   }
-
+  // subset operations with array offsets.
   [[nodiscard]] indirect_view<element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
     return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
