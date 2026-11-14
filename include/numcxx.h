@@ -938,27 +938,27 @@ public:
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<const element_type> operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return mask_view<const element_type>(to_mdspan(), extract_mask_offsets(expr));
+    return mask_view<const element_type>(to_mdspan(), resolve_mask_offsets(expr));
   }
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr)       {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return mask_view<      element_type>(to_mdspan(), extract_mask_offsets(expr));
+    return mask_view<      element_type>(to_mdspan(), resolve_mask_offsets(expr));
   } 
 
   // subset operations with initializer-list offsets.
   [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
-    return indirect_view<const element_type>(to_mdspan(), extract_indirect_offsets(offsets.begin(), offsets.end()));
+    return indirect_view<const element_type>(to_mdspan(), resolve_indirect_offsets(offsets.begin(), offsets.end()));
   }
   [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets)       {
-    return indirect_view<      element_type>(to_mdspan(), extract_indirect_offsets(offsets.begin(), offsets.end()));
+    return indirect_view<      element_type>(to_mdspan(), resolve_indirect_offsets(offsets.begin(), offsets.end()));
   }
   // subset operations with array offsets.
   [[nodiscard]] indirect_view<const element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
-    return indirect_view<const element_type>(to_mdspan(), extract_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
+    return indirect_view<const element_type>(to_mdspan(), resolve_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
   }
   [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets)       {
-    return indirect_view<      element_type>(to_mdspan(), extract_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
+    return indirect_view<      element_type>(to_mdspan(), resolve_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
   }
 
   template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
@@ -1120,7 +1120,7 @@ private:
   }
 
   template <typename BoolExpr>
-  std::vector<size_type> extract_mask_offsets(const BoolExpr& expr) const {
+  std::vector<size_type> resolve_mask_offsets(const BoolExpr& expr) const {
     std::vector<size_type> offsets;
     offsets.reserve(expr.size());
     for (size_type i = 0; i < expr.size(); ++i)
@@ -1130,7 +1130,7 @@ private:
   }
 
   template <typename Iterator>
-  std::vector<size_type> extract_indirect_offsets(Iterator first, Iterator last) const {
+  std::vector<size_type> resolve_indirect_offsets(Iterator first, Iterator last) const {
     std::vector<size_type> offsets(first, last);
     for (auto &offset : offsets)
       offset = calc_flat_offset(offset);
