@@ -253,3 +253,53 @@ TEST_F(SlicingTest, ReverseColumnsLinearAccess) {
   const auto &const_view = v;
   EXPECT_EQ(const_view.flat(0), 40);
 }
+
+TEST_F(SlicingTest, ReverseViewMaskUsesLogicalOffsets) {
+  auto v = a(full_extent, slice({}, {}, -1));
+  auto selected = v[v > 10];
+
+  ASSERT_EQ(selected.size(), 9);
+  EXPECT_EQ(selected[0], 14);
+  EXPECT_EQ(selected[1], 13);
+  EXPECT_EQ(selected[2], 12);
+  EXPECT_EQ(selected[3], 11);
+  EXPECT_EQ(selected[4], 19);
+  EXPECT_EQ(selected[8], 15);
+
+  const auto &const_view = v;
+  auto const_selected = const_view[v > 10];
+  EXPECT_EQ(const_selected[0], 14);
+  EXPECT_EQ(const_selected[8], 15);
+
+  selected = -1;
+  EXPECT_EQ(a(2, 4), -1);
+  EXPECT_EQ(a(2, 1), -1);
+  EXPECT_EQ(a(2, 0), 10);
+  EXPECT_EQ(a(3, 0), -1);
+}
+
+TEST_F(SlicingTest, ReverseViewOffsetsMapThroughView) {
+  auto v = a(full_extent, slice({}, {}, -1));
+  auto selected = v[{0, 1, 5, 6}];
+
+  ASSERT_EQ(selected.size(), 4);
+  EXPECT_EQ(selected[0], 4);
+  EXPECT_EQ(selected[1], 3);
+  EXPECT_EQ(selected[2], 9);
+  EXPECT_EQ(selected[3], 8);
+
+  selected += 100;
+  EXPECT_EQ(a(0, 4), 104);
+  EXPECT_EQ(a(0, 3), 103);
+  EXPECT_EQ(a(1, 4), 109);
+  EXPECT_EQ(a(1, 3), 108);
+
+  ndarray<size_type, dextents<1>> offsets(2);
+  offsets[0] = 0;
+  offsets[1] = 5;
+  const auto &const_view = v;
+  const auto &const_offsets = offsets;
+  auto const_selected = const_view[const_offsets];
+  EXPECT_EQ(const_selected[0], 104);
+  EXPECT_EQ(const_selected[1], 109);
+}

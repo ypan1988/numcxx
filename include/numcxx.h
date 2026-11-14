@@ -938,26 +938,44 @@ public:
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<const element_type> operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return      mask_view<const element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
+    std::vector<size_type> offsets;
+    offsets.reserve(expr.size());
+    for (size_type i = 0; i < expr.size(); ++i)
+      if (static_cast<bool>(expr.flat_unchecked(i)))
+        offsets.push_back(calc_flat_offset(i));
+    return mask_view<const element_type>(to_mdspan(), std::move(offsets));
   }
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr) {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return      mask_view<      element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
+    std::vector<size_type> offsets;
+    offsets.reserve(expr.size());
+    for (size_type i = 0; i < expr.size(); ++i)
+      if (static_cast<bool>(expr.flat_unchecked(i)))
+        offsets.push_back(calc_flat_offset(i));
+    return mask_view<element_type>(to_mdspan(), std::move(offsets));
   }
 
   [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
-    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets));
+    std::vector<size_type> mapped_offsets(offsets);
+    map_offsets(mapped_offsets);
+    return indirect_view<const element_type>(to_mdspan(), std::move(mapped_offsets));
   }
   [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets) {
-    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets));
+    std::vector<size_type> mapped_offsets(offsets);
+    map_offsets(mapped_offsets);
+    return indirect_view<element_type>(to_mdspan(), std::move(mapped_offsets));
   }
   // subset operations with array offsets.
   [[nodiscard]] indirect_view<const element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
-    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+    std::vector<size_type> mapped_offsets(offsets.data(), offsets.data() + offsets.size());
+    map_offsets(mapped_offsets);
+    return indirect_view<const element_type>(to_mdspan(), std::move(mapped_offsets));
   }
   [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) {
-    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+    std::vector<size_type> mapped_offsets(offsets.data(), offsets.data() + offsets.size());
+    map_offsets(mapped_offsets);
+    return indirect_view<element_type>(to_mdspan(), std::move(mapped_offsets));
   }
 
   template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
@@ -1116,6 +1134,11 @@ private:
         process_dim(r);
     }
     return offset;
+  }
+
+  void map_offsets(std::vector<size_type> &offsets) const noexcept {
+    for (auto &offset : offsets)
+      offset = calc_flat_offset(offset);
   }
 
   template <template <class> class Op> auto apply_unary_op() const {
@@ -1452,17 +1475,17 @@ public:
   ~mask_view() = default;
 
   // Linear access in view order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const value_type &operator[](size_type i) const {
+  [[nodiscard]] const_reference operator[](size_type i) const {
     return flat_unchecked(i);
   }
-  [[nodiscard]] value_type &operator[](size_type i) {
+  [[nodiscard]] reference operator[](size_type i) {
     return flat_unchecked(i);
   }
-  [[nodiscard]] const value_type &at(size_type i) const {
+  [[nodiscard]] const_reference at(size_type i) const {
     detail::checked_index(i, size(), "mask_view::at");
     return (*this)[i];
   }
-  [[nodiscard]] value_type &at(size_type i) {
+  [[nodiscard]] reference at(size_type i) {
     detail::checked_index(i, size(), "mask_view::at");
     return (*this)[i];
   }
@@ -1545,6 +1568,15 @@ private:
     span_ = mdspan_type(base, ext, acc);
   }
 
+  template <typename MdSpan>
+  explicit mask_view(const MdSpan &data_span,
+                     std::vector<size_type> offsets) {
+    auto base = data_span.data_handle();
+    extents_type ext(offsets.size());
+    auto acc = detail::index_accessor<element_type>(std::move(offsets));
+    span_ = mdspan_type(base, ext, acc);
+  }
+
   template <template <class> class Op> auto apply_unary_op() const {
     return detail::make_unary_op<Op<value_type>>(*this);
   }
@@ -1565,6 +1597,7 @@ private:
   }
 
   template <class, class, class> friend class ndarray;
+  template <class, class, class> friend class gslice_view;
 
   mdspan_type span_;
 };
@@ -1615,17 +1648,17 @@ public:
   ~indirect_view() = default;
 
   // Linear access in view order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const value_type &operator[](size_type i) const {
+  [[nodiscard]] const_reference operator[](size_type i) const {
     return flat_unchecked(i);
   }
-  [[nodiscard]] value_type &operator[](size_type i) {
+  [[nodiscard]] reference operator[](size_type i) {
     return flat_unchecked(i);
   }
-  [[nodiscard]] const value_type &at(size_type i) const {
+  [[nodiscard]] const_reference at(size_type i) const {
     detail::checked_index(i, size(), "indirect_view::at");
     return (*this)[i];
   }
-  [[nodiscard]] value_type &at(size_type i) {
+  [[nodiscard]] reference at(size_type i) {
     detail::checked_index(i, size(), "indirect_view::at");
     return (*this)[i];
   }
@@ -1720,6 +1753,7 @@ private:
   }
 
   template <class, class, class> friend class ndarray;
+  template <class, class, class> friend class gslice_view;
 
   mdspan_type span_;
 };
