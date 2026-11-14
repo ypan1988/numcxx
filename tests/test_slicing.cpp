@@ -279,27 +279,37 @@ TEST_F(SlicingTest, ReverseViewMaskUsesLogicalOffsets) {
 }
 
 TEST_F(SlicingTest, ReverseViewOffsetsMapThroughView) {
+  // v is the array with columns reversed. a(0, 4) is 4, so v(0, 0) is 4.
   auto v = a(full_extent, slice({}, {}, -1));
-  auto selected = v[{0, 1, 5, 6}];
 
-  ASSERT_EQ(selected.size(), 4);
-  EXPECT_EQ(selected[0], 4);
-  EXPECT_EQ(selected[1], 3);
-  EXPECT_EQ(selected[2], 9);
-  EXPECT_EQ(selected[3], 8);
+  // 1. Select row 0 and row 1 along Axis 0 using initializer_list.
+  auto selected = v[{0, 1}];
 
-  selected += 100;
+  // Verify shape: (2, 5)
+  ASSERT_EQ(selected.extent(0), 2);
+  ASSERT_EQ(selected.extent(1), 5);
+
+  // Verify content: v's row 0 is a's row 0 reversed.
+  EXPECT_EQ(selected(0, 0), 4);
+  EXPECT_EQ(selected(0, 1), 3);
+  EXPECT_EQ(selected(0, 4), 0);
+
+  // Verify content: v's row 1 is a's row 1 reversed.
+  EXPECT_EQ(selected(1, 0), 9);
+  EXPECT_EQ(selected(1, 4), 5);
+
+  // 2. Verify write-through: modifying selected(0, 0) affects a(0, 4).
+  selected(0, 0) = 104;
   EXPECT_EQ(a(0, 4), 104);
-  EXPECT_EQ(a(0, 3), 103);
-  EXPECT_EQ(a(1, 4), 109);
-  EXPECT_EQ(a(1, 3), 108);
 
-  ndarray<size_type, dextents<1>> offsets(2);
-  offsets[0] = 0;
-  offsets[1] = 5;
+  // 3. Use an ndarray as indices to verify the const view path.
+  numcxx::ndarray<numcxx::size_type, numcxx::dextents<1>> offsets(2);
+  offsets[0] = 1;
+  offsets[1] = 2;
   const auto &const_view = v;
-  const auto &const_offsets = offsets;
-  auto const_selected = const_view[const_offsets];
-  EXPECT_EQ(const_selected[0], 104);
-  EXPECT_EQ(const_selected[1], 109);
+  auto const_selected = const_view[offsets];
+
+  ASSERT_EQ(const_selected.extent(0), 2);
+  EXPECT_EQ(const_selected(0, 0), 9);   // v row 1, col 0 is a(1, 4) = 9
+  EXPECT_EQ(const_selected(1, 0), 14);  // v row 2, col 0 is a(2, 4) = 14
 }

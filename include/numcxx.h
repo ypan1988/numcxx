@@ -275,19 +275,27 @@ using default_layout = layout_right;
 template <class Tp, class Ex, class Lp> class        ndarray;
 template <class Tp, class Ex, class Lp> class    gslice_view;
 template <class Tp>                     class      mask_view;
-template <class Tp>                     class  indirect_view;
+template <class Tp, size_type Rank>     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
 
 template <class ValExpr>                struct  nc_val_expr;
 template <class Op, class A0>           struct  nc_unary_op;
 template <class Op, class A0, class A1> struct nc_binary_op;
 
+namespace detail {
+template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
+auto make_indirect_view(
+    MdSpan &&src, std::vector<size_type> indices,
+    std::array<bool, Rank> reverse_dims = {})
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
+}
+
 // Value-expression types participate in NumCxx expression evaluation.
 template <class ValExpr>                struct nc_is_val_expr                             : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<   gslice_view<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_is_val_expr<     mask_view<Tp        >> : std::true_type  {};
-template <class Tp>                     struct nc_is_val_expr< indirect_view<Tp        >> : std::true_type  {};
+template <class Tp, size_type Rank>     struct nc_is_val_expr< indirect_view<Tp, Rank  >> : std::true_type  {};
 template <class Tp, size_type Rank>     struct nc_is_val_expr<broadcast_view<Tp, Rank  >> : std::true_type  {};
 template <class ValExpr>                struct nc_is_val_expr<   nc_val_expr<ValExpr   >> : std::true_type  {};
 template <class Op, class A0>           struct nc_is_val_expr<   nc_unary_op<Op, A0    >> : std::true_type  {};
@@ -298,7 +306,7 @@ template <class Tp>                     struct nc_has_extents                   
 template <class Tp, class Ex, class Lp> struct nc_has_extents<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp, class Ex, class Lp> struct nc_has_extents<   gslice_view<Tp, Ex, Lp>> : std::true_type  {};
 template <class Tp>                     struct nc_has_extents<     mask_view<Tp        >> : std::true_type  {};
-template <class Tp>                     struct nc_has_extents< indirect_view<Tp        >> : std::true_type  {};
+template <class Tp, size_type Rank>     struct nc_has_extents< indirect_view<Tp, Rank  >> : std::true_type  {};
 template <class Tp, size_type Rank>     struct nc_has_extents<broadcast_view<Tp, Rank  >> : std::true_type  {};
 template <class ValExpr>                struct nc_has_extents<   nc_val_expr<ValExpr   >> : nc_has_extents<std::remove_cvref_t<ValExpr>> {};
 template <class Op, class A0>           struct nc_has_extents<   nc_unary_op<Op, A0    >> : nc_has_extents<std::remove_cvref_t<A0>     > {};
@@ -344,7 +352,10 @@ template <class Array> concept   static_array = static_extents<typename Array::e
 template <class Array> concept  dynamic_array = !static_array<Array>;
 
 template <class T> struct is_boolean_expr : std::bool_constant<
-    requires(const T &expr) { static_cast<bool>(expr.flat(size_type{})); }> {};
+    requires { typename std::remove_cvref_t<T>::value_type; } &&
+    (std::is_same_v<typename std::remove_cvref_t<T>::value_type, bool> ||
+     std::is_same_v<typename std::remove_cvref_t<T>::value_type, unsigned char>)>
+{};
 
 template <class Lhs, class Rhs>
 void check_shape_match(const Lhs &lhs, const Rhs &rhs) {
@@ -554,7 +565,8 @@ public:
   template <class... SizeTypes> explicit constexpr ndarray(SizeTypes... dyn_exts) : elem_(Extents(dyn_exts...)) {}
   ndarray(const    gslice_view<ElementType, Extents, LayoutPolicy> &sv) : elem_(sv.to_mdspan()) {}
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
-  ndarray(const indirect_view<ElementType>                        &iv) : elem_(iv.to_mdspan()) {}
+  ndarray(const indirect_view<ElementType, Extents::rank()> &iv)
+      : elem_(iv.to_mdspan()) {}
   template <class BroadcastElement, ::numcxx::size_type Rank>
   explicit ndarray(const broadcast_view<BroadcastElement, Rank> &bv);
   // Broadcast views remain explicit-only to preserve their materialization API.
@@ -620,18 +632,24 @@ public:
   }
 
   // subset operations with initializer-list offsets.
-  [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
-    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets.begin(), offsets.end()));
+  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) const {
+    return detail::make_indirect_view(
+        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()));
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets)       {
-    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets.begin(), offsets.end()));
+  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) {
+    return detail::make_indirect_view(
+        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()));
   }
   // subset operations with array offsets.
-  [[nodiscard]] indirect_view<const element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
-    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) const {
+    return detail::make_indirect_view(
+        to_mdspan(),
+        std::vector<size_type>(indices.data(), indices.data() + indices.size()));
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets)       {
-    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) {
+    return detail::make_indirect_view(
+        to_mdspan(),
+        std::vector<size_type>(indices.data(), indices.data() + indices.size()));
   }
 
   template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
@@ -726,7 +744,7 @@ private:
   template <class, class, class> friend class       ndarray;
   template <class, class, class> friend class    gslice_view;
   template <class>               friend class     mask_view;
-  template <class>               friend class indirect_view;
+  template <class, ::numcxx::size_type> friend class indirect_view;
   template <class>               friend class   nc_val_expr;
   // clang-format on
 
@@ -947,18 +965,28 @@ public:
   } 
 
   // subset operations with initializer-list offsets.
-  [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
-    return indirect_view<const element_type>(to_mdspan(), resolve_indirect_offsets(offsets.begin(), offsets.end()));
+  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) const {
+    return detail::make_indirect_view(
+        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()),
+        reverse_dims_);
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets)       {
-    return indirect_view<      element_type>(to_mdspan(), resolve_indirect_offsets(offsets.begin(), offsets.end()));
+  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) {
+    return detail::make_indirect_view(
+        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()),
+        reverse_dims_);
   }
   // subset operations with array offsets.
-  [[nodiscard]] indirect_view<const element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
-    return indirect_view<const element_type>(to_mdspan(), resolve_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
+  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) const {
+    return detail::make_indirect_view(
+        to_mdspan(),
+        std::vector<size_type>(indices.data(), indices.data() + indices.size()),
+        reverse_dims_);
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets)       {
-    return indirect_view<      element_type>(to_mdspan(), resolve_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
+  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) {
+    return detail::make_indirect_view(
+        to_mdspan(),
+        std::vector<size_type>(indices.data(), indices.data() + indices.size()),
+        reverse_dims_);
   }
 
   template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
@@ -1400,24 +1428,24 @@ template <class Tp, size_type Rank>
 struct is_broadcast_source<broadcast_view<Tp, Rank>> : std::true_type {};
 
 // clang-format off
-template <class Tp> class index_accessor {
+template <class Tp> class mask_accessor {
 public:
   using element_type     = Tp;
   using reference        = element_type &;
   using data_handle_type = element_type *;
-  using offset_policy    = index_accessor;
+  using offset_policy    = mask_accessor;
 
-           index_accessor() = default;
-  explicit index_accessor(const std::vector<size_type> &idxs) : indices_(idxs) {}
+           mask_accessor() = default;
+  explicit mask_accessor(std::vector<size_type> idxs) : indices_(std::move(idxs)) {}
 
   reference access(const data_handle_type p, const size_type i) const noexcept {
-    NUMCXX_ASSERT(i < indices_.size(), "index_accessor::access: index out of bounds");
+    NUMCXX_ASSERT(i < indices_.size(), "mask_accessor::access: index out of bounds");
     return p[indices_[i]];
   }
   
   data_handle_type offset(const data_handle_type p, const size_type i) const noexcept { return p + indices_[i]         ; }
-  friend bool operator==(const index_accessor &a, const index_accessor &b)   noexcept { return a.indices_ == b.indices_; }
-  friend bool operator!=(const index_accessor &a, const index_accessor &b)   noexcept { return        !(a == b)        ; }
+  friend bool operator==(const mask_accessor &a, const mask_accessor &b)   noexcept { return a.indices_ == b.indices_; }
+  friend bool operator!=(const mask_accessor &a, const mask_accessor &b)   noexcept { return        !(a == b)        ; }
 
 private:
   std::vector<size_type> indices_;
@@ -1441,8 +1469,8 @@ public:
 
   // layout and accessor
   using         layout_type = default_layout;
-  using const_accessor_type = detail::index_accessor<const element_type>;
-  using       accessor_type = detail::index_accessor<      element_type>;
+  using const_accessor_type = detail::mask_accessor<const element_type>;
+  using       accessor_type = detail::mask_accessor<      element_type>;
 
   // mdspan
   using   const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type, const_accessor_type>;
@@ -1560,7 +1588,7 @@ private:
 
     auto base = data_span.data_handle();
     extents_type ext(offsets.size());
-    auto acc = detail::index_accessor<element_type>(std::move(offsets));
+    auto acc = detail::mask_accessor<element_type>(std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
   }
 
@@ -1569,7 +1597,7 @@ private:
                      std::vector<size_type> offsets) {
     auto base = data_span.data_handle();
     extents_type ext(offsets.size());
-    auto acc = detail::index_accessor<element_type>(std::move(offsets));
+    auto acc = detail::mask_accessor<element_type>(std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
   }
 
@@ -1598,161 +1626,292 @@ private:
   mdspan_type span_;
 };
 
-// [numcxx.indirect_view]
-template <class ElementType> class indirect_view {
+namespace detail {
+template <class Tp, size_type Rank>
+class indirect_accessor {
 public:
-  // clang-format off
-  // element
+  using element_type = Tp;
+  using reference = element_type &;
+  using data_handle_type = element_type *;
+  using offset_policy = indirect_accessor;
+
+  indirect_accessor() = default;
+  indirect_accessor(std::vector<size_type> indices,
+                    std::array<size_type, Rank> source_extents,
+                    std::array<size_type, Rank> view_extents,
+                    std::array<size_type, Rank> strides,
+                    std::array<bool, Rank> reverse_dims)
+      : indices_(std::move(indices)), source_extents_(source_extents),
+        view_extents_(view_extents), strides_(strides),
+        reverse_dims_(reverse_dims) {}
+  template <class Other>
+    requires std::same_as<std::remove_const_t<Other>,
+                          std::remove_const_t<Tp>>
+  indirect_accessor(const indirect_accessor<Other, Rank> &other)
+      : indices_(other.indices_), source_extents_(other.source_extents_),
+        view_extents_(other.view_extents_), strides_(other.strides_),
+        reverse_dims_(other.reverse_dims_) {}
+
+  reference access(data_handle_type p, size_type i) const noexcept {
+    return p[physical_offset(i)];
+  }
+  data_handle_type offset(data_handle_type p, size_type i) const noexcept {
+    return p + physical_offset(i);
+  }
+  friend bool operator==(const indirect_accessor &a,
+                         const indirect_accessor &b) noexcept {
+    return a.indices_ == b.indices_ && a.source_extents_ == b.source_extents_ &&
+           a.view_extents_ == b.view_extents_ && a.strides_ == b.strides_ &&
+           a.reverse_dims_ == b.reverse_dims_;
+  }
+
+private:
+  template <class, size_type> friend class indirect_accessor;
+  template <class, size_type> friend class ::numcxx::indirect_view; 
+  size_type physical_offset(size_type i) const noexcept {
+    size_type offset = 0;
+    for (size_type r = Rank; r-- > 0;) {
+      size_type coordinate = i % view_extents_[r];
+      i /= view_extents_[r];
+      if (r == 0)
+        coordinate = indices_[coordinate];
+      if (reverse_dims_[r])
+        coordinate = source_extents_[r] - 1 - coordinate;
+      offset += coordinate * strides_[r];
+    }
+    return offset;
+  }
+  std::vector<size_type> indices_;
+  std::array<size_type, Rank> source_extents_{};
+  std::array<size_type, Rank> view_extents_{};
+  std::array<size_type, Rank> strides_{};
+  std::array<bool, Rank> reverse_dims_{};
+};
+} // namespace detail
+
+// [numcxx.indirect_view]
+template <class ElementType, size_type Rank>
+class indirect_view {
+public:
   using element_type = ElementType;
-  using   value_type = std::remove_cv_t<element_type>;
-
-  // extents
-  using extents_type = dextents<1>;
-  using   index_type = typename extents_type::index_type;
-  using    size_type = typename extents_type::size_type;
-  using    rank_type = typename extents_type::rank_type;
-
-  // layout and accessor
-  using         layout_type = default_layout;
-  using const_accessor_type = detail::index_accessor<const element_type>;
-  using       accessor_type = detail::index_accessor<      element_type>;
-
-  // mdspan
-  using   const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type, const_accessor_type>;
-  using         mdspan_type = detail::mdspan<      element_type, extents_type, layout_type,       accessor_type>;
-
-  // reference
+  using value_type = std::remove_cv_t<element_type>;
+  using extents_type = dextents<Rank>;
+  using index_type = typename extents_type::index_type;
+  using size_type = typename extents_type::size_type;
+  using rank_type = typename extents_type::rank_type;
+  using layout_type = layout_right;
+  using accessor_type = detail::indirect_accessor<element_type, Rank>;
+  using const_accessor_type =
+      detail::indirect_accessor<const value_type, Rank>;
+  using mdspan_type =
+      detail::mdspan<element_type, extents_type, layout_type, accessor_type>;
+  using const_mdspan_type = detail::mdspan<const value_type, extents_type,
+                                           layout_type, const_accessor_type>;
+  using reference = typename mdspan_type::reference;
   using const_reference = typename const_mdspan_type::reference;
-  using       reference = typename       mdspan_type::reference;
+  using data_handle_type = typename mdspan_type::data_handle_type;
 
-  // data_handle
-  using const_data_handle_type = typename const_mdspan_type::data_handle_type;
-  using       data_handle_type = typename       mdspan_type::data_handle_type;
+  static constexpr rank_type rank() noexcept { return Rank; }
+  static constexpr rank_type rank_dynamic() noexcept { return Rank; }
+  static constexpr size_type static_extent(rank_type r) noexcept {
+    return extents_type::static_extent(r);
+  }
+  constexpr index_type extent(rank_type r) const noexcept {
+    return span_.extent(r);
+  }
+  constexpr size_type size() const noexcept { return span_.size(); }
+  constexpr bool empty() const noexcept { return span_.empty(); }
+  constexpr const extents_type &extents() const noexcept {
+    return span_.extents();
+  }
+  constexpr data_handle_type data_handle() const noexcept {
+    return span_.data_handle();
+  }
+  constexpr index_type stride(rank_type r) const noexcept {
+    return span_.stride(r);
+  }
 
-  static constexpr  rank_type  rank        (           )       noexcept { return extents_type::rank()          ; }
-  static constexpr  rank_type  rank_dynamic(           )       noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr  size_type static_extent(rank_type r)       noexcept { return extents_type::static_extent(r); }
-         constexpr index_type        extent(rank_type r) const noexcept { return span_.extent(r)               ; }
-
-  //--------------------------------------------------------------------------------
-  // [numcxx.indirect_view.cons], indirect_view constructors, destructor, and assignment
-
-  // construct/destroy:
   indirect_view() = delete;
-  indirect_view(const indirect_view &) = default;
-  indirect_view(indirect_view &&) noexcept = default;
-  ~indirect_view() = default;
+  indirect_view(data_handle_type data, extents_type extents,
+                accessor_type accessor)
+      : span_(data, extents, std::move(accessor)) {}
 
-  // Linear access in view order: operator[] is unchecked; at() checks bounds.
+  template <class... Idxs>
+    requires elem_access_arguments<Rank, Idxs...>
+  [[nodiscard]] reference operator()(Idxs &&...idxs) {
+    return access(std::forward<Idxs>(idxs)...);
+  }
+  template <class... Idxs>
+    requires elem_access_arguments<Rank, Idxs...>
+  [[nodiscard]] const_reference operator()(Idxs &&...idxs) const {
+    return access(std::forward<Idxs>(idxs)...);
+  }
+
+  [[nodiscard]] reference operator[](size_type i) { return flat_unchecked(i); }
   [[nodiscard]] const_reference operator[](size_type i) const {
     return flat_unchecked(i);
   }
-  [[nodiscard]] reference operator[](size_type i) {
+  [[nodiscard]] reference at(size_type i) {
+    detail::checked_index(i, size(), "indirect_view::at");
     return flat_unchecked(i);
   }
   [[nodiscard]] const_reference at(size_type i) const {
     detail::checked_index(i, size(), "indirect_view::at");
-    return (*this)[i];
-  }
-  [[nodiscard]] reference at(size_type i) {
-    detail::checked_index(i, size(), "indirect_view::at");
-    return (*this)[i];
-  }
-
-  // flattened element access using the default_layout order, independent of the actual storage layout.
-  [[nodiscard]] const_reference flat(size_type i) const {
-    detail::checked_index(i, size(), "indirect_view::flat");
     return flat_unchecked(i);
   }
   [[nodiscard]] reference flat(size_type i) {
     detail::checked_index(i, size(), "indirect_view::flat");
     return flat_unchecked(i);
   }
-  // Internal API (not stable): unchecked flat access; requires i < size().
-  // Bypass mdspan::operator[] to avoid any potential bounds checking.
-  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
-    return span_.accessor().offset(span_.data_handle(), i)[0];
+  [[nodiscard]] const_reference flat(size_type i) const {
+    detail::checked_index(i, size(), "indirect_view::flat");
+    return flat_unchecked(i);
   }
   [[nodiscard]] reference flat_unchecked(size_type i) {
-    return span_.accessor().offset(span_.data_handle(), i)[0];
+    return span_.data_handle()[span_.accessor().physical_offset(i)];
+  }
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
+    return span_.data_handle()[span_.accessor().physical_offset(i)];
   }
 
-  // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
-  auto operator-() const { return apply_unary_op<std::negate>          (); }
-  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
+  auto operator-() const { return apply_unary_op<std::negate>(); }
+  auto operator~() const { return apply_unary_op<detail::nc_bit_not>(); }
+  auto operator!() const { return apply_unary_op<std::logical_not>(); }
 
-  // computed assignment:
-  indirect_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
-  indirect_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
-  indirect_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
-  indirect_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
-  indirect_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
-  indirect_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
-  indirect_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
-  indirect_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
-  indirect_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
+  indirect_view &operator=(const value_type &x) {
+    return apply_scalar_op([](value_type &a, value_type b) { a = b; }, x);
+  }
+  indirect_view &operator+=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b; }, x); }
+  indirect_view &operator-=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b; }, x); }
+  indirect_view &operator*=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b; }, x); }
+  indirect_view &operator/=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b; }, x); }
+  indirect_view &operator%=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b; }, x); }
+  indirect_view &operator&=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b; }, x); }
+  indirect_view &operator|=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b; }, x); }
+  indirect_view &operator^=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b; }, x); }
   indirect_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
   indirect_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
+  template <value_expression Expr> indirect_view &operator+=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a += b; }, e); }
+  template <value_expression Expr> indirect_view &operator-=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a -= b; }, e); }
+  template <value_expression Expr> indirect_view &operator*=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a *= b; }, e); }
+  template <value_expression Expr> indirect_view &operator/=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a /= b; }, e); }
+  template <value_expression Expr> indirect_view &operator%=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a %= b; }, e); }
+  template <value_expression Expr> indirect_view &operator&=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a &= b; }, e); }
+  template <value_expression Expr> indirect_view &operator|=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a |= b; }, e); }
+  template <value_expression Expr> indirect_view &operator^=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a ^= b; }, e); }
+  template <value_expression Expr> indirect_view &operator<<=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a <<= b; }, e); }
+  template <value_expression Expr> indirect_view &operator>>=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a >>= b; }, e); }
 
-  template <value_expression Expr> indirect_view &operator=  (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
-  template <value_expression Expr> indirect_view &operator+= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
-  template <value_expression Expr> indirect_view &operator-= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
-  template <value_expression Expr> indirect_view &operator*= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
-  template <value_expression Expr> indirect_view &operator/= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
-  template <value_expression Expr> indirect_view &operator%= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
-  template <value_expression Expr> indirect_view &operator&= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
-  template <value_expression Expr> indirect_view &operator|= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
-  template <value_expression Expr> indirect_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
-  template <value_expression Expr> indirect_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
-  template <value_expression Expr> indirect_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+  template <value_expression Expr>
+  indirect_view &operator=(const Expr &expr) {
+    return apply_expr_op([](value_type &a, value_type b) { a = b; }, expr);
+  }
 
-  // observers
-  [[nodiscard]] constexpr              size_type         size() const noexcept { return span_.size()       ; }
-  [[nodiscard]] constexpr                   bool        empty() const noexcept { return span_.empty()      ; }
-  [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
-  [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
-
-  // mdspan interoperability
-         constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_          ; }
-         constexpr        mdspan_type                to_mdspan()       noexcept { return span_          ; }
-  // clang-format on
+  constexpr const_mdspan_type to_mdspan() const noexcept {
+    return {span_.data_handle(), span_.extents(),
+            const_accessor_type(span_.accessor())};
+  }
+  constexpr mdspan_type to_mdspan() noexcept { return span_; }
 
 private:
-  template <typename MdSpan>
-  explicit indirect_view(const MdSpan &data_span,
-                         std::vector<size_type> offsets) {
-    auto base = data_span.data_handle();
-    extents_type ext(offsets.size());
-    auto acc = detail::index_accessor<element_type>(std::move(offsets));
-    span_ = mdspan_type(base, ext, acc);
+  template <class... Idxs>
+  auto normalize_indices(Idxs &&...idxs) const {
+    std::array<index_type, Rank> indices{
+        static_cast<index_type>(std::forward<Idxs>(idxs))...};
+    for (rank_type r = 0; r < Rank; ++r) {
+      if (indices[r] < 0)
+        indices[r] += extent(r);
+      NUMCXX_ASSERT(indices[r] >= 0 && indices[r] < extent(r),
+                    "indirect_view index out of bounds");
+    }
+    return indices;
+  }
+
+  template <class... Idxs>
+  const_reference access(Idxs &&...idxs) const {
+    const auto indices = normalize_indices(std::forward<Idxs>(idxs)...);
+    size_type flat_idx = 0;
+    size_type stride = 1;
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
+      for (size_type r = Rank; r-- > 0;) {
+        flat_idx += indices[r] * stride;
+        stride *= span_.extent(r);
+      }
+    } else {
+      for (size_type r = 0; r < Rank; ++r) {
+        flat_idx += indices[r] * stride;
+        stride *= span_.extent(r);
+      }
+    }
+    return span_.data_handle()[span_.accessor().physical_offset(flat_idx)];
+  }
+
+  template <class... Idxs>
+  reference access(Idxs &&...idxs) {
+    const auto indices = normalize_indices(std::forward<Idxs>(idxs)...);
+    size_type flat_idx = 0;
+    size_type stride = 1;
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
+      for (size_type r = Rank; r-- > 0;) {
+        flat_idx += indices[r] * stride;
+        stride *= span_.extent(r);
+      }
+    } else {
+      for (size_type r = 0; r < Rank; ++r) {
+        flat_idx += indices[r] * stride;
+        stride *= span_.extent(r);
+      }
+    }
+    return span_.data_handle()[span_.accessor().physical_offset(flat_idx)];
   }
 
   template <template <class> class Op> auto apply_unary_op() const {
     return detail::make_unary_op<Op<value_type>>(*this);
   }
-
-  template <typename Op>
-  indirect_view &apply_scalar_op(Op &&op, const value_type &x) {
+  template <class Op> indirect_view &apply_scalar_op(Op op, value_type x) {
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), x);
     return *this;
   }
-
   template <class Op, class Expr>
-  indirect_view &apply_expr_op(Op &&op, const Expr &expr) {
+  indirect_view &apply_expr_op(Op op, const Expr &expr) {
     detail::check_shape_match(*this, expr);
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), expr.flat_unchecked(i));
     return *this;
   }
-
-  template <class, class, class> friend class ndarray;
-  template <class, class, class> friend class gslice_view;
-
+  template <class, ::numcxx::size_type> friend class indirect_view;
   mdspan_type span_;
 };
+
+namespace detail {
+template <class MdSpan, size_type Rank>
+auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,
+                        std::array<bool, Rank> reverse_dims)
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type,
+                     Rank> {
+  using element_type = typename std::remove_cvref_t<MdSpan>::element_type;
+  static_assert(Rank > 0, "Axis 0 selection requires rank at least one");
+  std::array<size_type, Rank> source_extents{}, view_extents{}, strides{};
+  for (size_type r = 0; r < Rank; ++r) {
+    source_extents[r] = static_cast<size_type>(src.extent(r));
+    view_extents[r] = source_extents[r];
+    strides[r] = static_cast<size_type>(src.stride(r));
+  }
+  for (auto index : indices)
+    NUMCXX_ASSERT(index < source_extents[0],
+                  "indirect_view axis 0 index out of bounds");
+  view_extents[0] = indices.size();
+  using view_type = indirect_view<element_type, Rank>;
+  using extents_type = typename view_type::extents_type;
+  using accessor_type = typename view_type::accessor_type;
+  return view_type(
+      src.data_handle(), extents_type(view_extents),
+      accessor_type(std::move(indices), source_extents, view_extents, strides,
+                    reverse_dims));
+}
+} // namespace detail
 
 // [numcxx.array_initialization] initialization of ndarrays and slice views from nested initializer_list
 namespace detail {
@@ -3157,8 +3316,9 @@ template <class Tp> struct nc_operand_storage<mask_view<Tp>> {
   using type = const mask_view<Tp> &;
 };
 
-template <class Tp> struct nc_operand_storage<indirect_view<Tp>> {
-  using type = const indirect_view<Tp> &;
+template <class Tp, size_type Rank>
+struct nc_operand_storage<indirect_view<Tp, Rank>> {
+  using type = const indirect_view<Tp, Rank> &;
 };
 
 template <class T>
