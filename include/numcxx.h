@@ -614,23 +614,23 @@ public:
     return      mask_view<const element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
-  [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr) {
+  [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr)       {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return      mask_view<      element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
 
   // subset operations with initializer-list offsets.
   [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
-    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets));
+    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets.begin(), offsets.end()));
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets) {
-    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets));
+  [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets)       {
+    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets.begin(), offsets.end()));
   }
   // subset operations with array offsets.
   [[nodiscard]] indirect_view<const element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
     return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) {
+  [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets)       {
     return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
 
@@ -941,31 +941,24 @@ public:
     return mask_view<const element_type>(to_mdspan(), extract_mask_offsets(expr));
   }
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
-  [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr) {
+  [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr)       {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<      element_type>(to_mdspan(), extract_mask_offsets(expr));
   } 
 
+  // subset operations with initializer-list offsets.
   [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
-    std::vector<size_type> mapped_offsets(offsets);
-    map_offsets(mapped_offsets);
-    return indirect_view<const element_type>(to_mdspan(), std::move(mapped_offsets));
+    return indirect_view<const element_type>(to_mdspan(), extract_indirect_offsets(offsets.begin(), offsets.end()));
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets) {
-    std::vector<size_type> mapped_offsets(offsets);
-    map_offsets(mapped_offsets);
-    return indirect_view<element_type>(to_mdspan(), std::move(mapped_offsets));
+  [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets)       {
+    return indirect_view<      element_type>(to_mdspan(), extract_indirect_offsets(offsets.begin(), offsets.end()));
   }
   // subset operations with array offsets.
   [[nodiscard]] indirect_view<const element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
-    std::vector<size_type> mapped_offsets(offsets.data(), offsets.data() + offsets.size());
-    map_offsets(mapped_offsets);
-    return indirect_view<const element_type>(to_mdspan(), std::move(mapped_offsets));
+    return indirect_view<const element_type>(to_mdspan(), extract_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
   }
-  [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) {
-    std::vector<size_type> mapped_offsets(offsets.data(), offsets.data() + offsets.size());
-    map_offsets(mapped_offsets);
-    return indirect_view<element_type>(to_mdspan(), std::move(mapped_offsets));
+  [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets)       {
+    return indirect_view<      element_type>(to_mdspan(), extract_indirect_offsets(offsets.data(), offsets.data() + offsets.size()));
   }
 
   template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
@@ -1136,9 +1129,12 @@ private:
     return offsets;
   }
 
-  void map_offsets(std::vector<size_type> &offsets) const noexcept {
+  template <typename Iterator>
+  std::vector<size_type> extract_indirect_offsets(Iterator first, Iterator last) const {
+    std::vector<size_type> offsets(first, last);
     for (auto &offset : offsets)
       offset = calc_flat_offset(offset);
+    return offsets;
   }
 
   template <template <class> class Op> auto apply_unary_op() const {
