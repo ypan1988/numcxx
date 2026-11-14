@@ -938,23 +938,13 @@ public:
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<const element_type> operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    std::vector<size_type> offsets;
-    offsets.reserve(expr.size());
-    for (size_type i = 0; i < expr.size(); ++i)
-      if (static_cast<bool>(expr.flat_unchecked(i)))
-        offsets.push_back(calc_flat_offset(i));
-    return mask_view<const element_type>(to_mdspan(), std::move(offsets));
+    return mask_view<const element_type>(to_mdspan(), extract_mask_offsets(expr));
   }
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr) {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    std::vector<size_type> offsets;
-    offsets.reserve(expr.size());
-    for (size_type i = 0; i < expr.size(); ++i)
-      if (static_cast<bool>(expr.flat_unchecked(i)))
-        offsets.push_back(calc_flat_offset(i));
-    return mask_view<element_type>(to_mdspan(), std::move(offsets));
-  }
+    return mask_view<      element_type>(to_mdspan(), extract_mask_offsets(expr));
+  } 
 
   [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
     std::vector<size_type> mapped_offsets(offsets);
@@ -1134,6 +1124,16 @@ private:
         process_dim(r);
     }
     return offset;
+  }
+
+  template <typename BoolExpr>
+  std::vector<size_type> extract_mask_offsets(const BoolExpr& expr) const {
+    std::vector<size_type> offsets;
+    offsets.reserve(expr.size());
+    for (size_type i = 0; i < expr.size(); ++i)
+      if (static_cast<bool>(expr.flat_unchecked(i)))
+        offsets.push_back(calc_flat_offset(i));
+    return offsets;
   }
 
   void map_offsets(std::vector<size_type> &offsets) const noexcept {
