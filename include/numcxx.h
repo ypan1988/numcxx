@@ -934,42 +934,34 @@ public:
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
   [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
-  template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
-  template <std::integral Extent, ::numcxx::size_type Rank>
-  [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
-
-  // subset operations (mask_view):
-  template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
-  [[nodiscard]] mask_view<element_type>
-  operator[](BoolExpr &&expr) const {
+  // subset operations with boolean mask.
+  template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
+  [[nodiscard]] mask_view<const element_type> operator[](BoolExpr &&expr) const {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
+    return      mask_view<const element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
-  template <typename BoolExpr, std::enable_if_t<detail::is_boolean_expr<std::decay_t<BoolExpr>>::value, int> = 0>
-  [[nodiscard]] mask_view<element_type>
-  operator[](BoolExpr &&expr) {
+  template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
+  [[nodiscard]] mask_view<      element_type> operator[](BoolExpr &&expr) {
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
-    return mask_view<element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
+    return      mask_view<      element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
 
-  // subset operations (indirect_view):
-  [[nodiscard]] indirect_view<element_type>
-  operator[](std::initializer_list<size_type> offsets) const {
-    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
+  [[nodiscard]] indirect_view<const element_type> operator[](std::initializer_list<size_type> offsets) const {
+    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets));
   }
-  [[nodiscard]] indirect_view<element_type>
-  operator[](std::initializer_list<size_type> offsets) {
-    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets));
+  [[nodiscard]] indirect_view<      element_type> operator[](std::initializer_list<size_type> offsets) {
+    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets));
+  }
+  // subset operations with array offsets.
+  [[nodiscard]] indirect_view<const element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) const {
+    return      indirect_view<const element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
+  }
+  [[nodiscard]] indirect_view<      element_type> operator[](const ndarray<size_type, dextents<1>> &offsets) {
+    return      indirect_view<      element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
   }
 
-  [[nodiscard]] indirect_view<element_type>
-  operator[](const ndarray<size_type, dextents<1>> &offsets) const {
-    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
-  }
-  [[nodiscard]] indirect_view<element_type>
-  operator[](const ndarray<size_type, dextents<1>> &offsets) {
-    return indirect_view<element_type>(to_mdspan(), std::vector<size_type>(offsets.data(), offsets.data() + offsets.size()));
-  }
+  template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
+  template <std::integral Extent, ::numcxx::size_type Rank> [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
