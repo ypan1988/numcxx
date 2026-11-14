@@ -277,6 +277,7 @@ template <class Tp, class Ex, class Lp> class    gslice_view;
 template <class Tp>                     class      mask_view;
 template <class Tp, size_type Rank>     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
+template <class... Args>                struct       ix_pack;
 
 template <class ValExpr>                struct  nc_val_expr;
 template <class Op, class A0>           struct  nc_unary_op;
@@ -288,6 +289,15 @@ auto make_indirect_view(
     MdSpan &&src, std::vector<size_type> indices,
     std::array<bool, Rank> reverse_dims = {})
     -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
+
+template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
+auto make_indirect_view(
+    MdSpan &&src, std::vector<size_type> indices, size_type target_axis,
+    std::array<bool, Rank> reverse_dims = {})
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
+
+template <class Array, class... Args>
+auto make_ix_view(Array &&src, const ix_pack<Args...> &pack);
 }
 
 // Value-expression types participate in NumCxx expression evaluation.
@@ -469,6 +479,159 @@ private:
 // Deduce and store selector types by value.
 template <class... Args> gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
 
+// [numcxx.ix]
+/// Multidimensional indirect index pack.
+template <class... Args>
+struct ix_pack {
+  std::tuple<Args...> args;
+  constexpr explicit ix_pack(Args... a) : args(std::move(a)...) {}
+  [[nodiscard]] constexpr const auto &arguments() const noexcept { return args; }
+};
+template <class... Args>
+ix_pack(Args...) -> ix_pack<std::decay_t<Args>...>;
+
+// Helper overloads to allow syntax like ix({0, 2}), ix(full_extent, {1, 3}), etc.
+// 1 argument
+inline auto ix(std::initializer_list<size_type> il) {
+  return ix_pack<std::vector<size_type>>(std::vector<size_type>(il));
+}
+template <class T0>
+auto ix(T0 &&a0) {
+  return ix_pack<std::decay_t<T0>>(std::forward<T0>(a0));
+}
+
+// 2 arguments
+template <class T0, class T1>
+auto ix(T0 &&a0, T1 &&a1) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>>(std::forward<T0>(a0),
+                                                     std::forward<T1>(a1));
+}
+template <class T1>
+auto ix(std::initializer_list<size_type> a0, T1 &&a1) {
+  return ix_pack<std::vector<size_type>, std::decay_t<T1>>(
+      std::vector<size_type>(a0), std::forward<T1>(a1));
+}
+template <class T0>
+auto ix(T0 &&a0, std::initializer_list<size_type> a1) {
+  return ix_pack<std::decay_t<T0>, std::vector<size_type>>(
+      std::forward<T0>(a0), std::vector<size_type>(a1));
+}
+
+// 3 arguments
+template <class T0, class T1, class T2>
+auto ix(T0 &&a0, T1 &&a1, T2 &&a2) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2));
+}
+template <class T1, class T2>
+auto ix(std::initializer_list<size_type> a0, T1 &&a1, T2 &&a2) {
+  return ix_pack<std::vector<size_type>, std::decay_t<T1>, std::decay_t<T2>>(
+      std::vector<size_type>(a0), std::forward<T1>(a1), std::forward<T2>(a2));
+}
+template <class T0, class T2>
+auto ix(T0 &&a0, std::initializer_list<size_type> a1, T2 &&a2) {
+  return ix_pack<std::decay_t<T0>, std::vector<size_type>, std::decay_t<T2>>(
+      std::forward<T0>(a0), std::vector<size_type>(a1), std::forward<T2>(a2));
+}
+template <class T0, class T1>
+auto ix(T0 &&a0, T1 &&a1, std::initializer_list<size_type> a2) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::vector<size_type>>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::vector<size_type>(a2));
+}
+
+// 4 arguments
+template <class T0, class T1, class T2, class T3>
+auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::decay_t<T3>>(std::forward<T0>(a0), std::forward<T1>(a1),
+                                   std::forward<T2>(a2), std::forward<T3>(a3));
+}
+template <class T1, class T2, class T3>
+auto ix(std::initializer_list<size_type> a0, T1 &&a1, T2 &&a2, T3 &&a3) {
+  return ix_pack<std::vector<size_type>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::decay_t<T3>>(std::vector<size_type>(a0),
+                                   std::forward<T1>(a1), std::forward<T2>(a2),
+                                   std::forward<T3>(a3));
+}
+template <class T0, class T2, class T3>
+auto ix(T0 &&a0, std::initializer_list<size_type> a1, T2 &&a2, T3 &&a3) {
+  return ix_pack<std::decay_t<T0>, std::vector<size_type>, std::decay_t<T2>,
+                 std::decay_t<T3>>(std::forward<T0>(a0),
+                                   std::vector<size_type>(a1),
+                                   std::forward<T2>(a2), std::forward<T3>(a3));
+}
+template <class T0, class T1, class T3>
+auto ix(T0 &&a0, T1 &&a1, std::initializer_list<size_type> a2, T3 &&a3) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::vector<size_type>,
+                 std::decay_t<T3>>(std::forward<T0>(a0), std::forward<T1>(a1),
+                                   std::vector<size_type>(a2),
+                                   std::forward<T3>(a3));
+}
+template <class T0, class T1, class T2>
+auto ix(T0 &&a0, T1 &&a1, T2 &&a2, std::initializer_list<size_type> a3) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::vector<size_type>>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
+      std::vector<size_type>(a3));
+}
+
+// 5 arguments
+template <class T0, class T1, class T2, class T3, class T4>
+auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3, T4 &&a4) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::decay_t<T3>, std::decay_t<T4>>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
+      std::forward<T3>(a3), std::forward<T4>(a4));
+}
+template <class T1, class T2, class T3, class T4>
+auto ix(std::initializer_list<size_type> a0, T1 &&a1, T2 &&a2, T3 &&a3, T4 &&a4) {
+  return ix_pack<std::vector<size_type>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::decay_t<T3>, std::decay_t<T4>>(
+      std::vector<size_type>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
+      std::forward<T3>(a3), std::forward<T4>(a4));
+}
+template <class T0, class T2, class T3, class T4>
+auto ix(T0 &&a0, std::initializer_list<size_type> a1, T2 &&a2, T3 &&a3, T4 &&a4) {
+  return ix_pack<std::decay_t<T0>, std::vector<size_type>, std::decay_t<T2>,
+                 std::decay_t<T3>, std::decay_t<T4>>(
+      std::forward<T0>(a0), std::vector<size_type>(a1), std::forward<T2>(a2),
+      std::forward<T3>(a3), std::forward<T4>(a4));
+}
+template <class T0, class T1, class T3, class T4>
+auto ix(T0 &&a0, T1 &&a1, std::initializer_list<size_type> a2, T3 &&a3, T4 &&a4) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::vector<size_type>,
+                 std::decay_t<T3>, std::decay_t<T4>>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::vector<size_type>(a2),
+      std::forward<T3>(a3), std::forward<T4>(a4));
+}
+template <class T0, class T1, class T2, class T4>
+auto ix(T0 &&a0, T1 &&a1, T2 &&a2, std::initializer_list<size_type> a3, T4 &&a4) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::vector<size_type>, std::decay_t<T4>>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
+      std::vector<size_type>(a3), std::forward<T4>(a4));
+}
+template <class T0, class T1, class T2, class T3>
+auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3, std::initializer_list<size_type> a4) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::decay_t<T3>, std::vector<size_type>>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
+      std::forward<T3>(a3), std::vector<size_type>(a4));
+}
+
+// 6+ arguments variadic fallback
+template <class T0, class T1, class T2, class T3, class T4, class T5,
+          class... Rest>
+auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3, T4 &&a4, T5 &&a5,
+        Rest &&...rest) {
+  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
+                 std::decay_t<T3>, std::decay_t<T4>, std::decay_t<T5>,
+                 std::decay_t<Rest>...>(
+      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
+      std::forward<T3>(a3), std::forward<T4>(a4), std::forward<T5>(a5),
+      std::forward<Rest>(rest)...);
+}
+
 // [numcxx.ndarray]
 namespace detail {
 template <class Ex>          struct static_extents_size;
@@ -618,6 +781,12 @@ public:
   [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return  detail::apply_indices(*this, selection.arguments()); }
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
   [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return  detail::apply_indices(*this, selection.arguments()); }
+
+  // subset operations with ix (multidimensional indirect view)
+  template <class... Args>
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) const;
+  template <class... Args>
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection);
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
@@ -952,6 +1121,12 @@ public:
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
   [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
+  // subset operations with ix (multidimensional indirect view)
+  template <class... Args>
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) const;
+  template <class... Args>
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection);
+
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
   [[nodiscard]] mask_view<const element_type> operator[](BoolExpr &&expr) const {
@@ -1037,6 +1212,10 @@ public:
   [[nodiscard]]        constexpr bool is_strided           () const    { return span_.mapping().is_strided()        ; }
   [[nodiscard]] constexpr  index_type stride(rank_type     r) const    { return span_.stride(r)                     ; }
   [[nodiscard]] constexpr bool has_reversed_dim() const noexcept { return has_reversed_dim_; }
+  [[nodiscard]] constexpr const std::array<bool, extents_type::rank()> &
+  reverse_dims() const noexcept {
+    return reverse_dims_;
+  }
   [[nodiscard]] auto eval() const;
 
   [[nodiscard]] auto sum() const { return eval().sum(); }
@@ -1637,18 +1816,29 @@ public:
 
   indirect_accessor() = default;
   indirect_accessor(std::vector<size_type> indices,
+                    size_type target_axis,
                     std::array<size_type, Rank> source_extents,
                     std::array<size_type, Rank> view_extents,
                     std::array<size_type, Rank> strides,
                     std::array<bool, Rank> reverse_dims)
-      : indices_(std::move(indices)), source_extents_(source_extents),
-        view_extents_(view_extents), strides_(strides),
-        reverse_dims_(reverse_dims) {}
+      : indices_(std::move(indices)), target_axis_(target_axis),
+        source_extents_(source_extents), view_extents_(view_extents),
+        strides_(strides), reverse_dims_(reverse_dims) {}
+
+  indirect_accessor(std::vector<size_type> indices,
+                    std::array<size_type, Rank> source_extents,
+                    std::array<size_type, Rank> view_extents,
+                    std::array<size_type, Rank> strides,
+                    std::array<bool, Rank> reverse_dims)
+      : indirect_accessor(std::move(indices), 0, source_extents, view_extents,
+                          strides, reverse_dims) {}
+
   template <class Other>
     requires std::same_as<std::remove_const_t<Other>,
                           std::remove_const_t<Tp>>
   indirect_accessor(const indirect_accessor<Other, Rank> &other)
-      : indices_(other.indices_), source_extents_(other.source_extents_),
+      : indices_(other.indices_), target_axis_(other.target_axis_),
+        source_extents_(other.source_extents_),
         view_extents_(other.view_extents_), strides_(other.strides_),
         reverse_dims_(other.reverse_dims_) {}
 
@@ -1660,7 +1850,8 @@ public:
   }
   friend bool operator==(const indirect_accessor &a,
                          const indirect_accessor &b) noexcept {
-    return a.indices_ == b.indices_ && a.source_extents_ == b.source_extents_ &&
+    return a.indices_ == b.indices_ && a.target_axis_ == b.target_axis_ &&
+           a.source_extents_ == b.source_extents_ &&
            a.view_extents_ == b.view_extents_ && a.strides_ == b.strides_ &&
            a.reverse_dims_ == b.reverse_dims_;
   }
@@ -1673,7 +1864,7 @@ private:
     for (size_type r = Rank; r-- > 0;) {
       size_type coordinate = i % view_extents_[r];
       i /= view_extents_[r];
-      if (r == 0)
+      if (r == target_axis_)
         coordinate = indices_[coordinate];
       if (reverse_dims_[r])
         coordinate = source_extents_[r] - 1 - coordinate;
@@ -1682,6 +1873,7 @@ private:
     return offset;
   }
   std::vector<size_type> indices_;
+  size_type target_axis_ = 0;
   std::array<size_type, Rank> source_extents_{};
   std::array<size_type, Rank> view_extents_{};
   std::array<size_type, Rank> strides_{};
@@ -1888,11 +2080,13 @@ private:
 namespace detail {
 template <class MdSpan, size_type Rank>
 auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,
+                        size_type target_axis,
                         std::array<bool, Rank> reverse_dims)
     -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type,
                      Rank> {
   using element_type = typename std::remove_cvref_t<MdSpan>::element_type;
-  static_assert(Rank > 0, "Axis 0 selection requires rank at least one");
+  static_assert(Rank > 0, "Axis selection requires rank at least one");
+  NUMCXX_ASSERT(target_axis < Rank, "indirect_view target_axis out of range");
   std::array<size_type, Rank> source_extents{}, view_extents{}, strides{};
   for (size_type r = 0; r < Rank; ++r) {
     source_extents[r] = static_cast<size_type>(src.extent(r));
@@ -1900,16 +2094,25 @@ auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,
     strides[r] = static_cast<size_type>(src.stride(r));
   }
   for (auto index : indices)
-    NUMCXX_ASSERT(index < source_extents[0],
-                  "indirect_view axis 0 index out of bounds");
-  view_extents[0] = indices.size();
+    NUMCXX_ASSERT(index < source_extents[target_axis],
+                  "indirect_view index out of bounds");
+  view_extents[target_axis] = indices.size();
   using view_type = indirect_view<element_type, Rank>;
   using extents_type = typename view_type::extents_type;
   using accessor_type = typename view_type::accessor_type;
   return view_type(
       src.data_handle(), extents_type(view_extents),
-      accessor_type(std::move(indices), source_extents, view_extents, strides,
-                    reverse_dims));
+      accessor_type(std::move(indices), target_axis, source_extents,
+                    view_extents, strides, reverse_dims));
+}
+
+template <class MdSpan, size_type Rank>
+auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,
+                        std::array<bool, Rank> reverse_dims)
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type,
+                     Rank> {
+  return make_indirect_view(std::forward<MdSpan>(src), std::move(indices), 0,
+                            reverse_dims);
 }
 } // namespace detail
 
@@ -2701,6 +2904,213 @@ template <typename... Args>
                                std::forward<Args>(args)...)
              : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
                    to_mdspan(), std::forward<Args>(args)...);
+}
+
+// [numcxx.ix_view]
+namespace detail {
+
+template <class T>
+struct is_indices_arg : std::bool_constant<!slice_specifier<T>> {};
+
+template <class T>
+inline constexpr bool is_indices_arg_v = is_indices_arg<T>::value;
+
+template <class T>
+std::vector<size_type> to_indices_vector(const T &arg) {
+  if constexpr (std::is_same_v<std::decay_t<T>, std::vector<size_type>>) {
+    return arg;
+  } else if constexpr (std::is_same_v<std::decay_t<T>,
+                                      std::initializer_list<size_type>>) {
+    return std::vector<size_type>(arg.begin(), arg.end());
+  } else if constexpr (requires { arg.data(); arg.size(); }) {
+    std::vector<size_type> res;
+    res.reserve(arg.size());
+    for (size_type i = 0; i < arg.size(); ++i) {
+      res.push_back(static_cast<size_type>(arg.data()[i]));
+    }
+    return res;
+  } else {
+    std::vector<size_type> res;
+    res.reserve(std::size(arg));
+    for (auto v : arg) {
+      res.push_back(static_cast<size_type>(v));
+    }
+    return res;
+  }
+}
+
+template <class PaddedTuple, std::size_t... Is>
+constexpr size_type find_target_axis_impl(std::index_sequence<Is...>) {
+  size_type found = sizeof...(Is);
+  ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? (found = Is, 0)
+                                                            : 0),
+   ...);
+  return found;
+}
+
+template <class PaddedTuple>
+constexpr size_type find_target_axis() {
+  return find_target_axis_impl<PaddedTuple>(
+      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+}
+
+template <class PaddedTuple, std::size_t... Is>
+constexpr size_type count_indices_impl(std::index_sequence<Is...>) {
+  return ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) +
+          ... + 0);
+}
+
+template <class PaddedTuple>
+constexpr size_type count_indices() {
+  return count_indices_impl<PaddedTuple>(
+      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+}
+
+template <class PaddedTuple, std::size_t... Is>
+constexpr size_type count_scalars_impl(std::index_sequence<Is...>) {
+  return ((scalar_index<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) + ... +
+          0);
+}
+
+template <class PaddedTuple>
+constexpr size_type count_scalars() {
+  return count_scalars_impl<PaddedTuple>(
+      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+}
+
+template <class PaddedTuple, size_type TAxis, std::size_t... Is>
+constexpr size_type compute_new_target_axis_impl(std::index_sequence<Is...>) {
+  return TAxis - (((Is < TAxis &&
+                    scalar_index<std::tuple_element_t<Is, PaddedTuple>>)
+                       ? 1
+                       : 0) +
+                  ... + 0);
+}
+
+template <class PaddedTuple, size_type TAxis>
+constexpr size_type compute_new_target_axis() {
+  return compute_new_target_axis_impl<PaddedTuple, TAxis>(
+      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+}
+
+template <std::size_t... Is>
+auto make_full_extents_tuple(std::index_sequence<Is...>) {
+  return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
+}
+
+template <size_type TargetAxis, size_type I, class Tuple>
+decltype(auto) get_replacement_element(Tuple &&t) {
+  if constexpr (I == TargetAxis) {
+    return ::numcxx::detail::full_extent;
+  } else {
+    return std::get<I>(std::forward<Tuple>(t));
+  }
+}
+
+template <size_type TargetAxis, class Tuple, std::size_t... Is>
+auto make_replacement_args_impl(Tuple &&t, std::index_sequence<Is...>) {
+  return std::tuple{get_replacement_element<TargetAxis, Is>(std::forward<Tuple>(t))...};
+}
+
+template <size_type TargetAxis, class Tuple>
+auto make_replacement_args(Tuple &&t) {
+  return make_replacement_args_impl<TargetAxis>(
+      std::forward<Tuple>(t),
+      std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
+}
+
+template <class Array, class... Args>
+[[nodiscard]] auto make_ix_view(Array &&src, const ix_pack<Args...> &pack) {
+  constexpr size_type SrcRank = std::remove_cvref_t<Array>::rank();
+  constexpr size_type PackSize = sizeof...(Args);
+  static_assert(PackSize <= SrcRank,
+                "Number of arguments in ix cannot exceed array rank");
+
+  auto padded_args = std::tuple_cat(
+      pack.arguments(),
+      make_full_extents_tuple(std::make_index_sequence<SrcRank - PackSize>{}));
+
+  using PaddedTuple = decltype(padded_args);
+  static_assert(count_indices<PaddedTuple>() == 1,
+                "ix requires exactly one discrete indices argument");
+
+  constexpr size_type TargetAxis = find_target_axis<PaddedTuple>();
+  constexpr size_type NumScalars = count_scalars<PaddedTuple>();
+  constexpr size_type ResultRank = SrcRank - NumScalars;
+  static_assert(ResultRank >= 1, "Result rank must be at least 1");
+
+  constexpr size_type NewTargetAxis =
+      compute_new_target_axis<PaddedTuple, TargetAxis>();
+
+  auto indices_vec = to_indices_vector(std::get<TargetAxis>(padded_args));
+
+  auto replacement_args = make_replacement_args<TargetAxis>(padded_args);
+
+  auto base_view = std::apply(
+      [&src](auto &&...args) {
+        return src(std::forward<decltype(args)>(args)...);
+      },
+      replacement_args);
+
+  using base_view_type = std::decay_t<decltype(base_view)>;
+  static_assert(base_view_type::rank() == ResultRank,
+                "Base view rank must match ResultRank");
+
+  for (auto idx : indices_vec) {
+    NUMCXX_ASSERT(idx < base_view.extent(NewTargetAxis),
+                  "indirect_view index out of bounds");
+  }
+
+  using element_type = typename base_view_type::element_type;
+  using view_type = indirect_view<element_type, ResultRank>;
+  using extents_type = typename view_type::extents_type;
+  using accessor_type = typename view_type::accessor_type;
+
+  std::array<size_type, ResultRank> source_extents{};
+  std::array<size_type, ResultRank> view_extents{};
+  std::array<size_type, ResultRank> strides{};
+  for (size_type r = 0; r < ResultRank; ++r) {
+    source_extents[r] = static_cast<size_type>(base_view.extent(r));
+    view_extents[r] = source_extents[r];
+    strides[r] = static_cast<size_type>(base_view.stride(r));
+  }
+  view_extents[NewTargetAxis] = indices_vec.size();
+  std::array<bool, ResultRank> reverse_dims = base_view.reverse_dims();
+
+  return view_type(
+      base_view.data_handle(), extents_type(view_extents),
+      accessor_type(std::move(indices_vec), NewTargetAxis, source_extents,
+                    view_extents, strides, reverse_dims));
+}
+
+} // namespace detail
+
+template <typename Tp, typename Extents, typename Lp>
+template <class... Args>
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator[](
+    const ix_pack<Args...> &selection) const {
+  return detail::make_ix_view(*this, selection);
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <class... Args>
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator[](
+    const ix_pack<Args...> &selection) {
+  return detail::make_ix_view(*this, selection);
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <class... Args>
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator[](
+    const ix_pack<Args...> &selection) const {
+  return detail::make_ix_view(*this, selection);
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <class... Args>
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator[](
+    const ix_pack<Args...> &selection) {
+  return detail::make_ix_view(*this, selection);
 }
 
 template <typename Layout, typename Extents>
