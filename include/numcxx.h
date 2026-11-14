@@ -1,4 +1,4 @@
-//===-------------------------------numcxx.h-------------------------------===//
+﻿//===-------------------------------numcxx.h-------------------------------===//
 //
 // Portions of this file are derived from the LLVM libc++ `valarray` code.
 // Original libc++ source code is licensed under the Apache License v2.0 with
@@ -598,13 +598,13 @@ public:
   [[nodiscard]]          auto  operator()(Args&&... args)      ;
   
   // subset operations with slice.
-  [[nodiscard]]          auto  operator[](const  slice          &selection) const { return (*this)(selection)                                  ; }
-  [[nodiscard]]          auto  operator[](const  slice          &selection)       { return (*this)(selection)                                  ; }
+  [[nodiscard]]          auto  operator[](const  slice          &selection) const { return                                   (*this)(selection); }
+  [[nodiscard]]          auto  operator[](const  slice          &selection)       { return                                   (*this)(selection); }
   // subset operations with gslice (i.e., N-dimensional indices and slice specifiers).
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()) ; }
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return  detail::apply_indices(*this, selection.arguments()); }
   template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()) ; }
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return  detail::apply_indices(*this, selection.arguments()); }
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
@@ -900,61 +900,39 @@ public:
   gslice_view &operator=(gslice_view &&) noexcept = default;
 
   // element access using N-dimensional indices.
-  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]] const_reference operator()(Idxs&&... idxs) const;
-  template <typename... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...> [[nodiscard]] reference operator()(Idxs&&... idxs);
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const;
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)      ;
 
-  // Flattened physical-order access: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const value_type &operator[](size_type i) const {
-    return data_handle()[calc_offset(i)];
-  }
-  [[nodiscard]] value_type &operator[](size_type i) {
-    return data_handle()[calc_offset(i)];
-  }
-  [[nodiscard]] const value_type &at(size_type i) const {
-    detail::checked_index(i, size(), "gslice_view::at");
-    return (*this)[i];
-  }
-  [[nodiscard]] value_type &at(size_type i) {
-    detail::checked_index(i, size(), "gslice_view::at");
-    return (*this)[i];
-  }
-
-  // flattened element access using the default_layout order, independent of the actual storage layout.
-  [[nodiscard]] const_reference flat(size_type i) const;
-  [[nodiscard]]       reference flat(size_type i);
-  // Internal API (not stable): unchecked flat access; requires i < size().
-  // Non-contiguous slices still compute the logical index's storage offset.
+  // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
-  [[nodiscard]]       reference flat_unchecked(size_type i);
+  [[nodiscard]]       reference flat_unchecked(size_type i)      ;
+  [[nodiscard]] const_reference flat          (size_type i) const { detail::checked_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
+  [[nodiscard]]       reference flat          (size_type i)       { detail::checked_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
 
-  // subset operations (gslice_view)
-  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args) const;
-  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...> [[nodiscard]] auto operator()(Args&&... args);
-  [[nodiscard]] auto operator[](const slice &selection) const {
-    return (*this)(selection);
-  }
-  [[nodiscard]] auto operator[](const slice &selection) {
-    return (*this)(selection);
-  }
-  template <class... Args>
-    requires(gslice_arguments<Extents::rank(), Args...>)
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const {
-    return std::apply(
-        [this](const auto &...indices) -> decltype(auto) {
-          return (*this)(indices...);
-        },
-        selection.arguments());
-  }
-  template <class... Args>
-    requires(elem_access_arguments<Extents::rank(), Args...> ||
-             gslice_view_arguments<Extents::rank(), Args...>)
-  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) {
-    return std::apply(
-        [this](const auto &...indices) -> decltype(auto) {
-          return (*this)(indices...);
-        },
-        selection.arguments());
-  }
+  // flattened element access in physical storage order: operator[] is unchecked; at() checks bounds.
+  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                        return data_handle()[calc_offset(i)]; }
+  [[nodiscard]]       reference operator[]    (size_type i)       {                                                        return data_handle()[calc_offset(i)]; }
+  [[nodiscard]] const_reference at            (size_type i) const { detail::checked_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
+  [[nodiscard]]       reference at            (size_type i)       { detail::checked_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
+
+  // subset operations using N-dimensional slice specifiers.
+  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator()(Args&&... args) const;
+  template <typename... Args> requires gslice_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator()(Args&&... args)      ;
+
+  // subset operations with slice.
+  [[nodiscard]] auto operator[](const slice &selection) const {                     return                                  (*this)(selection); }
+  [[nodiscard]] auto operator[](const slice &selection)       {                     return                                  (*this)(selection); }
+
+  // subset operations with gslice (i.e., N-dimensional indices and slice specifiers).
+  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
+  template <class... Args> requires gslice_arguments     <Extents::rank(), Args...>
+  [[nodiscard]] decltype(auto) operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
+
   template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type Rank>
   [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
@@ -2893,23 +2871,9 @@ ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) {
 
 template <typename Tp, typename Ex, typename Lp>
 typename gslice_view<Tp, Ex, Lp>::const_reference
-gslice_view<Tp, Ex, Lp>::flat(size_type i) const {
-  detail::checked_index(i, size(), "gslice_view::flat");
-  return flat_unchecked(i);
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename gslice_view<Tp, Ex, Lp>::const_reference
 gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
   return flat_contiguous_ ? data_handle()[i]
                           : data_handle()[calc_flat_offset(i)];
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename gslice_view<Tp, Ex, Lp>::reference
-gslice_view<Tp, Ex, Lp>::flat(size_type i) {
-  detail::checked_index(i, size(), "gslice_view::flat");
-  return flat_unchecked(i);
 }
 
 template <typename Tp, typename Ex, typename Lp>
