@@ -348,6 +348,33 @@ template <size_type Rank, class... Args> concept gslice_view_arguments = sizeof.
                                                                         (all_slice_specifiers<Args...> && !all_scalar_indices<Args...> && sizeof...(Args) <= Rank) ||
                                                                         (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
 
+// Concept for discrete (fancy) index list arguments (vector, initializer_list, 1D ndarray, etc.)
+// Explicitly excludes anything that is already a slice_specifier.
+// Accepts: containers with begin()/end(), contiguous arrays with data()/size(), or initializer_list.
+template <class T>
+concept index_list_container =
+    requires(const std::remove_cvref_t<T> &t) { t.size(); t.begin(); t.end(); } ||
+    requires(const std::remove_cvref_t<T> &t) { t.size(); t.data(); };
+template <class T>
+concept index_list_arg = !slice_specifier<T> && (
+    index_list_container<T> ||
+    std::same_as<std::remove_cvref_t<T>, std::initializer_list<size_type>> ||
+    std::same_as<std::remove_cvref_t<T>, std::initializer_list<int>>);
+
+// Helper: each argument must be either a slice_specifier or an index_list_arg.
+template <class T>
+concept ix_arg = slice_specifier<T> || index_list_arg<T>;
+
+template <class... Args>
+constexpr size_type count_index_lists() { return ((index_list_arg<Args> ? 1 : 0) + ... + 0); }
+
+// Overload C concept: at least one discrete index list, exactly one, rest are slice_specifiers.
+template <size_type Rank, class... Args>
+concept indirect_view_arguments =
+    sizeof...(Args) > 0 && sizeof...(Args) <= Rank &&
+    (ix_arg<Args> && ...) &&
+    count_index_lists<Args...>() == 1;
+
 namespace detail {
 
 template <class Ex   > concept static_extents = requires { Ex::rank_dynamic(); } && (Ex::rank_dynamic() == 0);
@@ -764,6 +791,12 @@ public:
   [[nodiscard]] auto operator()(        Args&&...           args) const;
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator()(        Args&&...           args)      ;
+
+  // subset operations using discrete (indirect) indexing via ix_pack arguments.
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator()(        Args&&...           args) const;
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator()(        Args&&...           args)      ;
   
   // subset operations with slice.
   [[nodiscard]] auto operator[](const  slice          &selection) const { return                                   (*this)(selection); }
@@ -775,11 +808,15 @@ public:
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator[](const gslice<Args...> &selection)       { return  detail::apply_indices(*this, selection.arguments()); }
 
-  // subset operations with ix (multidimensional indirect view)
+  // subset operations with ix (multidimensional indirect view): forward to operator()
   template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) const;
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) const {
+    return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, selection.arguments());
+  }
   template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection)      ;
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) {
+    return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, selection.arguments());
+  }
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
@@ -1104,6 +1141,12 @@ public:
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator()(        Args&&...           args)      ;
 
+  // subset operations using discrete (indirect) indexing via ix_pack arguments.
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator()(        Args&&...           args) const;
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator()(        Args&&...           args)      ;
+
   // subset operations with slice.
   [[nodiscard]] auto operator[](const  slice          &selection) const { return                                  (*this)(selection); }
   [[nodiscard]] auto operator[](const  slice          &selection)       { return                                  (*this)(selection); }
@@ -1114,11 +1157,15 @@ public:
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
-  // subset operations with ix (multidimensional indirect view)
+  // subset operations with ix (multidimensional indirect view): forward to operator()
   template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) const;
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) const {
+    return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, selection.arguments());
+  }
   template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection)      ;
+  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) {
+    return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, selection.arguments());
+  }
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
@@ -2794,6 +2841,44 @@ auto make_gslice_view_padded_with_reverse_dims(
 } // namespace slice_utils
 } // namespace detail
 
+// ============================================================================
+// Overload C (indirect_view_arguments): operator() on ndarray
+// ============================================================================
+template <typename Tp, typename Extents, typename Lp>
+template <typename... Args>
+  requires indirect_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) const {
+  return detail::make_ix_view(*this,
+      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <typename... Args>
+  requires indirect_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) {
+  return detail::make_ix_view(*this,
+      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+}
+
+// ============================================================================
+// Overload C (indirect_view_arguments): operator() on gslice_view
+// ============================================================================
+template <typename Tp, typename Extents, typename Lp>
+template <typename... Args>
+  requires indirect_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) const {
+  return detail::make_ix_view(*this,
+      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <typename... Args>
+  requires indirect_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) {
+  return detail::make_ix_view(*this,
+      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+}
+
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
@@ -3056,34 +3141,6 @@ template <class Array, class... Args>
 }
 
 } // namespace detail
-
-template <typename Tp, typename Extents, typename Lp>
-template <class... Args>
-[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator[](
-    const ix_pack<Args...> &selection) const {
-  return detail::make_ix_view(*this, selection);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <class... Args>
-[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator[](
-    const ix_pack<Args...> &selection) {
-  return detail::make_ix_view(*this, selection);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <class... Args>
-[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator[](
-    const ix_pack<Args...> &selection) const {
-  return detail::make_ix_view(*this, selection);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <class... Args>
-[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator[](
-    const ix_pack<Args...> &selection) {
-  return detail::make_ix_view(*this, selection);
-}
 
 template <typename Layout, typename Extents>
 std::array<size_type, Extents::rank()>
