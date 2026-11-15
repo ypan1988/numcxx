@@ -336,15 +336,10 @@ inline constexpr bool nc_is_broadcast_view_v =
 template <class Tp> concept  value_expression = nc_is_val_expr_v<Tp>;
 
 // Type traits and concepts used to distinguish scalar indexing from slicing operations.
-// A slice specifier is scalar index, slice, full_extent, or integral pair range.
-template <class Tp>                         concept     scalar_index = std::integral<std::remove_cvref_t<Tp>>;
-
-template <class Tp>                          struct is_integral_pair                  : std::false_type {};
-template <std::integral I, std::integral J>  struct is_integral_pair<std::pair<I, J>> : std::true_type  {};
-template <class Tp>                         concept    integral_pair = is_integral_pair<std::remove_cvref_t<Tp>>::value;
-
+// A slice specifier is scalar index, slice or full_extent.
+template <class Tp> concept scalar_index    = std::integral<std::remove_cvref_t<Tp>>;
 template <class Tp> concept slice_specifier = scalar_index<Tp> || std::same_as<std::remove_cvref_t<Tp>, slice> ||
-                                              std::same_as<std::remove_cvref_t<Tp>, detail::full_extent_t> || integral_pair<Tp>;
+                                              std::same_as<std::remove_cvref_t<Tp>, detail::full_extent_t>;
 
 template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
@@ -2667,32 +2662,6 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
   is_index = false;
   reversed = src_reversed;
   return ::numcxx::detail::full_extent;
-}
-
-// Forward a std::pair range [first, second) for std::submdspan compatibility.
-// The range is interpreted in the logical coordinate system of the current view.
-template <typename I, typename J>
-  requires std::integral<I> && std::integral<J>
-auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
-                      bool &is_index, bool &reversed,
-                      bool src_reversed = false) {
-  if constexpr (std::signed_integral<I>)
-    NUMCXX_ASSERT(p.first >= 0, "Range start must be non-negative");
-  if constexpr (std::signed_integral<J>)
-    NUMCXX_ASSERT(p.second >= 0, "Range end must be non-negative");
-
-  const size_type first = static_cast<size_type>(p.first);
-  const size_type second = static_cast<size_type>(p.second);
-
-  NUMCXX_ASSERT(first <= second, "Range start must not exceed range end");
-  NUMCXX_ASSERT(second <= dim_len, "Range out of bounds");
-
-  is_index = false;
-  reversed = src_reversed;
-
-  return src_reversed ? std::pair<size_type, size_type>{dim_len - second,
-                                                        dim_len - first}
-                      : std::pair<size_type, size_type>{first, second};
 }
 
 template <typename MdSpan, std::size_t N, typename... Args>

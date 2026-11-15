@@ -73,8 +73,8 @@ TEST(BroadcastViewTest, SupportsNonContiguousSliceSource) {
   numcxx::dmat source{{0, 1, 2, 3},
                       {4, 5, 6, 7},
                       {8, 9, 10, 11}};
-  const auto slice = source(numcxx::full_extent, std::pair{1, 2});
-  const auto view = slice.broadcast_to(3, 4);
+  const auto tmp = source(numcxx::full_extent, numcxx::slice(1, 2));
+  const auto view = tmp.broadcast_to(3, 4);
 
   EXPECT_EQ(view(0, 0), 1.0);
   EXPECT_EQ(view(2, 3), 9.0);

@@ -16,11 +16,11 @@ static_assert(slice_specifier<int>);
 static_assert(slice_specifier<long>);
 static_assert(slice_specifier<slice>);
 static_assert(slice_specifier<detail::full_extent_t>);
-static_assert(slice_specifier<std::pair<int, int>>);
-static_assert(slice_specifier<std::pair<unsigned, unsigned>>);
-static_assert(slice_specifier<std::pair<long, unsigned>>);
 
 static_assert(!slice_specifier<double>);
+static_assert(!slice_specifier<std::pair<int, int>>);
+static_assert(!slice_specifier<std::pair<unsigned, unsigned>>);
+static_assert(!slice_specifier<std::pair<long, unsigned>>);
 static_assert(!slice_specifier<std::pair<double, double>>);
 
 // ----------------------------------------------------------------------------
@@ -82,7 +82,7 @@ TEST_F(SlicingTest, FullExtentWithScalarIndexReducesRank) {
 // ----------------------------------------------------------------------------
 
 TEST_F(SlicingTest, PairRange) {
-  auto v = a(std::pair{1, 3}, full_extent);
+  auto v = a(slice(1, 3), full_extent);
 
   EXPECT_EQ(v.extent(0), 2);
   EXPECT_EQ(v.extent(1), 5);
@@ -92,7 +92,7 @@ TEST_F(SlicingTest, PairRange) {
 }
 
 TEST_F(SlicingTest, PairRangeSecondDimension) {
-  auto v = a(full_extent, std::pair{1, 4});
+  auto v = a(full_extent, slice(1, 4));
 
   EXPECT_EQ(v.extent(0), 4);
   EXPECT_EQ(v.extent(1), 3);
@@ -102,7 +102,7 @@ TEST_F(SlicingTest, PairRangeSecondDimension) {
 }
 
 TEST_F(SlicingTest, PairRangeWithScalarIndex) {
-  auto v = a(std::pair{1, 4}, 2);
+  auto v = a(slice(1, 4), 2);
 
   static_assert(std::decay_t<decltype(v)>::rank() == 1);
 
@@ -114,7 +114,7 @@ TEST_F(SlicingTest, PairRangeWithScalarIndex) {
 }
 
 TEST_F(SlicingTest, PairDifferentIntegralTypes) {
-  auto v = a(std::pair<long, unsigned>{1, 3}, full_extent);
+  auto v = a(slice(1, 3), full_extent);
 
   EXPECT_EQ(v.extent(0), 2);
   EXPECT_EQ(v.extent(1), 5);
@@ -181,7 +181,7 @@ TEST_F(SlicingTest, ReverseStrideTwo) {
 // ----------------------------------------------------------------------------
 
 TEST_F(SlicingTest, PairAndSlice) {
-  auto v = a(std::pair{1, 4}, slice(1, 5, 2));
+  auto v = a(slice(1, 4), slice(1, 5, 2));
 
   EXPECT_EQ(v.extent(0), 3);
   EXPECT_EQ(v.extent(1), 2);
@@ -194,7 +194,7 @@ TEST_F(SlicingTest, PairAndSlice) {
 }
 
 TEST_F(SlicingTest, ScalarPairSlice) {
-  auto v = a(2, std::pair{1, 4});
+  auto v = a(2, slice(1, 4));
 
   static_assert(std::decay_t<decltype(v)>::rank() == 1);
 
