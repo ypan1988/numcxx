@@ -2637,14 +2637,16 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
                              bool &reversed, bool src_reversed = false) {
   NUMCXX_ASSERT(s.is_valid(), "invalid slice");
   is_index = false;
-  reversed = (s.step() < 0) != src_reversed;    // The resulting dimension is reversed iff exactly one of the
-                                                // normalized slice or source dimension is reversed.
-  
-  // TODO: Optimize the common case for std::pair with step == 1
-  // if (s.step() == 1) {}
+  // TODO: Optimize the common case for std::pair with step == 1 ?
+  // if (s.step() == 1) {
+  //   reversed = src_reversed;
+  // }
                                                 
   // std::strided_slice only represents forward slices.
   const auto ns = s.normalize(dim_len);
+  // The resulting dimension is reversed iff exactly one of the
+  // normalized slice or source dimension is reversed.
+  reversed = ns.reversed != src_reversed;
   size_type offset = ns.offset;
   if (src_reversed && ns.extent != 0) {
     // Reflect the last selected index into the underlying forward
