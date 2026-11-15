@@ -33,7 +33,7 @@ jobs:
         run: |
           cd build
           lcov --directory . --capture --output-file coverage.info \
-               --ignore-errors mismatch
+               --ignore-errors mismatch,inconsistent
           lcov --extract coverage.info '*/include/numcxx.h' \
                --output-file numcxx-coverage.info \
                --ignore-errors unused
