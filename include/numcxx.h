@@ -279,9 +279,92 @@ template <class Tp, size_type Rank>     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
 template <class... Args>                struct       ix_pack;
 
-template <class ValExpr>                struct  nc_val_expr;
-template <class Op, class A0>           struct  nc_unary_op;
-template <class Op, class A0, class A1> struct nc_binary_op;
+template <class ValExpr>                struct   nc_val_expr;
+template <class Op, class A0>           struct   nc_unary_op;
+template <class Op, class A0, class A1> struct  nc_binary_op;
+
+//
+// [numcxx.aliases] type aliases
+//
+
+// ===========================================================
+// Dynamic array aliases (runtime extents, default layout)
+// ===========================================================
+template <class T>                                        using  vec       = ndarray<T, dextents<1>     , default_layout>;
+template <class T>                                        using  mat       = ndarray<T, dextents<2>     , default_layout>;
+template <class T>                                        using cube       = ndarray<T, dextents<3>     , default_layout>;
+
+// ===========================================================
+// Static array aliases (compile-time extents, default layout)
+// ===========================================================
+template <class T, size_type N>                           using  vec_fixed = ndarray<T, extents<N      >, default_layout>;
+template <class T, size_type M, size_type N>              using  mat_fixed = ndarray<T, extents<M, N   >, default_layout>;
+template <class T, size_type M, size_type N, size_type K> using cube_fixed = ndarray<T, extents<M, N, K>, default_layout>;
+
+
+// ============================================
+// Typed aliases (Armadillo-style)
+// ============================================
+
+// -------- dynamic --------
+// int
+using ivec     =  vec<int>     ;
+using imat     =  mat<int>     ;
+using icube    = cube<int>     ;
+
+// Logical arrays store 0/1 bytes to avoid vector<bool>'s proxy references.
+using bvec     =  vec<unsigned char>;
+using bmat     =  mat<unsigned char>;
+using bcube    = cube<unsigned char>;
+
+// unsigned int
+using uvec     =  vec<unsigned>;
+using umat     =  mat<unsigned>;
+using ucube    = cube<unsigned>;
+
+// double
+using dvec     =  vec<double>  ;
+using dmat     =  mat<double>  ; 
+using dcube    = cube<double>  ;
+
+// float
+using fvec     =  vec<float>   ;
+using fmat     =  mat<float>   ;
+using fcube    = cube<float>   ;
+
+// complex
+using cx_float  = std::complex<float> ;
+using cx_double = std::complex<double>;
+using cx_fvec   = vec<cx_float>       ;
+using cx_fmat   = mat<cx_float>       ;
+using cx_fcube  = cube<cx_float>      ;
+using cx_dvec   = vec<cx_double>      ;
+using cx_dmat   = mat<cx_double>      ;
+using cx_dcube  = cube<cx_double>     ;
+using cx_vec    = cx_dvec             ;
+using cx_mat    = cx_dmat             ;
+using cx_cube   = cx_dcube            ;
+
+// -------- fixed-size --------
+// int
+using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
+using imat22   =  mat_fixed<int,      2, 2>   ; using imat33   =  mat_fixed<int,      3, 3>   ; using imat44   =  mat_fixed<int,      4, 4>   ;
+using icube222 = cube_fixed<int,      2, 2, 2>; using icube333 = cube_fixed<int,      3, 3, 3>; using icube444 = cube_fixed<int,      4, 4, 4>;
+
+// unsigned int
+using uvec2    =  vec_fixed<unsigned, 2>      ; using uvec3    =  vec_fixed<unsigned, 3>      ; using uvec4    =  vec_fixed<unsigned, 4>      ;
+using umat22   =  mat_fixed<unsigned, 2, 2>   ; using umat33   =  mat_fixed<unsigned, 3, 3>   ; using umat44   =  mat_fixed<unsigned, 4, 4>   ;
+using ucube222 = cube_fixed<unsigned, 2, 2, 2>; using ucube333 = cube_fixed<unsigned, 3, 3, 3>; using ucube444 = cube_fixed<unsigned, 4, 4, 4>;
+
+// double
+using dvec2    =  vec_fixed<double,   2>      ; using dvec3    =  vec_fixed<double,   3>      ; using dvec4    =  vec_fixed<double,   4>      ;
+using dmat22   =  mat_fixed<double,   2, 2>   ; using dmat33   =  mat_fixed<double,   3, 3>   ; using dmat44   =  mat_fixed<double,   4, 4>   ;
+using dcube222 = cube_fixed<double,   2, 2, 2>; using dcube333 = cube_fixed<double,   3, 3, 3>; using dcube444 = cube_fixed<double,   4, 4, 4>;
+
+// float
+using fvec2    =  vec_fixed<float,    2>      ; using fvec3    =  vec_fixed<float,    3>      ; using fvec4    =  vec_fixed<float,    4>      ;
+using fmat22   =  mat_fixed<float,    2, 2>   ; using fmat33   =  mat_fixed<float,    3, 3>   ; using fmat44   =  mat_fixed<float,    4, 4>   ;
+using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<float,    3, 3, 3>; using fcube444 = cube_fixed<float,    4, 4, 4>;
 
 namespace detail {
 template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
@@ -5307,91 +5390,6 @@ template <class A> auto qr_r(const A &a) {
 }
 
 } // namespace linalg
-
-//
-// [numcxx.aliases] type aliases
-//
-// clang-format off
-
-// ============================================
-// Dynamic array aliases (runtime extents, default layout)
-// ============================================
-template <class T>                                        using  vec       = ndarray<T, dextents<1>>     ;
-template <class T>                                        using  mat       = ndarray<T, dextents<2>>     ;
-template <class T>                                        using cube       = ndarray<T, dextents<3>>     ;
-
-// ============================================
-// Static array aliases (compile-time extents, default layout)
-// ============================================
-template <class T, size_type N>                           using  vec_fixed = ndarray<T, extents<N>>      ;
-template <class T, size_type M, size_type N>              using  mat_fixed = ndarray<T, extents<M, N>>   ;
-template <class T, size_type M, size_type N, size_type K> using cube_fixed = ndarray<T, extents<M, N, K>>;
-
-
-// ============================================
-// Typed aliases (Armadillo-style)
-// ============================================
-
-// -------- dynamic --------
-// int
-using ivec     =  vec<int>     ;
-using imat     =  mat<int>     ;
-using icube    = cube<int>     ;
-
-// Logical arrays store 0/1 bytes to avoid vector<bool>'s proxy references.
-using bvec     =  vec<unsigned char>;
-using bmat     =  mat<unsigned char>;
-using bcube    = cube<unsigned char>;
-
-// unsigned int
-using uvec     =  vec<unsigned>;
-using umat     =  mat<unsigned>;
-using ucube    = cube<unsigned>;
-
-// double
-using dvec     =  vec<double>  ;
-using dmat     =  mat<double>  ; 
-using dcube    = cube<double>  ;
-
-// float
-using fvec     =  vec<float>   ;
-using fmat     =  mat<float>   ;
-using fcube    = cube<float>   ;
-
-// complex
-using cx_float  = std::complex<float> ;
-using cx_double = std::complex<double>;
-using cx_fvec   = vec<cx_float>       ;
-using cx_fmat   = mat<cx_float>       ;
-using cx_fcube  = cube<cx_float>      ;
-using cx_dvec   = vec<cx_double>      ;
-using cx_dmat   = mat<cx_double>      ;
-using cx_dcube  = cube<cx_double>    ;
-using cx_vec    = cx_dvec             ;
-using cx_mat    = cx_dmat             ;
-using cx_cube   = cx_dcube            ;
-
-// -------- fixed-size --------
-// int
-using ivec2    =  vec_fixed<int,      2>      ; using ivec3    =  vec_fixed<int,      3>      ; using ivec4    =  vec_fixed<int,      4>      ;
-using imat22   =  mat_fixed<int,      2, 2>   ; using imat33   =  mat_fixed<int,      3, 3>   ; using imat44   =  mat_fixed<int,      4, 4>   ;
-using icube222 = cube_fixed<int,      2, 2, 2>; using icube333 = cube_fixed<int,      3, 3, 3>; using icube444 = cube_fixed<int,      4, 4, 4>;
-
-// unsigned int
-using uvec2    =  vec_fixed<unsigned, 2>      ; using uvec3    =  vec_fixed<unsigned, 3>      ; using uvec4    =  vec_fixed<unsigned, 4>      ;
-using umat22   =  mat_fixed<unsigned, 2, 2>   ; using umat33   =  mat_fixed<unsigned, 3, 3>   ; using umat44   =  mat_fixed<unsigned, 4, 4>   ;
-using ucube222 = cube_fixed<unsigned, 2, 2, 2>; using ucube333 = cube_fixed<unsigned, 3, 3, 3>; using ucube444 = cube_fixed<unsigned, 4, 4, 4>;
-
-// double
-using dvec2    =  vec_fixed<double,   2>      ; using dvec3    =  vec_fixed<double,   3>      ; using dvec4    =  vec_fixed<double,   4>      ;
-using dmat22   =  mat_fixed<double,   2, 2>   ; using dmat33   =  mat_fixed<double,   3, 3>   ; using dmat44   =  mat_fixed<double,   4, 4>   ;
-using dcube222 = cube_fixed<double,   2, 2, 2>; using dcube333 = cube_fixed<double,   3, 3, 3>; using dcube444 = cube_fixed<double,   4, 4, 4>;
-
-// float
-using fvec2    =  vec_fixed<float,    2>      ; using fvec3    =  vec_fixed<float,    3>      ; using fvec4    =  vec_fixed<float,    4>      ;
-using fmat22   =  mat_fixed<float,    2, 2>   ; using fmat33   =  mat_fixed<float,    3, 3>   ; using fmat44   =  mat_fixed<float,    4, 4>   ;
-using fcube222 = cube_fixed<float,    2, 2, 2>; using fcube333 = cube_fixed<float,    3, 3, 3>; using fcube444 = cube_fixed<float,    4, 4, 4>;
-// clang-format on
 
 } // namespace numcxx
 
