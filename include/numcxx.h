@@ -351,29 +351,21 @@ template <size_type Rank, class... Args> concept gslice_view_arguments = sizeof.
 // Concept for discrete (fancy) index list arguments (vector, initializer_list, 1D ndarray, etc.)
 // Explicitly excludes anything that is already a slice_specifier.
 // Accepts: containers with begin()/end(), contiguous arrays with data()/size(), or initializer_list.
-template <class T>
-concept index_list_container =
-    requires(const std::remove_cvref_t<T> &t) { t.size(); t.begin(); t.end(); } ||
-    requires(const std::remove_cvref_t<T> &t) { t.size(); t.data(); };
-template <class T>
-concept index_list_arg = !slice_specifier<T> && (
-    index_list_container<T> ||
-    std::same_as<std::remove_cvref_t<T>, std::initializer_list<size_type>> ||
-    std::same_as<std::remove_cvref_t<T>, std::initializer_list<int>>);
+template <class Tp> concept index_list_container = requires(const std::remove_cvref_t<Tp> &t) { t.size(); t.begin(); t.end(); } ||
+                                                   requires(const std::remove_cvref_t<Tp> &t) { t.size(); t.data(); };
+template <class Tp> concept index_list_arg = !slice_specifier<Tp> && (index_list_container<Tp> ||
+                                                                      std::same_as<std::remove_cvref_t<Tp>, std::initializer_list<size_type>> ||
+                                                                      std::same_as<std::remove_cvref_t<Tp>, std::initializer_list<int>>);
 
 // Helper: each argument must be either a slice_specifier or an index_list_arg.
-template <class T>
-concept ix_arg = slice_specifier<T> || index_list_arg<T>;
+template <class Tp> concept ix_arg = slice_specifier<Tp> || index_list_arg<Tp>;
 
-template <class... Args>
-constexpr size_type count_index_lists() { return ((index_list_arg<Args> ? 1 : 0) + ... + 0); }
+template <class... Args> constexpr size_type count_index_lists() { return ((index_list_arg<Args> ? 1 : 0) + ... + 0); }
 
 // Overload C concept: at least one discrete index list, exactly one, rest are slice_specifiers.
-template <size_type Rank, class... Args>
-concept indirect_view_arguments =
-    sizeof...(Args) > 0 && sizeof...(Args) <= Rank &&
-    (ix_arg<Args> && ...) &&
-    count_index_lists<Args...>() == 1;
+template <size_type Rank, class... Args> concept indirect_view_arguments = sizeof...(Args) > 0 && sizeof...(Args) <= Rank &&
+                                                                          (ix_arg<Args> && ...) &&
+                                                                           count_index_lists<Args...>() == 1;
 
 namespace detail {
 
