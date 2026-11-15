@@ -114,7 +114,7 @@ TEST(ElementAccess, SliceAndGsliceSubscripts) {
   static_assert(std::decay_t<decltype(row)>::extents_type::rank() == 1);
   EXPECT_EQ(row(3), 13);
 
-  a[numcxx::gslice(1, 2)] = 42;
+  a(1, 2) = 42;
   EXPECT_EQ(a(1, 2), 42);
 
   const auto &const_a = a;
