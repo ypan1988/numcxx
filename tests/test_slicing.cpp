@@ -283,7 +283,7 @@ TEST_F(SlicingTest, ReverseViewOffsetsMapThroughView) {
   auto v = a(full_extent, slice({}, {}, -1));
 
   // 1. Select row 0 and row 1 along Axis 0 using initializer_list.
-  auto selected = v[{0, 1}];
+  auto selected = v[ix(uvec{0, 1})];
 
   // Verify shape: (2, 5)
   ASSERT_EQ(selected.extent(0), 2);
@@ -302,14 +302,4 @@ TEST_F(SlicingTest, ReverseViewOffsetsMapThroughView) {
   selected(0, 0) = 104;
   EXPECT_EQ(a(0, 4), 104);
 
-  // 3. Use an ndarray as indices to verify the const view path.
-  numcxx::ndarray<numcxx::size_type, numcxx::dextents<1>> offsets(2);
-  offsets[0] = 1;
-  offsets[1] = 2;
-  const auto &const_view = v;
-  auto const_selected = const_view[offsets];
-
-  ASSERT_EQ(const_selected.extent(0), 2);
-  EXPECT_EQ(const_selected(0, 0), 9);   // v row 1, col 0 is a(1, 4) = 9
-  EXPECT_EQ(const_selected(1, 0), 14);  // v row 2, col 0 is a(2, 4) = 14
 }

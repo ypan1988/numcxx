@@ -51,7 +51,7 @@ TEST(MaskViewExpressionTest, MaskAndIndirectViewsSupportUncheckedFlatEvaluation)
   EXPECT_EQ(arr[3], 23);
   EXPECT_EQ(arr[5], 25);
 
-  auto indirect = arr[{0, 2, 4}];
+  auto indirect = arr[numcxx::ix(numcxx::uvec{0, 2, 4})];
   EXPECT_EQ(indirect.flat_unchecked(1), 2);
   indirect = indirect + 20;
   EXPECT_EQ(arr[0], 20);
@@ -295,7 +295,7 @@ TEST(MaskViewExpressionTest, MaskAndIndirectViewsSupportUncheckedFlatEvaluation)
 
 TEST(NdarrayIndirectTest, RowSelection2D) {
   numcxx::imat a = {{0, 1}, {2, 3}, {4, 5}};
-  auto view = a[{0, 2}];
+  auto view = a[numcxx::ix(numcxx::uvec{0, 2})];
 
   static_assert(std::decay_t<decltype(view)>::rank() == 2);
   EXPECT_EQ(view.extent(0), 2);
@@ -315,22 +315,22 @@ TEST(NdarrayIndirectTest, LayoutIndependence) {
       left(i, j) = static_cast<int>(2 * i + j);
     }
 
-  auto view_r = right[{0, 2}];
-  auto view_l = left[{0, 2}];
+  auto view_r = right[numcxx::ix(numcxx::uvec{0, 2})];
+  auto view_l = left[numcxx::ix(numcxx::uvec{0, 2})];
   EXPECT_EQ(view_r(1, 1), view_l(1, 1));
   EXPECT_EQ(view_r(1, 1), 5);
 }
 
 TEST(NdarrayIndirectTest, WriteThroughView) {
   numcxx::imat a = {{0, 1}, {2, 3}, {4, 5}};
-  auto view = a[{0, 2}];
+  auto view = a[numcxx::ix(numcxx::uvec{0, 2})];
   view(1, 0) = 99;
   EXPECT_EQ(a(2, 0), 99);
 }
 
 TEST(NdarrayIndirectTest, ConstCorrectness) {
   const numcxx::imat a = {{0, 1}, {2, 3}};
-  auto view = a[{0}];
+  auto view = a[numcxx::ix(numcxx::uvec{0})];
   static_assert(
       std::is_const_v<typename std::decay_t<decltype(view)>::element_type>);
 }
@@ -340,14 +340,14 @@ TEST(NdarrayIndirectTest, IndexArrayAndGsliceSource) {
   numcxx::ndarray<numcxx::size_type, numcxx::dextents<1>> rows(2);
   rows[0] = 0;
   rows[1] = 2;
-  auto view = a[rows];
+  auto view = a[numcxx::ix(rows)];
   static_assert(std::is_same_v<decltype(view), numcxx::indirect_view<int, 2>>, "view type");
   static_assert(std::is_same_v<decltype(view(1, 1)), int&>, "element type");
   int val = view(1, 1);
   EXPECT_EQ(val, 5);
 
   auto reversed = a(numcxx::full_extent, numcxx::slice({}, {}, -1));
-  auto selected = reversed[{0, 2}];
+  auto selected = reversed[numcxx::ix(numcxx::uvec{0, 2})];
   EXPECT_EQ(selected(1, 0), 5);
   EXPECT_EQ(selected(1, 1), 4);
   selected(0, 0) = 10;

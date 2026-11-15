@@ -879,27 +879,6 @@ public:
     return      mask_view<      element_type>(to_mdspan(), std::forward<BoolExpr>(expr));
   }
 
-  // subset operations with initializer-list offsets.
-  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) const {
-    return detail::make_indirect_view(
-        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()));
-  }
-  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) {
-    return detail::make_indirect_view(
-        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()));
-  }
-  // subset operations with array offsets.
-  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) const {
-    return detail::make_indirect_view(
-        to_mdspan(),
-        std::vector<size_type>(indices.data(), indices.data() + indices.size()));
-  }
-  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) {
-    return detail::make_indirect_view(
-        to_mdspan(),
-        std::vector<size_type>(indices.data(), indices.data() + indices.size()));
-  }
-
   template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type Rank> [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
 
@@ -1227,31 +1206,6 @@ public:
     NUMCXX_ASSERT(expr.size() == size(), "mask size must match array size");
     return mask_view<      element_type>(to_mdspan(), resolve_mask_offsets(expr));
   } 
-
-  // subset operations with initializer-list offsets.
-  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) const {
-    return detail::make_indirect_view(
-        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()),
-        reverse_dims_);
-  }
-  [[nodiscard]] auto operator[](std::initializer_list<size_type> indices) {
-    return detail::make_indirect_view(
-        to_mdspan(), std::vector<size_type>(indices.begin(), indices.end()),
-        reverse_dims_);
-  }
-  // subset operations with array offsets.
-  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) const {
-    return detail::make_indirect_view(
-        to_mdspan(),
-        std::vector<size_type>(indices.data(), indices.data() + indices.size()),
-        reverse_dims_);
-  }
-  [[nodiscard]] auto operator[](const ndarray<size_type, dextents<1>> &indices) {
-    return detail::make_indirect_view(
-        to_mdspan(),
-        std::vector<size_type>(indices.data(), indices.data() + indices.size()),
-        reverse_dims_);
-  }
 
   template <std::integral...                          Dims> [[nodiscard]] auto broadcast_to(                         Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type Rank> [[nodiscard]] auto broadcast_to(const std::array<Extent, Rank> &shape) const;
