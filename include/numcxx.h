@@ -166,31 +166,26 @@
 // Error Handling Configuration
 //===----------------------------------------------------------------------===//
 #ifndef NUMCXX_NO_DEBUG
-#define NUMCXX_ASSERT(expr, msg)                                               \
-  ((expr) ? (void)0                                                            \
-          : ::numcxx::detail::fail("Assertion failed (" #expr ")", (msg)))
+#define NUMCXX_ASSERT(expr, msg) ((expr) ? (void)0 : ::numcxx::detail::fail("Assertion failed (" #expr ")", (msg)))
 #else
 #define NUMCXX_ASSERT(expr, msg) ((void)0)
 #endif
 
-#define NUMCXX_THROW(exception_type, msg)                                      \
-  ::numcxx::detail::throw_exception<exception_type>((msg))
+#define NUMCXX_THROW(exception_type, msg) ::numcxx::detail::throw_exception<exception_type>((msg))
 
 namespace numcxx {
 namespace detail {
 [[noreturn]]
-inline void
-fail(const char *kind, const char *msg,
-     std::source_location loc = std::source_location::current()) noexcept {
-  std::fprintf(stderr, "numcxx:%s:%u: %s: %s: %s\n", loc.file_name(),
-               loc.line(), loc.function_name(), kind, msg);
+inline void fail(const char* kind, const char* msg,
+                 std::source_location loc = std::source_location::current()) noexcept {
+  std::fprintf(stderr, "numcxx:%s:%u: %s: %s: %s\n", loc.file_name(), loc.line(), loc.function_name(), kind, msg);
   std::fflush(stderr);
   std::abort();
 }
 
 template <class Exception>
 [[noreturn]]
-inline void throw_exception(const char *msg) {
+inline void throw_exception(const char* msg) {
 #ifdef NUMCXX_NO_EXCEPTIONS
   fail("Exception", msg);
 #else
@@ -200,7 +195,7 @@ inline void throw_exception(const char *msg) {
 
 template <class Exception>
 [[noreturn]]
-inline void throw_exception(const std::string &msg) {
+inline void throw_exception(const std::string& msg) {
 #ifdef NUMCXX_NO_EXCEPTIONS
   fail("Exception", msg.c_str());
 #else
@@ -210,16 +205,13 @@ inline void throw_exception(const std::string &msg) {
 
 template <std::integral Index>
 [[noreturn]]
-inline void throw_index_out_of_range(Index i, NUMCXX_SIZE_TYPE size,
-                                     const char *what) {
+inline void throw_index_out_of_range(Index i, NUMCXX_SIZE_TYPE size, const char* what) {
   const std::string message =
-      std::string(what) + ": index " + std::to_string(i) +
-      " out of bounds for size " + std::to_string(size);
+      std::string(what) + ": index " + std::to_string(i) + " out of bounds for size " + std::to_string(size);
   NUMCXX_THROW(std::out_of_range, message);
 }
 
-inline void checked_index(NUMCXX_SIZE_TYPE i, NUMCXX_SIZE_TYPE size,
-                          const char *what) {
+inline void checked_index(NUMCXX_SIZE_TYPE i, NUMCXX_SIZE_TYPE size, const char* what) {
   if (i >= size)
     throw_index_out_of_range(i, size, what);
 }
@@ -980,45 +972,34 @@ private:
   template <class>               friend class   nc_val_expr;
   // clang-format on
 
-  ::numcxx::index_type normalize_reduction_axis(
-      ::numcxx::index_type axis, const char *function_name) const {
-    const ::numcxx::index_type rank_value =
-        static_cast<::numcxx::index_type>(extents_type::rank());
+  ::numcxx::index_type normalize_reduction_axis(::numcxx::index_type axis, const char* function_name) const {
+    const ::numcxx::index_type rank_value = static_cast<::numcxx::index_type>(extents_type::rank());
     if (axis < 0)
       axis += rank_value;
     if (axis < 0 || axis >= rank_value)
-      NUMCXX_THROW(std::out_of_range,
-                   std::string(function_name) + ": axis out of range");
+      NUMCXX_THROW(std::out_of_range, std::string(function_name) + ": axis out of range");
     return axis;
   }
 
   template <class ResultValue, class Transform, class Operation>
-  auto reduce_axis_impl(::numcxx::index_type axis, const char *function_name,
-                        ResultValue identity, Transform transform,
-                        Operation operation,
-                        bool use_first = false) const {
-    using result_extents_type =
-        dextents<(extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>;
+  auto reduce_axis_impl(::numcxx::index_type axis, const char* function_name, ResultValue identity, Transform transform,
+                        Operation operation, bool use_first = false) const {
+    using result_extents_type = dextents<(extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>;
     using result_type = ndarray<ResultValue, result_extents_type>;
 
     axis = normalize_reduction_axis(axis, function_name);
 
-    std::array<size_type,
-               (extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>
-        output_shape{};
+    std::array<size_type, (extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)> output_shape{};
     for (size_type src = 0, dst = 0; src < extents_type::rank(); ++src)
       if (src != static_cast<size_type>(axis))
         output_shape[dst++] = static_cast<size_type>(extent(src));
 
     auto result = [&]<size_type... Is>(std::index_sequence<Is...>) {
       return result_type(static_cast<index_type>(output_shape[Is])...);
-    }(std::make_index_sequence<
-       (extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>{});
+    }(std::make_index_sequence<(extents_type::rank() > 0 ? extents_type::rank() - 1 : 0)>{});
 
-    for (size_type output_flat = 0; output_flat < result.size();
-         ++output_flat) {
-      const auto output_indices =
-          unravel_index<default_layout>(output_flat, result.extents());
+    for (size_type output_flat = 0; output_flat < result.size(); ++output_flat) {
+      const auto output_indices = unravel_index<default_layout>(output_flat, result.extents());
       std::array<size_type, extents_type::rank()> input_indices{};
       for (size_type src = 0, dst = 0; src < extents_type::rank(); ++src)
         if (src != static_cast<size_type>(axis))
@@ -1026,16 +1007,11 @@ private:
 
       ResultValue value = identity;
       bool initialized = false;
-      for (size_type reduced = 0;
-           reduced < static_cast<size_type>(extent(axis)); ++reduced) {
+      for (size_type reduced = 0; reduced < static_cast<size_type>(extent(axis)); ++reduced) {
         input_indices[axis] = reduced;
-        const value_type &element = data()[std::apply(
-            [&](auto... indices) {
-              return elem_.mapping()(indices...);
-            },
-            input_indices)];
-        const ResultValue transformed =
-            transform(element, output_flat, reduced);
+        const value_type& element =
+            data()[std::apply([&](auto... indices) { return elem_.mapping()(indices...); }, input_indices)];
+        const ResultValue transformed = transform(element, output_flat, reduced);
         if (use_first && !initialized)
           value = transformed;
         else
@@ -1051,8 +1027,7 @@ private:
     return detail::make_unary_op<Op<value_type>>(*this);
   }
 
-  template <typename Op>
-  ndarray &apply_scalar_op(Op &&op, const value_type &x) {
+  template <typename Op> ndarray& apply_scalar_op(Op&& op, const value_type& x) {
     auto ptr = data();
     const size_type n = size();
 #pragma omp simd
@@ -1061,8 +1036,7 @@ private:
     return *this;
   }
 
-  template <class Op, class Expr>
-  ndarray &apply_expr_op(Op &&op, const Expr &expr) {
+  template <class Op, class Expr> ndarray& apply_expr_op(Op&& op, const Expr& expr) {
     detail::check_shape_match(*this, expr);
     const size_type n = size();
 #pragma omp simd
@@ -1072,18 +1046,15 @@ private:
   }
 
   template <class Expr, size_type... Is>
-  static mdarray_type make_expression_storage(
-      const Expr &expr, std::index_sequence<Is...>) {
+  static mdarray_type make_expression_storage(const Expr& expr, std::index_sequence<Is...>) {
     if constexpr (detail::static_extents<extents_type>) {
       mdarray_type storage(extents_type{});
       for (rank_type r = 0; r < extents_type::rank(); ++r)
         if (expr.extent(r) != storage.extent(r))
-          NUMCXX_THROW(std::invalid_argument,
-                       "expression shape does not match static extents");
+          NUMCXX_THROW(std::invalid_argument, "expression shape does not match static extents");
       return storage;
     } else {
-      return mdarray_type(extents_type(
-          static_cast<index_type>(expr.extent(Is))...));
+      return mdarray_type(extents_type(static_cast<index_type>(expr.extent(Is))...));
     }
   }
 
@@ -1098,8 +1069,7 @@ private:
 // extern template void ndarray<size_type>::resize(size_type, size_type);
 
 // [numcxx.gslice_view]
-template <class ElementType, class Extents, class LayoutPolicy = default_layout>
-class gslice_view {
+template <class ElementType, class Extents, class LayoutPolicy = default_layout> class gslice_view {
 public:
   // clang-format off
   // element
@@ -1300,9 +1270,8 @@ public:
   // clang-format on
 
 private:
-  static bool is_flat_contiguous(
-      const mdspan_type &span,
-      const std::array<bool, extents_type::rank()> &reverse) noexcept {
+  static bool is_flat_contiguous(const mdspan_type& span,
+                                 const std::array<bool, extents_type::rank()>& reverse) noexcept {
     if (span.size() <= 1)
       return true;
     if (!span.mapping().is_exhaustive())
@@ -1374,8 +1343,7 @@ private:
     return offset;
   }
 
-  template <typename BoolExpr>
-  std::vector<size_type> resolve_mask_offsets(const BoolExpr& expr) const {
+  template <typename BoolExpr> std::vector<size_type> resolve_mask_offsets(const BoolExpr& expr) const {
     std::vector<size_type> offsets;
     offsets.reserve(expr.size());
     for (size_type i = 0; i < expr.size(); ++i)
@@ -1384,10 +1352,9 @@ private:
     return offsets;
   }
 
-  template <typename Iterator>
-  std::vector<size_type> resolve_indirect_offsets(Iterator first, Iterator last) const {
+  template <typename Iterator> std::vector<size_type> resolve_indirect_offsets(Iterator first, Iterator last) const {
     std::vector<size_type> offsets(first, last);
-    for (auto &offset : offsets)
+    for (auto& offset : offsets)
       offset = calc_flat_offset(offset);
     return offsets;
   }
@@ -1396,16 +1363,14 @@ private:
     return detail::make_unary_op<Op<value_type>>(*this);
   }
 
-  template <typename Op>
-  gslice_view &apply_scalar_op(Op &&op, const value_type &x) {
+  template <typename Op> gslice_view& apply_scalar_op(Op&& op, const value_type& x) {
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), x);
     return *this;
   }
 
-  template <class Op, class Expr>
-  gslice_view &apply_expr_op(Op &&op, const Expr &expr) {
+  template <class Op, class Expr> gslice_view& apply_expr_op(Op&& op, const Expr& expr) {
     detail::check_shape_match(*this, expr);
 #pragma omp simd
     for (size_type i = 0; i < size(); ++i)
@@ -1436,38 +1401,25 @@ public:
   using index_type = typename extents_type::index_type;
   using size_type = typename extents_type::size_type;
   using rank_type = typename extents_type::rank_type;
-  using const_reference = const value_type &;
+  using const_reference = const value_type&;
 
   static constexpr rank_type rank() noexcept { return extents_type::rank(); }
-  static constexpr rank_type rank_dynamic() noexcept {
-    return extents_type::rank_dynamic();
-  }
-  static constexpr size_type static_extent(rank_type r) noexcept {
-    return extents_type::static_extent(r);
-  }
-  constexpr index_type extent(rank_type r) const noexcept {
-    return extents_.extent(r);
-  }
-  constexpr index_type stride(rank_type r) const noexcept {
-    return strides_[r];
-  }
+  static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
+  static constexpr size_type static_extent(rank_type r) noexcept { return extents_type::static_extent(r); }
+  constexpr index_type extent(rank_type r) const noexcept { return extents_.extent(r); }
+  constexpr index_type stride(rank_type r) const noexcept { return strides_[r]; }
 
   template <typename... Idxs>
     requires all_scalar_indices<Idxs...>
   [[nodiscard]] const_reference operator()(Idxs... idxs) const {
-    static_assert(sizeof...(Idxs) == Rank,
-                  "Number of arguments must match broadcast_view rank");
-    const std::array<index_type, Rank> indices{
-        static_cast<index_type>(idxs)...};
+    static_assert(sizeof...(Idxs) == Rank, "Number of arguments must match broadcast_view rank");
+    const std::array<index_type, Rank> indices{static_cast<index_type>(idxs)...};
     size_type offset = 0;
     for (rank_type r = 0; r < rank(); ++r) {
       const index_type dim_size = static_cast<index_type>(extent(r));
-      const index_type index =
-          indices[r] < 0 ? indices[r] + dim_size : indices[r];
-      NUMCXX_ASSERT(index >= 0 && index < dim_size,
-                    "broadcast_view index out of bounds");
-      offset +=
-          static_cast<size_type>(index) * static_cast<size_type>(stride(r));
+      const index_type index = indices[r] < 0 ? indices[r] + dim_size : indices[r];
+      NUMCXX_ASSERT(index >= 0 && index < dim_size, "broadcast_view index out of bounds");
+      offset += static_cast<size_type>(index) * static_cast<size_type>(stride(r));
     }
     return data_[offset];
   }
@@ -1505,50 +1457,33 @@ public:
     return result;
   }
   [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
-  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
-    return extents_;
-  }
-  [[nodiscard]] constexpr const value_type *data_handle() const noexcept {
-    return data_;
-  }
+  [[nodiscard]] constexpr const extents_type& extents() const noexcept { return extents_; }
+  [[nodiscard]] constexpr const value_type* data_handle() const noexcept { return data_; }
   [[nodiscard]] constexpr bool is_unique() const noexcept {
     for (rank_type r = 0; r < rank(); ++r)
       if (extent(r) > 1 && stride(r) == 0)
         return false;
     return true;
   }
-  [[nodiscard]] constexpr bool is_exhaustive() const noexcept {
-    return exhaustive_;
-  }
-  [[nodiscard]] static constexpr bool is_always_unique() noexcept {
-    return false;
-  }
-  [[nodiscard]] static constexpr bool is_always_exhaustive() noexcept {
-    return false;
-  }
-  [[nodiscard]] static constexpr bool is_always_strided() noexcept {
-    return true;
-  }
+  [[nodiscard]] constexpr bool is_exhaustive() const noexcept { return exhaustive_; }
+  [[nodiscard]] static constexpr bool is_always_unique() noexcept { return false; }
+  [[nodiscard]] static constexpr bool is_always_exhaustive() noexcept { return false; }
+  [[nodiscard]] static constexpr bool is_always_strided() noexcept { return true; }
 
-  template <std::integral... Dims>
-  [[nodiscard]] auto broadcast_to(Dims... dims) const;
+  template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
   template <std::integral Extent, ::numcxx::size_type TargetRank>
-  [[nodiscard]] auto
-  broadcast_to(const std::array<Extent, TargetRank> &shape) const;
+  [[nodiscard]] auto broadcast_to(const std::array<Extent, TargetRank>& shape) const;
 
-  [[nodiscard]] auto eval() const {
-    return ndarray<value_type, extents_type>(*this);
-  }
+  [[nodiscard]] auto eval() const { return ndarray<value_type, extents_type>(*this); }
 
 private:
   friend struct detail::broadcast_view_factory;
 
-  broadcast_view(const value_type *data, const extents_type &extents,
-                 const std::array<index_type, Rank> &strides, bool exhaustive)
-      : data_(data), extents_(extents), strides_(strides),
-        exhaustive_(exhaustive) {}
+  broadcast_view(const value_type* data, const extents_type& extents, const std::array<index_type, Rank>& strides,
+                 bool exhaustive)
+      : data_(data), extents_(extents), strides_(strides), exhaustive_(exhaustive) {}
 
-  const value_type *data_;
+  const value_type* data_;
   extents_type extents_;
   std::array<index_type, Rank> strides_;
   bool exhaustive_;
@@ -1557,46 +1492,37 @@ private:
 namespace detail {
 struct broadcast_view_factory {
   template <class T, size_type Rank>
-  static auto
-  create(const T *data, const ::numcxx::dextents<Rank> &extents,
-         const std::array<typename ::numcxx::dextents<Rank>::index_type, Rank>
-             &strides,
-         bool exhaustive) {
+  static auto create(const T* data, const ::numcxx::dextents<Rank>& extents,
+                     const std::array<typename ::numcxx::dextents<Rank>::index_type, Rank>& strides, bool exhaustive) {
     return broadcast_view<T, Rank>(data, extents, strides, exhaustive);
   }
 };
 
-template <std::integral Extent>
-size_type checked_broadcast_extent(Extent extent) {
+template <std::integral Extent> size_type checked_broadcast_extent(Extent extent) {
   if constexpr (std::is_signed_v<Extent>)
     if (extent < 0)
-      NUMCXX_THROW(std::invalid_argument,
-                   "broadcast_to: target extents must be non-negative");
+      NUMCXX_THROW(std::invalid_argument, "broadcast_to: target extents must be non-negative");
   return static_cast<size_type>(extent);
 }
 
 template <class Source, std::integral Extent, size_type TargetRank>
-auto make_broadcast_view(const Source &source,
-                         const std::array<Extent, TargetRank> &target_shape) {
+auto make_broadcast_view(const Source& source, const std::array<Extent, TargetRank>& target_shape) {
   constexpr size_type source_rank = Source::rank();
   using value_type = typename Source::value_type;
   using index_type = typename Source::index_type;
   using extents_type = ::numcxx::dextents<TargetRank>;
 
   if constexpr (source_rank > TargetRank) {
-    NUMCXX_THROW(std::invalid_argument,
-                 "broadcast_to: target rank must be at least the source rank");
+    NUMCXX_THROW(std::invalid_argument, "broadcast_to: target rank must be at least the source rank");
   } else {
     std::array<size_type, TargetRank> shape{};
-    std::transform(
-        target_shape.begin(), target_shape.end(), shape.begin(),
-        [](Extent extent) { return checked_broadcast_extent(extent); });
+    std::transform(target_shape.begin(), target_shape.end(), shape.begin(),
+                   [](Extent extent) { return checked_broadcast_extent(extent); });
 
     if constexpr (requires { source.has_reversed_dim(); })
       if (source.has_reversed_dim())
-        NUMCXX_THROW(std::invalid_argument,
-                     "broadcast_to: reversed gslice_view sources are not "
-                     "supported; materialize with eval() first");
+        NUMCXX_THROW(std::invalid_argument, "broadcast_to: reversed gslice_view sources are not "
+                                            "supported; materialize with eval() first");
 
     std::array<index_type, TargetRank> strides{};
     constexpr size_type leading_dims = TargetRank - source_rank;
@@ -1609,50 +1535,39 @@ auto make_broadcast_view(const Source &source,
       const size_type source_extent = static_cast<size_type>(source.extent(r));
       const size_type target_extent = shape[leading_dims + r];
       if (source_extent != target_extent && source_extent != 1) {
-        const std::string message =
-            "broadcast_to: incompatible extent at dimension " +
-            std::to_string(leading_dims + r) + " (source " +
-            std::to_string(source_extent) + ", target " +
-            std::to_string(target_extent) + ")";
+        const std::string message = "broadcast_to: incompatible extent at dimension " +
+                                    std::to_string(leading_dims + r) + " (source " + std::to_string(source_extent) +
+                                    ", target " + std::to_string(target_extent) + ")";
         NUMCXX_THROW(std::invalid_argument, message.c_str());
       }
       strides[leading_dims + r] =
-          source_extent == target_extent
-              ? static_cast<index_type>(source.stride(r))
-              : index_type{};
+          source_extent == target_extent ? static_cast<index_type>(source.stride(r)) : index_type{};
       if (source_extent != target_extent && target_extent > 1)
         exhaustive = false;
     }
 
     const extents_type extents(shape);
-    const auto *data = [&]() {
+    const auto* data = [&]() {
       if constexpr (requires { source.to_mdspan(); })
         return source.to_mdspan().data_handle();
       else
         return source.data_handle();
     }();
-    return broadcast_view_factory::create<value_type, TargetRank>(
-        data, extents, strides, exhaustive);
+    return broadcast_view_factory::create<value_type, TargetRank>(data, extents, strides, exhaustive);
   }
 }
 
-template <class Source, std::integral... Dims>
-auto make_broadcast_view(const Source &source, Dims... dims) {
-  static_assert(sizeof...(Dims) > 0,
-                "broadcast_to requires at least one target extent");
+template <class Source, std::integral... Dims> auto make_broadcast_view(const Source& source, Dims... dims) {
+  static_assert(sizeof...(Dims) > 0, "broadcast_to requires at least one target extent");
   constexpr size_type target_rank = sizeof...(Dims);
-  const std::array<size_type, target_rank> shape{
-      checked_broadcast_extent(dims)...};
+  const std::array<size_type, target_rank> shape{checked_broadcast_extent(dims)...};
   return make_broadcast_view(source, shape);
 }
 
 template <class T> struct is_broadcast_source : std::false_type {};
-template <class Tp, class Ex, class Lp>
-struct is_broadcast_source<ndarray<Tp, Ex, Lp>> : std::true_type {};
-template <class Tp, class Ex, class Lp>
-struct is_broadcast_source<gslice_view<Tp, Ex, Lp>> : std::true_type {};
-template <class Tp, size_type Rank>
-struct is_broadcast_source<broadcast_view<Tp, Rank>> : std::true_type {};
+template <class Tp, class Ex, class Lp> struct is_broadcast_source<ndarray<Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, class Ex, class Lp> struct is_broadcast_source<gslice_view<Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, size_type Rank> struct is_broadcast_source<broadcast_view<Tp, Rank>> : std::true_type {};
 
 // clang-format off
 template <class Tp> class mask_accessor {
@@ -1802,12 +1717,11 @@ public:
   // clang-format on
 
 private:
-  template <typename MdSpan, typename BoolExpr>
-  explicit mask_view(const MdSpan &data_span, const BoolExpr &expr) {
+  template <typename MdSpan, typename BoolExpr> explicit mask_view(const MdSpan& data_span, const BoolExpr& expr) {
     std::vector<size_type> offsets;
     offsets.reserve(expr.size());
 
-    const auto &mapping = data_span.mapping();
+    const auto& mapping = data_span.mapping();
     for (size_type i = 0; i < expr.size(); ++i) {
       if (static_cast<bool>(expr.flat_unchecked(i)))
         offsets.push_back(mapping(i));
@@ -1819,9 +1733,7 @@ private:
     span_ = mdspan_type(base, ext, acc);
   }
 
-  template <typename MdSpan>
-  explicit mask_view(const MdSpan &data_span,
-                     std::vector<size_type> offsets) {
+  template <typename MdSpan> explicit mask_view(const MdSpan& data_span, std::vector<size_type> offsets) {
     auto base = data_span.data_handle();
     extents_type ext(offsets.size());
     auto acc = detail::mask_accessor<element_type>(std::move(offsets));
@@ -1832,15 +1744,13 @@ private:
     return detail::make_unary_op<Op<value_type>>(*this);
   }
 
-  template <typename Op>
-  mask_view &apply_scalar_op(Op &&op, const value_type &x) {
+  template <typename Op> mask_view& apply_scalar_op(Op&& op, const value_type& x) {
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), x);
     return *this;
   }
 
-  template <class Op, class Expr>
-  mask_view &apply_expr_op(Op &&op, const Expr &expr) {
+  template <class Op, class Expr> mask_view& apply_expr_op(Op&& op, const Expr& expr) {
     detail::check_shape_match(*this, expr);
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), expr.flat_unchecked(i));
@@ -1854,59 +1764,41 @@ private:
 };
 
 namespace detail {
-template <class Tp, size_type Rank>
-class indirect_accessor {
+template <class Tp, size_type Rank> class indirect_accessor {
 public:
   using element_type = Tp;
-  using reference = element_type &;
-  using data_handle_type = element_type *;
+  using reference = element_type&;
+  using data_handle_type = element_type*;
   using offset_policy = indirect_accessor;
 
   indirect_accessor() = default;
-  indirect_accessor(std::vector<size_type> indices,
-                    size_type target_axis,
-                    std::array<size_type, Rank> source_extents,
-                    std::array<size_type, Rank> view_extents,
-                    std::array<size_type, Rank> strides,
+  indirect_accessor(std::vector<size_type> indices, size_type target_axis, std::array<size_type, Rank> source_extents,
+                    std::array<size_type, Rank> view_extents, std::array<size_type, Rank> strides,
                     std::array<bool, Rank> reverse_dims)
-      : indices_(std::move(indices)), target_axis_(target_axis),
-        source_extents_(source_extents), view_extents_(view_extents),
-        strides_(strides), reverse_dims_(reverse_dims) {}
+      : indices_(std::move(indices)), target_axis_(target_axis), source_extents_(source_extents),
+        view_extents_(view_extents), strides_(strides), reverse_dims_(reverse_dims) {}
 
-  indirect_accessor(std::vector<size_type> indices,
-                    std::array<size_type, Rank> source_extents,
-                    std::array<size_type, Rank> view_extents,
-                    std::array<size_type, Rank> strides,
+  indirect_accessor(std::vector<size_type> indices, std::array<size_type, Rank> source_extents,
+                    std::array<size_type, Rank> view_extents, std::array<size_type, Rank> strides,
                     std::array<bool, Rank> reverse_dims)
-      : indirect_accessor(std::move(indices), 0, source_extents, view_extents,
-                          strides, reverse_dims) {}
+      : indirect_accessor(std::move(indices), 0, source_extents, view_extents, strides, reverse_dims) {}
 
   template <class Other>
-    requires std::same_as<std::remove_const_t<Other>,
-                          std::remove_const_t<Tp>>
-  indirect_accessor(const indirect_accessor<Other, Rank> &other)
-      : indices_(other.indices_), target_axis_(other.target_axis_),
-        source_extents_(other.source_extents_),
-        view_extents_(other.view_extents_), strides_(other.strides_),
-        reverse_dims_(other.reverse_dims_) {}
+    requires std::same_as<std::remove_const_t<Other>, std::remove_const_t<Tp>>
+  indirect_accessor(const indirect_accessor<Other, Rank>& other)
+      : indices_(other.indices_), target_axis_(other.target_axis_), source_extents_(other.source_extents_),
+        view_extents_(other.view_extents_), strides_(other.strides_), reverse_dims_(other.reverse_dims_) {}
 
-  reference access(data_handle_type p, size_type i) const noexcept {
-    return p[physical_offset(i)];
-  }
-  data_handle_type offset(data_handle_type p, size_type i) const noexcept {
-    return p + physical_offset(i);
-  }
-  friend bool operator==(const indirect_accessor &a,
-                         const indirect_accessor &b) noexcept {
-    return a.indices_ == b.indices_ && a.target_axis_ == b.target_axis_ &&
-           a.source_extents_ == b.source_extents_ &&
-           a.view_extents_ == b.view_extents_ && a.strides_ == b.strides_ &&
-           a.reverse_dims_ == b.reverse_dims_;
+  reference access(data_handle_type p, size_type i) const noexcept { return p[physical_offset(i)]; }
+  data_handle_type offset(data_handle_type p, size_type i) const noexcept { return p + physical_offset(i); }
+  friend bool operator==(const indirect_accessor& a, const indirect_accessor& b) noexcept {
+    return a.indices_ == b.indices_ && a.target_axis_ == b.target_axis_ && a.source_extents_ == b.source_extents_ &&
+           a.view_extents_ == b.view_extents_ && a.strides_ == b.strides_ && a.reverse_dims_ == b.reverse_dims_;
   }
 
 private:
   template <class, size_type> friend class indirect_accessor;
-  template <class, size_type> friend class ::numcxx::indirect_view; 
+  template <class, size_type> friend class ::numcxx::indirect_view;
   size_type physical_offset(size_type i) const noexcept {
     size_type offset = 0;
     for (size_type r = Rank; r-- > 0;) {
@@ -1930,8 +1822,7 @@ private:
 } // namespace detail
 
 // [numcxx.indirect_view]
-template <class ElementType, size_type Rank>
-class indirect_view {
+template <class ElementType, size_type Rank> class indirect_view {
 public:
   using element_type = ElementType;
   using value_type = std::remove_cv_t<element_type>;
@@ -1941,56 +1832,40 @@ public:
   using rank_type = typename extents_type::rank_type;
   using layout_type = layout_right;
   using accessor_type = detail::indirect_accessor<element_type, Rank>;
-  using const_accessor_type =
-      detail::indirect_accessor<const value_type, Rank>;
-  using mdspan_type =
-      detail::mdspan<element_type, extents_type, layout_type, accessor_type>;
-  using const_mdspan_type = detail::mdspan<const value_type, extents_type,
-                                           layout_type, const_accessor_type>;
+  using const_accessor_type = detail::indirect_accessor<const value_type, Rank>;
+  using mdspan_type = detail::mdspan<element_type, extents_type, layout_type, accessor_type>;
+  using const_mdspan_type = detail::mdspan<const value_type, extents_type, layout_type, const_accessor_type>;
   using reference = typename mdspan_type::reference;
   using const_reference = typename const_mdspan_type::reference;
   using data_handle_type = typename mdspan_type::data_handle_type;
 
   static constexpr rank_type rank() noexcept { return Rank; }
   static constexpr rank_type rank_dynamic() noexcept { return Rank; }
-  static constexpr size_type static_extent(rank_type r) noexcept {
-    return extents_type::static_extent(r);
-  }
-  constexpr index_type extent(rank_type r) const noexcept {
-    return span_.extent(r);
-  }
+  static constexpr size_type static_extent(rank_type r) noexcept { return extents_type::static_extent(r); }
+  constexpr index_type extent(rank_type r) const noexcept { return span_.extent(r); }
   constexpr size_type size() const noexcept { return span_.size(); }
   constexpr bool empty() const noexcept { return span_.empty(); }
-  constexpr const extents_type &extents() const noexcept {
-    return span_.extents();
-  }
-  constexpr data_handle_type data_handle() const noexcept {
-    return span_.data_handle();
-  }
-  constexpr index_type stride(rank_type r) const noexcept {
-    return span_.stride(r);
-  }
+  constexpr const extents_type& extents() const noexcept { return span_.extents(); }
+  constexpr data_handle_type data_handle() const noexcept { return span_.data_handle(); }
+  constexpr index_type stride(rank_type r) const noexcept { return span_.stride(r); }
 
   indirect_view() = delete;
-  indirect_view(data_handle_type data, extents_type extents,
-                accessor_type accessor)
+  indirect_view(data_handle_type data, extents_type extents, accessor_type accessor)
       : span_(data, extents, std::move(accessor)) {}
 
   template <class... Idxs>
     requires elem_access_arguments<Rank, Idxs...>
-  [[nodiscard]] reference operator()(Idxs &&...idxs) {
+  [[nodiscard]] reference operator()(Idxs&&... idxs) {
     return access(std::forward<Idxs>(idxs)...);
   }
   template <class... Idxs>
     requires elem_access_arguments<Rank, Idxs...>
-  [[nodiscard]] const_reference operator()(Idxs &&...idxs) const {
+  [[nodiscard]] const_reference operator()(Idxs&&... idxs) const {
     return access(std::forward<Idxs>(idxs)...);
   }
 
   [[nodiscard]] reference operator[](size_type i) { return flat_unchecked(i); }
-  [[nodiscard]] const_reference operator[](size_type i) const {
-    return flat_unchecked(i);
-  }
+  [[nodiscard]] const_reference operator[](size_type i) const { return flat_unchecked(i); }
   [[nodiscard]] reference at(size_type i) {
     detail::checked_index(i, size(), "indirect_view::at");
     return flat_unchecked(i);
@@ -2019,57 +1894,91 @@ public:
   auto operator~() const { return apply_unary_op<detail::nc_bit_not>(); }
   auto operator!() const { return apply_unary_op<std::logical_not>(); }
 
-  indirect_view &operator=(const value_type &x) {
-    return apply_scalar_op([](value_type &a, value_type b) { a = b; }, x);
+  indirect_view& operator=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a = b; }, x);
   }
-  indirect_view &operator+=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b; }, x); }
-  indirect_view &operator-=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b; }, x); }
-  indirect_view &operator*=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b; }, x); }
-  indirect_view &operator/=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b; }, x); }
-  indirect_view &operator%=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b; }, x); }
-  indirect_view &operator&=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b; }, x); }
-  indirect_view &operator|=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b; }, x); }
-  indirect_view &operator^=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b; }, x); }
-  indirect_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
-  indirect_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
-  template <value_expression Expr> indirect_view &operator+=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a += b; }, e); }
-  template <value_expression Expr> indirect_view &operator-=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a -= b; }, e); }
-  template <value_expression Expr> indirect_view &operator*=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a *= b; }, e); }
-  template <value_expression Expr> indirect_view &operator/=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a /= b; }, e); }
-  template <value_expression Expr> indirect_view &operator%=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a %= b; }, e); }
-  template <value_expression Expr> indirect_view &operator&=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a &= b; }, e); }
-  template <value_expression Expr> indirect_view &operator|=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a |= b; }, e); }
-  template <value_expression Expr> indirect_view &operator^=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a ^= b; }, e); }
-  template <value_expression Expr> indirect_view &operator<<=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a <<= b; }, e); }
-  template <value_expression Expr> indirect_view &operator>>=(const Expr &e) { return apply_expr_op([](value_type &a, value_type b) { a >>= b; }, e); }
+  indirect_view& operator+=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a += b; }, x);
+  }
+  indirect_view& operator-=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a -= b; }, x);
+  }
+  indirect_view& operator*=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a *= b; }, x);
+  }
+  indirect_view& operator/=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a /= b; }, x);
+  }
+  indirect_view& operator%=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a %= b; }, x);
+  }
+  indirect_view& operator&=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a &= b; }, x);
+  }
+  indirect_view& operator|=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a |= b; }, x);
+  }
+  indirect_view& operator^=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a ^= b; }, x);
+  }
+  indirect_view& operator<<=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a <<= b; }, x);
+  }
+  indirect_view& operator>>=(const value_type& x) {
+    return apply_scalar_op([](value_type& a, value_type b) { a >>= b; }, x);
+  }
+  template <value_expression Expr> indirect_view& operator+=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a += b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator-=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a -= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator*=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a *= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator/=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a /= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator%=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a %= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator&=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a &= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator|=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a |= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator^=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a ^= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator<<=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, e);
+  }
+  template <value_expression Expr> indirect_view& operator>>=(const Expr& e) {
+    return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, e);
+  }
 
-  template <value_expression Expr>
-  indirect_view &operator=(const Expr &expr) {
-    return apply_expr_op([](value_type &a, value_type b) { a = b; }, expr);
+  template <value_expression Expr> indirect_view& operator=(const Expr& expr) {
+    return apply_expr_op([](value_type& a, value_type b) { a = b; }, expr);
   }
 
   constexpr const_mdspan_type to_mdspan() const noexcept {
-    return {span_.data_handle(), span_.extents(),
-            const_accessor_type(span_.accessor())};
+    return {span_.data_handle(), span_.extents(), const_accessor_type(span_.accessor())};
   }
   constexpr mdspan_type to_mdspan() noexcept { return span_; }
 
 private:
-  template <class... Idxs>
-  auto normalize_indices(Idxs &&...idxs) const {
-    std::array<index_type, Rank> indices{
-        static_cast<index_type>(std::forward<Idxs>(idxs))...};
+  template <class... Idxs> auto normalize_indices(Idxs&&... idxs) const {
+    std::array<index_type, Rank> indices{static_cast<index_type>(std::forward<Idxs>(idxs))...};
     for (rank_type r = 0; r < Rank; ++r) {
       if (indices[r] < 0)
         indices[r] += extent(r);
-      NUMCXX_ASSERT(indices[r] >= 0 && indices[r] < extent(r),
-                    "indirect_view index out of bounds");
+      NUMCXX_ASSERT(indices[r] >= 0 && indices[r] < extent(r), "indirect_view index out of bounds");
     }
     return indices;
   }
 
-  template <class... Idxs>
-  const_reference access(Idxs &&...idxs) const {
+  template <class... Idxs> const_reference access(Idxs&&... idxs) const {
     const auto indices = normalize_indices(std::forward<Idxs>(idxs)...);
     size_type flat_idx = 0;
     size_type stride = 1;
@@ -2087,8 +1996,7 @@ private:
     return span_.data_handle()[span_.accessor().physical_offset(flat_idx)];
   }
 
-  template <class... Idxs>
-  reference access(Idxs &&...idxs) {
+  template <class... Idxs> reference access(Idxs&&... idxs) {
     const auto indices = normalize_indices(std::forward<Idxs>(idxs)...);
     size_type flat_idx = 0;
     size_type stride = 1;
@@ -2109,13 +2017,12 @@ private:
   template <template <class> class Op> auto apply_unary_op() const {
     return detail::make_unary_op<Op<value_type>>(*this);
   }
-  template <class Op> indirect_view &apply_scalar_op(Op op, value_type x) {
+  template <class Op> indirect_view& apply_scalar_op(Op op, value_type x) {
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), x);
     return *this;
   }
-  template <class Op, class Expr>
-  indirect_view &apply_expr_op(Op op, const Expr &expr) {
+  template <class Op, class Expr> indirect_view& apply_expr_op(Op op, const Expr& expr) {
     detail::check_shape_match(*this, expr);
     for (size_type i = 0; i < size(); ++i)
       op(flat_unchecked(i), expr.flat_unchecked(i));
@@ -2127,11 +2034,9 @@ private:
 
 namespace detail {
 template <class MdSpan, size_type Rank>
-auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,
-                        size_type target_axis,
+auto make_indirect_view(MdSpan&& src, std::vector<size_type> indices, size_type target_axis,
                         std::array<bool, Rank> reverse_dims)
-    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type,
-                     Rank> {
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank> {
   using element_type = typename std::remove_cvref_t<MdSpan>::element_type;
   static_assert(Rank > 0, "Axis selection requires rank at least one");
   NUMCXX_ASSERT(target_axis < Rank, "indirect_view target_axis out of range");
@@ -2142,25 +2047,19 @@ auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,
     strides[r] = static_cast<size_type>(src.stride(r));
   }
   for (auto index : indices)
-    NUMCXX_ASSERT(index < source_extents[target_axis],
-                  "indirect_view index out of bounds");
+    NUMCXX_ASSERT(index < source_extents[target_axis], "indirect_view index out of bounds");
   view_extents[target_axis] = indices.size();
   using view_type = indirect_view<element_type, Rank>;
   using extents_type = typename view_type::extents_type;
   using accessor_type = typename view_type::accessor_type;
-  return view_type(
-      src.data_handle(), extents_type(view_extents),
-      accessor_type(std::move(indices), target_axis, source_extents,
-                    view_extents, strides, reverse_dims));
+  return view_type(src.data_handle(), extents_type(view_extents),
+                   accessor_type(std::move(indices), target_axis, source_extents, view_extents, strides, reverse_dims));
 }
 
 template <class MdSpan, size_type Rank>
-auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,
-                        std::array<bool, Rank> reverse_dims)
-    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type,
-                     Rank> {
-  return make_indirect_view(std::forward<MdSpan>(src), std::move(indices), 0,
-                            reverse_dims);
+auto make_indirect_view(MdSpan&& src, std::vector<size_type> indices, std::array<bool, Rank> reverse_dims)
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank> {
+  return make_indirect_view(std::forward<MdSpan>(src), std::move(indices), 0, reverse_dims);
 }
 } // namespace detail
 
@@ -2173,23 +2072,20 @@ template <std::size_t N, typename I, typename List, std::enable_if_t< N == 1, in
 template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int> = 0> void add_extents(I &, const List &);
 // clang-format on
 
-template <std::size_t N, typename List>
-std::array<std::size_t, N> derive_extents(const List &list) {
+template <std::size_t N, typename List> std::array<std::size_t, N> derive_extents(const List& list) {
   std::array<std::size_t, N> a;
   auto f = a.begin();
   add_extents<N>(f, list); // add sizes (extents) to a
   return a;
 }
 
-template <std::size_t N, typename I, typename List,
-          std::enable_if_t<N == 1, int>>
-void add_extents(I &first, const List &list) {
+template <std::size_t N, typename I, typename List, std::enable_if_t<N == 1, int>>
+void add_extents(I& first, const List& list) {
   *first++ = list.size();
 }
 
-template <std::size_t N, typename I, typename List,
-          std::enable_if_t<(N > 1), int>>
-void add_extents(I &first, const List &list) {
+template <std::size_t N, typename I, typename List, std::enable_if_t<(N > 1), int>>
+void add_extents(I& first, const List& list) {
   if (list.size() == 0)
     NUMCXX_THROW(std::invalid_argument, "empty initializer list");
   if (!check_non_jagged<N>(list))
@@ -2198,8 +2094,7 @@ void add_extents(I &first, const List &list) {
   add_extents<N - 1>(first, *list.begin());
 }
 
-template <std::size_t N, typename List>
-bool check_non_jagged(const List &list) {
+template <std::size_t N, typename List> bool check_non_jagged(const List& list) {
   auto i = list.begin();
   for (auto j = i + 1; j != list.end(); ++j) {
     if (derive_extents<N - 1>(*i) != derive_extents<N - 1>(*j))
@@ -2208,48 +2103,39 @@ bool check_non_jagged(const List &list) {
   return true;
 }
 
-template <typename T, typename Vec>
-void add_list(const T *first, const T *last, Vec &vec) {
+template <typename T, typename Vec> void add_list(const T* first, const T* last, Vec& vec) {
   vec.insert(vec.end(), first, last);
 }
 
 template <typename T, typename Vec>
-void add_list(const std::initializer_list<T> *first,
-              const std::initializer_list<T> *last, Vec &vec) {
+void add_list(const std::initializer_list<T>* first, const std::initializer_list<T>* last, Vec& vec) {
   for (; first != last; ++first)
     add_list(first->begin(), first->end(), vec);
 }
 
-template <typename T, typename Vec>
-void insert_flat(std::initializer_list<T> list, Vec &vec) {
+template <typename T, typename Vec> void insert_flat(std::initializer_list<T> list, Vec& vec) {
   add_list(list.begin(), list.end(), vec);
 }
 
-template <typename T, typename Iter>
-void copy_list(const T *first, const T *last, Iter &iter) {
+template <typename T, typename Iter> void copy_list(const T* first, const T* last, Iter& iter) {
   iter = std::copy(first, last, iter);
 }
 
 template <typename T, typename Iter>
-void copy_list(const std::initializer_list<T> *first,
-               const std::initializer_list<T> *last, Iter &it) {
+void copy_list(const std::initializer_list<T>* first, const std::initializer_list<T>* last, Iter& it) {
   for (; first != last; ++first)
     copy_list(first->begin(), first->end(), it);
 }
 
-template <typename T, typename Iter>
-void copy_flat(std::initializer_list<T> list, Iter &iter) {
+template <typename T, typename Iter> void copy_flat(std::initializer_list<T> list, Iter& iter) {
   copy_list(list.begin(), list.end(), iter);
 }
 } // namespace detail
 
 template <class Tp, class Ex, class Lp>
-ndarray<Tp, Ex, Lp>::ndarray(
-    detail::nested_initializer_list_t<element_type, extents_type::rank()>
-        list) {
-  static_assert(std::is_same_v<layout_type, layout_right>,
-                "Nested initializer list is only supported for row-major "
-                "(layout_right) arrays.");
+ndarray<Tp, Ex, Lp>::ndarray(detail::nested_initializer_list_t<element_type, extents_type::rank()> list) {
+  static_assert(std::is_same_v<layout_type, layout_right>, "Nested initializer list is only supported for row-major "
+                                                           "(layout_right) arrays.");
   if (list.size() == 0)
     NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
 
@@ -2261,8 +2147,7 @@ ndarray<Tp, Ex, Lp>::ndarray(
     Ex expected;
     for (rank_type i = 0; i < Rank; ++i) {
       if (derived[i] != expected.extent(i))
-        NUMCXX_THROW(std::invalid_argument,
-                     "initializer list shape does not match static extents");
+        NUMCXX_THROW(std::invalid_argument, "initializer list shape does not match static extents");
     }
 
     elem_ = mdarray_type{}; // already has correct size
@@ -2277,11 +2162,10 @@ ndarray<Tp, Ex, Lp>::ndarray(
 }
 
 template <class Tp, class Ex, class Lp>
-ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator=(
-    detail::nested_initializer_list_t<value_type, extents_type::rank()> list) {
-  static_assert(std::is_same_v<layout_type, layout_right>,
-                "Nested initializer list is only supported for row-major "
-                "(layout_right) arrays.");
+ndarray<Tp, Ex, Lp>&
+ndarray<Tp, Ex, Lp>::operator=(detail::nested_initializer_list_t<value_type, extents_type::rank()> list) {
+  static_assert(std::is_same_v<layout_type, layout_right>, "Nested initializer list is only supported for row-major "
+                                                           "(layout_right) arrays.");
   if (list.size() == 0)
     NUMCXX_THROW(std::invalid_argument, "empty initializer list not allowed");
 
@@ -2290,8 +2174,7 @@ ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator=(
 
   for (rank_type i = 0; i < Rank; ++i) {
     if (derived[i] != extent(i))
-      NUMCXX_THROW(std::invalid_argument,
-                   "initializer list shape does not match array extents");
+      NUMCXX_THROW(std::invalid_argument, "initializer list shape does not match array extents");
   }
 
   auto it = data();
@@ -2303,8 +2186,7 @@ ndarray<Tp, Ex, Lp> &ndarray<Tp, Ex, Lp>::operator=(
 
 namespace detail {
 
-template <std::size_t Rank>
-std::array<size_type, Rank> make_shape(std::initializer_list<size_type> shape) {
+template <std::size_t Rank> std::array<size_type, Rank> make_shape(std::initializer_list<size_type> shape) {
   if (shape.size() != Rank)
     NUMCXX_THROW(std::invalid_argument, "shape size does not match array rank");
 
@@ -2313,8 +2195,7 @@ std::array<size_type, Rank> make_shape(std::initializer_list<size_type> shape) {
   return dims;
 }
 
-template <typename Array>
-Array make_dynamic_array(std::initializer_list<size_type> shape) {
+template <typename Array> Array make_dynamic_array(std::initializer_list<size_type> shape) {
   constexpr auto rank = Array::extents_type::rank();
   NUMCXX_ASSERT(shape.size() == rank, "shape must match array rank");
 
@@ -2327,15 +2208,13 @@ Array make_dynamic_array(std::initializer_list<size_type> shape) {
 // -----------------------------
 // array creation (factories)
 // -----------------------------
-template <typename T>
-ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
-  static_assert(std::is_arithmetic_v<T>,
-                "arange requires an arithmetic value type");
+template <typename T> ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
+  static_assert(std::is_arithmetic_v<T>, "arange requires an arithmetic value type");
 
   const size_type n = std::ceil((stop - start) / step);
 
   ndarray<T, dextents<1>> arr(n);
-  T *p = arr.data();
+  T* p = arr.data();
 
   T value = start;
   for (size_type i = 0; i < n; ++i) {
@@ -2346,33 +2225,27 @@ ndarray<T, dextents<1>> arange(T start, T stop, T step = T(1)) {
   return arr;
 }
 
-template <typename T> ndarray<T, dextents<1>> arange(T stop) {
-  return arange<T>(T(0), stop, T(1));
-}
+template <typename T> ndarray<T, dextents<1>> arange(T stop) { return arange<T>(T(0), stop, T(1)); }
 
-template <detail::static_array Array>
-Array ones() {
+template <detail::static_array Array> Array ones() {
   Array arr{};
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
 
-template <detail::dynamic_array Array>
-Array ones(std::initializer_list<size_type> shape) {
+template <detail::dynamic_array Array> Array ones(std::initializer_list<size_type> shape) {
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(1));
   return arr;
 }
 
-template <detail::static_array Array>
-Array zeros() {
+template <detail::static_array Array> Array zeros() {
   Array arr{};
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
 }
 
-template <detail::dynamic_array Array>
-Array zeros(std::initializer_list<size_type> shape) {
+template <detail::dynamic_array Array> Array zeros(std::initializer_list<size_type> shape) {
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::fill_n(arr.data(), arr.size(), typename Array::value_type(0));
   return arr;
@@ -2382,7 +2255,7 @@ Array zeros(std::initializer_list<size_type> shape) {
 // random number generation
 // -----------------------------
 namespace random {
-inline std::mt19937 &get_engine() {
+inline std::mt19937& get_engine() {
   static thread_local std::mt19937 engine(std::random_device{}());
   return engine;
 }
@@ -2390,14 +2263,13 @@ inline std::mt19937 &get_engine() {
 inline void seed(unsigned int value) { get_engine().seed(value); }
 
 namespace detail {
-using ::numcxx::detail::static_array;
 using ::numcxx::detail::dynamic_array;
 using ::numcxx::detail::make_dynamic_array;
+using ::numcxx::detail::static_array;
 
-template <typename Array, typename Distribution>
-void fill_random(Array &arr, Distribution &&dist) {
-  auto &engine = get_engine();
-  auto *data = arr.data();
+template <typename Array, typename Distribution> void fill_random(Array& arr, Distribution&& dist) {
+  auto& engine = get_engine();
+  auto* data = arr.data();
   const size_type n = arr.size();
   for (size_type i = 0; i < n; ++i)
     data[i] = dist(engine);
@@ -2413,12 +2285,9 @@ void fill_random(Array &arr, Distribution &&dist) {
 ///
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
-template <detail::static_array Array>
-Array rand() {
+template <detail::static_array Array> Array rand() {
   using T = typename Array::value_type;
-  static_assert(
-      std::is_floating_point_v<T>,
-      "rand() requires floating-point type (use randint() for integers)");
+  static_assert(std::is_floating_point_v<T>, "rand() requires floating-point type (use randint() for integers)");
   Array arr{};
   std::uniform_real_distribution<T> dist(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
@@ -2426,12 +2295,9 @@ Array rand() {
 }
 
 /// @copydoc rand()
-template <detail::dynamic_array Array>
-Array rand(std::initializer_list<size_type> shape) {
+template <detail::dynamic_array Array> Array rand(std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
-  static_assert(
-      std::is_floating_point_v<T>,
-      "rand() requires floating-point type (use randint() for integers)");
+  static_assert(std::is_floating_point_v<T>, "rand() requires floating-point type (use randint() for integers)");
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::uniform_real_distribution<T> dist(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
@@ -2447,11 +2313,9 @@ Array rand(std::initializer_list<size_type> shape) {
 ///
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
-template <detail::static_array Array>
-Array randn() {
+template <detail::static_array Array> Array randn() {
   using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>,
-                "randn() requires floating-point type");
+  static_assert(std::is_floating_point_v<T>, "randn() requires floating-point type");
   Array arr{};
   std::normal_distribution<T> dist(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
@@ -2459,11 +2323,9 @@ Array randn() {
 }
 
 /// @copydoc randn()
-template <detail::dynamic_array Array>
-Array randn(std::initializer_list<size_type> shape) {
+template <detail::dynamic_array Array> Array randn(std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>,
-                "randn() requires floating-point type");
+  static_assert(std::is_floating_point_v<T>, "randn() requires floating-point type");
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::normal_distribution<T> dist(T(0.0), T(1.0));
   detail::fill_random(arr, dist);
@@ -2482,11 +2344,9 @@ Array randn(std::initializer_list<size_type> shape) {
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
 /// @note Requires `low < high`.
-template <detail::static_array Array>
-Array uniform(typename Array::value_type low, typename Array::value_type high) {
+template <detail::static_array Array> Array uniform(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>,
-                "uniform() requires floating-point type");
+  static_assert(std::is_floating_point_v<T>, "uniform() requires floating-point type");
   Array arr{};
   std::uniform_real_distribution<T> dist(low, high);
   detail::fill_random(arr, dist);
@@ -2495,11 +2355,9 @@ Array uniform(typename Array::value_type low, typename Array::value_type high) {
 
 /// @copydoc uniform()
 template <detail::dynamic_array Array>
-Array uniform(typename Array::value_type low, typename Array::value_type high,
-              std::initializer_list<size_type> shape) {
+Array uniform(typename Array::value_type low, typename Array::value_type high, std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
-  static_assert(std::is_floating_point_v<T>,
-                "uniform() requires floating-point type");
+  static_assert(std::is_floating_point_v<T>, "uniform() requires floating-point type");
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::uniform_real_distribution<T> dist(low, high);
   detail::fill_random(arr, dist);
@@ -2518,14 +2376,11 @@ Array uniform(typename Array::value_type low, typename Array::value_type high,
 /// @note For static arrays (fixed extents), use the overload without `shape`.
 ///       For dynamic arrays (dextents), use the overload with `shape`.
 /// @note Requires `low < high`. The value `high` itself is never generated.
-template <detail::static_array Array>
-Array randint(typename Array::value_type low, typename Array::value_type high) {
+template <detail::static_array Array> Array randint(typename Array::value_type low, typename Array::value_type high) {
   using T = typename Array::value_type;
   static_assert(std::is_integral_v<T>, "randint() requires integral type");
   if (low >= high)
-    NUMCXX_THROW(
-        std::invalid_argument,
-        "randint: low must be less than high (empty range not supported)");
+    NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
   Array arr{};
   std::uniform_int_distribution<T> dist(low, high - T(1));
   detail::fill_random(arr, dist);
@@ -2534,14 +2389,11 @@ Array randint(typename Array::value_type low, typename Array::value_type high) {
 
 /// @copydoc randint()
 template <detail::dynamic_array Array>
-Array randint(typename Array::value_type low, typename Array::value_type high,
-              std::initializer_list<size_type> shape) {
+Array randint(typename Array::value_type low, typename Array::value_type high, std::initializer_list<size_type> shape) {
   using T = typename Array::value_type;
   static_assert(std::is_integral_v<T>, "randint() requires integral type");
   if (low >= high)
-    NUMCXX_THROW(
-        std::invalid_argument,
-        "randint: low must be less than high (empty range not supported)");
+    NUMCXX_THROW(std::invalid_argument, "randint: low must be less than high (empty range not supported)");
   Array arr = detail::make_dynamic_array<Array>(shape);
   std::uniform_int_distribution<T> dist(low, high - T(1));
   detail::fill_random(arr, dist);
@@ -2553,8 +2405,7 @@ Array randint(typename Array::value_type low, typename Array::value_type high,
 // [numcxx.indexing_and_slicing]
 
 // Precondition: is_valid() == true.
-constexpr auto slice::normalize(size_type dim_len) const noexcept
-    -> normalized_slice {
+constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_slice {
   const index_type len = static_cast<index_type>(dim_len);
   const bool reversed = step_ < 0;
 
@@ -2563,8 +2414,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept
 
   // Overflow-safe constexpr absolute value for the reversed case.
   // std::abs is not constexpr for integral types before C++23.
-  const size_type stride =
-      static_cast<size_type>(reversed ? -(step_ + 1) + 1 : step_);
+  const size_type stride = static_cast<size_type>(reversed ? -(step_ + 1) + 1 : step_);
 
   if (len == 0)
     return {0, 0, stride, reversed};
@@ -2637,8 +2487,7 @@ inline size_type normalize_index(index_type idx, size_type dim_len) {
   return static_cast<size_type>(res);
 }
 
-inline size_type normalize_and_reverse_index(index_type idx, size_type dim_len,
-                                             bool reversed) {
+inline size_type normalize_and_reverse_index(index_type idx, size_type dim_len, bool reversed) {
   const size_type n = normalize_index(idx, dim_len);
   return reversed ? dim_len - 1 - n : n;
 }
@@ -2646,13 +2495,10 @@ inline size_type normalize_and_reverse_index(index_type idx, size_type dim_len,
 // Element access with no reversed source dimensions.
 template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
-[[nodiscard]] decltype(auto) get_element(MdSpan &&src, Idxs &&...idxs) {
-  auto helper =
-      [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
-    const std::array<size_type, sizeof...(Idxs)> dims = {
-        static_cast<size_type>(src.extent(Is))...};
-    return std::forward<MdSpan>(src)(
-        normalize_index(static_cast<index_type>(idxs), dims[Is])...);
+[[nodiscard]] decltype(auto) get_element(MdSpan&& src, Idxs&&... idxs) {
+  auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
+    const std::array<size_type, sizeof...(Idxs)> dims = {static_cast<size_type>(src.extent(Is))...};
+    return std::forward<MdSpan>(src)(normalize_index(static_cast<index_type>(idxs), dims[Is])...);
   };
 
   return helper(std::make_index_sequence<sizeof...(Idxs)>{});
@@ -2661,15 +2507,12 @@ template <class MdSpan, class... Idxs>
 // Element access with reversed source dimensions.
 template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
-[[nodiscard]] decltype(auto)
-get_element(MdSpan &&src, const std::array<bool, sizeof...(Idxs)> &reverse_dims,
-            Idxs &&...idxs) {
-  auto helper =
-      [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
-    const std::array<size_type, sizeof...(Idxs)> dims = {
-        static_cast<size_type>(src.extent(Is))...};
-    return std::forward<MdSpan>(src)(normalize_and_reverse_index(
-        static_cast<index_type>(idxs), dims[Is], reverse_dims[Is])...);
+[[nodiscard]] decltype(auto) get_element(MdSpan&& src, const std::array<bool, sizeof...(Idxs)>& reverse_dims,
+                                         Idxs&&... idxs) {
+  auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
+    const std::array<size_type, sizeof...(Idxs)> dims = {static_cast<size_type>(src.extent(Is))...};
+    return std::forward<MdSpan>(src)(
+        normalize_and_reverse_index(static_cast<index_type>(idxs), dims[Is], reverse_dims[Is])...);
   };
 
   return helper(std::make_index_sequence<sizeof...(Idxs)>{});
@@ -2679,8 +2522,7 @@ get_element(MdSpan &&src, const std::array<bool, sizeof...(Idxs)> &reverse_dims,
 namespace slice_utils {
 
 // Convert a scalar index to a submdspan index argument.
-inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
-                                  bool &is_index, bool &reversed,
+inline size_type to_submdspan_arg(index_type idx, size_type dim_len, bool& is_index, bool& reversed,
                                   bool src_reversed = false) {
   is_index = true;
   reversed = false;
@@ -2688,15 +2530,15 @@ inline size_type to_submdspan_arg(index_type idx, size_type dim_len,
 }
 
 // Convert a slice to a submdspan strided_slice argument.
-inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
-                             bool &reversed, bool src_reversed = false) {
+inline auto to_submdspan_arg(const slice& s, size_type dim_len, bool& is_index, bool& reversed,
+                             bool src_reversed = false) {
   NUMCXX_ASSERT(s.is_valid(), "invalid slice");
   is_index = false;
   // TODO: Optimize the common case for std::pair with step == 1 ?
   // if (s.step() == 1) {
   //   reversed = src_reversed;
   // }
-                                                
+
   // std::strided_slice only represents forward slices.
   const auto ns = s.normalize(dim_len);
   // The resulting dimension is reversed iff exactly one of the
@@ -2711,14 +2553,12 @@ inline auto to_submdspan_arg(const slice &s, size_type dim_len, bool &is_index,
     const size_type last = ns.offset + steps * ns.stride;
     offset = (dim_len - 1) - last;
   }
-  return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{
-      offset, ns.extent, ns.stride};
+  return ::numcxx::detail::strided_slice<size_type, size_type, size_type>{offset, ns.extent, ns.stride};
 }
 
 // Forward std::full_extent for std::submdspan compatibility.
-inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
-                             size_type /*dim_len*/, bool &is_index,
-                             bool &reversed, bool src_reversed = false) {
+inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/, size_type /*dim_len*/, bool& is_index,
+                             bool& reversed, bool src_reversed = false) {
   is_index = false;
   reversed = src_reversed;
   return ::numcxx::detail::full_extent;
@@ -2728,8 +2568,7 @@ inline auto to_submdspan_arg(::numcxx::detail::full_extent_t /*tag*/,
 // The range is interpreted in the logical coordinate system of the current view.
 template <typename I, typename J>
   requires std::integral<I> && std::integral<J>
-auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
-                      bool &is_index, bool &reversed,
+auto to_submdspan_arg(const std::pair<I, J>& p, size_type dim_len, bool& is_index, bool& reversed,
                       bool src_reversed = false) {
   if constexpr (std::signed_integral<I>)
     NUMCXX_ASSERT(p.first >= 0, "Range start must be non-negative");
@@ -2745,29 +2584,22 @@ auto to_submdspan_arg(const std::pair<I, J> &p, size_type dim_len,
   is_index = false;
   reversed = src_reversed;
 
-  return src_reversed ? std::pair<size_type, size_type>{dim_len - second,
-                                                        dim_len - first}
+  return src_reversed ? std::pair<size_type, size_type>{dim_len - second, dim_len - first}
                       : std::pair<size_type, size_type>{first, second};
 }
 
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_submdspan_impl(MdSpan &&src,
-                         const std::array<bool, N> &src_reverse_dims,
-                         Args &&...args) {
-  static_assert(N == sizeof...(Args),
-                "src_reverse_dims must have one entry per argument");
+auto make_submdspan_impl(MdSpan&& src, const std::array<bool, N>& src_reverse_dims, Args&&... args) {
+  static_assert(N == sizeof...(Args), "src_reverse_dims must have one entry per argument");
 
   std::array<bool, N> is_index_arr{};
   std::array<bool, N> reversed_arr{};
 
   auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-    const std::array<size_type, N> dims = {
-        static_cast<size_type>(src.extent(Is))...};
-    return detail::submdspan(std::forward<MdSpan>(src),
-                             to_submdspan_arg(args, dims[Is], is_index_arr[Is],
-                                              reversed_arr[Is],
-                                              src_reverse_dims[Is])...);
+    const std::array<size_type, N> dims = {static_cast<size_type>(src.extent(Is))...};
+    return detail::submdspan(std::forward<MdSpan>(src), to_submdspan_arg(args, dims[Is], is_index_arr[Is],
+                                                                         reversed_arr[Is], src_reverse_dims[Is])...);
   };
   auto sub = helper(std::index_sequence_for<Args...>{});
   return std::tuple{sub, is_index_arr, reversed_arr};
@@ -2775,8 +2607,7 @@ auto make_submdspan_impl(MdSpan &&src,
 
 template <std::size_t NewRank, std::size_t N>
 [[nodiscard]]
-auto make_reverse_dims(const std::array<bool, N> &is_index_arr,
-                       const std::array<bool, N> &reversed_arr) {
+auto make_reverse_dims(const std::array<bool, N>& is_index_arr, const std::array<bool, N>& reversed_arr) {
   static_assert(NewRank <= N, "Result rank cannot exceed source rank");
   std::array<bool, NewRank> reverse_dims{};
   std::size_t rev_idx = 0;
@@ -2793,55 +2624,44 @@ auto make_reverse_dims(const std::array<bool, N> &is_index_arr,
 
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_gslice_view_impl(MdSpan &&src,
-                          const std::array<bool, N> &src_reverse_dims,
-                          Args &&...args) {
-  auto [sub_mdspan, is_index_arr, reversed_arr] = make_submdspan_impl(
-      std::forward<MdSpan>(src), src_reverse_dims, std::forward<Args>(args)...);
+auto make_gslice_view_impl(MdSpan&& src, const std::array<bool, N>& src_reverse_dims, Args&&... args) {
+  auto [sub_mdspan, is_index_arr, reversed_arr] =
+      make_submdspan_impl(std::forward<MdSpan>(src), src_reverse_dims, std::forward<Args>(args)...);
   using sub_mdspan_type = std::decay_t<decltype(sub_mdspan)>;
   constexpr std::size_t new_rank = sub_mdspan_type::rank();
-  const auto reverse_dims =
-      make_reverse_dims<new_rank>(is_index_arr, reversed_arr);
-  return gslice_view<typename sub_mdspan_type::element_type,
-                    typename sub_mdspan_type::extents_type,
-                    typename sub_mdspan_type::layout_type>(sub_mdspan,
-                                                           reverse_dims);
+  const auto reverse_dims = make_reverse_dims<new_rank>(is_index_arr, reversed_arr);
+  return gslice_view<typename sub_mdspan_type::element_type, typename sub_mdspan_type::extents_type,
+                     typename sub_mdspan_type::layout_type>(sub_mdspan, reverse_dims);
 }
 
 template <typename MdSpan, typename... Args>
 [[nodiscard]]
-auto make_gslice_view(MdSpan &&src, Args &&...args) {
+auto make_gslice_view(MdSpan&& src, Args&&... args) {
   // ndarray (or gslice_view with has_reversed_dim_ == false)
   // has no inherited reversed dimensions.
   const std::array<bool, sizeof...(Args)> no_reverse_dims{};
-  return make_gslice_view_impl(std::forward<MdSpan>(src), no_reverse_dims,
-                              std::forward<Args>(args)...);
+  return make_gslice_view_impl(std::forward<MdSpan>(src), no_reverse_dims, std::forward<Args>(args)...);
 }
 
 template <typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_gslice_view_with_reverse_dims(
-    MdSpan &&src, const std::array<bool, N> &src_reverse_dims, Args &&...args) {
-  return make_gslice_view_impl(std::forward<MdSpan>(src), src_reverse_dims,
-                              std::forward<Args>(args)...);
+auto make_gslice_view_with_reverse_dims(MdSpan&& src, const std::array<bool, N>& src_reverse_dims, Args&&... args) {
+  return make_gslice_view_impl(std::forward<MdSpan>(src), src_reverse_dims, std::forward<Args>(args)...);
 }
 
 template <std::size_t Rank, typename MdSpan, typename... Args>
 [[nodiscard]]
-auto make_gslice_view_padded(MdSpan &&src, Args &&...args) {
+auto make_gslice_view_padded(MdSpan&& src, Args&&... args) {
   if constexpr (sizeof...(Args) > Rank) {
-    static_assert(sizeof...(Args) <= Rank,
-                  "Number of arguments cannot exceed array rank");
+    static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
   } else {
-    auto padded_args = std::tuple_cat(
-        std::forward_as_tuple(std::forward<Args>(args)...),
-        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-          return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
-        }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+    auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
+                                      [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                                        return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
+                                      }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
     return std::apply(
-        [&src](auto &&...indices) {
-          return make_gslice_view(std::forward<MdSpan>(src),
-                                 std::forward<decltype(indices)>(indices)...);
+        [&src](auto&&... indices) {
+          return make_gslice_view(std::forward<MdSpan>(src), std::forward<decltype(indices)>(indices)...);
         },
         std::move(padded_args));
   }
@@ -2849,24 +2669,20 @@ auto make_gslice_view_padded(MdSpan &&src, Args &&...args) {
 
 template <std::size_t Rank, typename MdSpan, std::size_t N, typename... Args>
 [[nodiscard]]
-auto make_gslice_view_padded_with_reverse_dims(
-    MdSpan &&src, const std::array<bool, N> &src_reverse_dims,
-    Args &&...args) {
+auto make_gslice_view_padded_with_reverse_dims(MdSpan&& src, const std::array<bool, N>& src_reverse_dims,
+                                               Args&&... args) {
   static_assert(N == Rank, "src_reverse_dims must match array rank");
   if constexpr (sizeof...(Args) > Rank) {
-    static_assert(sizeof...(Args) <= Rank,
-                  "Number of arguments cannot exceed array rank");
+    static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
   } else {
-    auto padded_args = std::tuple_cat(
-        std::forward_as_tuple(std::forward<Args>(args)...),
-        [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-          return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
-        }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+    auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
+                                      [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                                        return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
+                                      }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
     return std::apply(
-        [&src, &src_reverse_dims](auto &&...indices) {
-          return make_gslice_view_with_reverse_dims(
-              std::forward<MdSpan>(src), src_reverse_dims,
-              std::forward<decltype(indices)>(indices)...);
+        [&src, &src_reverse_dims](auto&&... indices) {
+          return make_gslice_view_with_reverse_dims(std::forward<MdSpan>(src), src_reverse_dims,
+                                                    std::forward<decltype(indices)>(indices)...);
         },
         std::move(padded_args));
   }
@@ -2881,17 +2697,15 @@ auto make_gslice_view_padded_with_reverse_dims(
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) const {
-  return detail::make_ix_view(*this,
-      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) const {
+  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) {
-  return detail::make_ix_view(*this,
-      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) {
+  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
 }
 
 // ============================================================================
@@ -2900,120 +2714,101 @@ template <typename... Args>
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) const {
-  return detail::make_ix_view(*this,
-      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
+  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) {
-  return detail::make_ix_view(*this,
-      ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
+  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
-auto ndarray<Tp, Extents, Lp>::operator()(Idxs &&...idxs) const
-    -> const_reference {
-  return detail::index_utils::get_element(to_mdspan(),
-                                          std::forward<Idxs>(idxs)...);
+auto ndarray<Tp, Extents, Lp>::operator()(Idxs&&... idxs) const -> const_reference {
+  return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
-auto ndarray<Tp, Extents, Lp>::operator()(Idxs &&...idxs) -> reference {
-  return detail::index_utils::get_element(to_mdspan(),
-                                          std::forward<Idxs>(idxs)...);
+auto ndarray<Tp, Extents, Lp>::operator()(Idxs&&... idxs) -> reference {
+  return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
-auto gslice_view<Tp, Extents, Lp>::operator()(Idxs &&...idxs) const
-    -> const_reference {
-  return has_reversed_dim_
-             ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
-                                                std::forward<Idxs>(idxs)...)
-             : detail::index_utils::get_element(to_mdspan(),
-                                                std::forward<Idxs>(idxs)...);
+auto gslice_view<Tp, Extents, Lp>::operator()(Idxs&&... idxs) const -> const_reference {
+  return has_reversed_dim_ ? detail::index_utils::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
+                           : detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
-auto gslice_view<Tp, Extents, Lp>::operator()(Idxs &&...idxs) -> reference {
+auto gslice_view<Tp, Extents, Lp>::operator()(Idxs&&... idxs) -> reference {
+  return has_reversed_dim_ ? detail::index_utils::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
+                           : detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <typename... Args>
+  requires gslice_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) const {
+  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <typename... Args>
+  requires gslice_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) {
+  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+}
+
+template <typename Tp, typename Extents, typename Lp>
+template <typename... Args>
+  requires gslice_view_arguments<Extents::rank(), Args...>
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
   return has_reversed_dim_
-             ? detail::index_utils::get_element(to_mdspan(), reverse_dims_,
-                                                std::forward<Idxs>(idxs)...)
-             : detail::index_utils::get_element(to_mdspan(),
-                                                std::forward<Idxs>(idxs)...);
+             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires gslice_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) const {
-  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
-      to_mdspan(), std::forward<Args>(args)...);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <typename... Args>
-  requires gslice_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args &&...args) {
-  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
-      to_mdspan(), std::forward<Args>(args)...);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <typename... Args>
-  requires gslice_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) const {
+[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
   return has_reversed_dim_
-             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<
-                   Extents::rank()>(to_mdspan(), reverse_dims_,
-                               std::forward<Args>(args)...)
-             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
-                   to_mdspan(), std::forward<Args>(args)...);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <typename... Args>
-  requires gslice_view_arguments<Extents::rank(), Args...>
-[[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args &&...args) {
-  return has_reversed_dim_
-             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<
-                   Extents::rank()>(to_mdspan(), reverse_dims_,
-                               std::forward<Args>(args)...)
-             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(
-                   to_mdspan(), std::forward<Args>(args)...);
+             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 // [numcxx.ix_view]
 namespace detail {
 
-template <class T>
-struct is_indices_arg : std::bool_constant<!slice_specifier<T>> {};
+template <class T> struct is_indices_arg : std::bool_constant<!slice_specifier<T>> {};
 
-template <class T>
-inline constexpr bool is_indices_arg_v = is_indices_arg<T>::value;
+template <class T> inline constexpr bool is_indices_arg_v = is_indices_arg<T>::value;
 
-template <class T>
-std::vector<size_type> to_indices_vector(const T &arg) {
+template <class T> std::vector<size_type> to_indices_vector(const T& arg) {
   if constexpr (std::is_same_v<std::decay_t<T>, std::vector<size_type>>) {
     return arg;
-  } else if constexpr (std::is_same_v<std::decay_t<T>,
-                                      std::initializer_list<size_type>>) {
+  } else if constexpr (std::is_same_v<std::decay_t<T>, std::initializer_list<size_type>>) {
     return std::vector<size_type>(arg.begin(), arg.end());
-  } else if constexpr (requires { arg.data(); arg.size(); }) {
+  } else if constexpr (requires {
+                         arg.data();
+                         arg.size();
+                       }) {
     std::vector<size_type> res;
     res.reserve(arg.size());
     for (size_type i = 0; i < arg.size(); ++i) {
@@ -3030,67 +2825,46 @@ std::vector<size_type> to_indices_vector(const T &arg) {
   }
 }
 
-template <class PaddedTuple, std::size_t... Is>
-constexpr size_type find_target_axis_impl(std::index_sequence<Is...>) {
+template <class PaddedTuple, std::size_t... Is> constexpr size_type find_target_axis_impl(std::index_sequence<Is...>) {
   size_type found = sizeof...(Is);
-  ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? (found = Is, 0)
-                                                            : 0),
-   ...);
+  ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? (found = Is, 0) : 0), ...);
   return found;
 }
 
-template <class PaddedTuple>
-constexpr size_type find_target_axis() {
-  return find_target_axis_impl<PaddedTuple>(
-      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+template <class PaddedTuple> constexpr size_type find_target_axis() {
+  return find_target_axis_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
 }
 
-template <class PaddedTuple, std::size_t... Is>
-constexpr size_type count_indices_impl(std::index_sequence<Is...>) {
-  return ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) +
-          ... + 0);
+template <class PaddedTuple, std::size_t... Is> constexpr size_type count_indices_impl(std::index_sequence<Is...>) {
+  return ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) + ... + 0);
 }
 
-template <class PaddedTuple>
-constexpr size_type count_indices() {
-  return count_indices_impl<PaddedTuple>(
-      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+template <class PaddedTuple> constexpr size_type count_indices() {
+  return count_indices_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
 }
 
-template <class PaddedTuple, std::size_t... Is>
-constexpr size_type count_scalars_impl(std::index_sequence<Is...>) {
-  return ((scalar_index<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) + ... +
-          0);
+template <class PaddedTuple, std::size_t... Is> constexpr size_type count_scalars_impl(std::index_sequence<Is...>) {
+  return ((scalar_index<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) + ... + 0);
 }
 
-template <class PaddedTuple>
-constexpr size_type count_scalars() {
-  return count_scalars_impl<PaddedTuple>(
-      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+template <class PaddedTuple> constexpr size_type count_scalars() {
+  return count_scalars_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
 }
 
 template <class PaddedTuple, size_type TAxis, std::size_t... Is>
 constexpr size_type compute_new_target_axis_impl(std::index_sequence<Is...>) {
-  return TAxis - (((Is < TAxis &&
-                    scalar_index<std::tuple_element_t<Is, PaddedTuple>>)
-                       ? 1
-                       : 0) +
-                  ... + 0);
+  return TAxis - (((Is < TAxis && scalar_index<std::tuple_element_t<Is, PaddedTuple>>) ? 1 : 0) + ... + 0);
 }
 
-template <class PaddedTuple, size_type TAxis>
-constexpr size_type compute_new_target_axis() {
-  return compute_new_target_axis_impl<PaddedTuple, TAxis>(
-      std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+template <class PaddedTuple, size_type TAxis> constexpr size_type compute_new_target_axis() {
+  return compute_new_target_axis_impl<PaddedTuple, TAxis>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
 }
 
-template <std::size_t... Is>
-auto make_full_extents_tuple(std::index_sequence<Is...>) {
+template <std::size_t... Is> auto make_full_extents_tuple(std::index_sequence<Is...>) {
   return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
 }
 
-template <size_type TargetAxis, size_type I, class Tuple>
-decltype(auto) get_replacement_element(Tuple &&t) {
+template <size_type TargetAxis, size_type I, class Tuple> decltype(auto) get_replacement_element(Tuple&& t) {
   if constexpr (I == TargetAxis) {
     return ::numcxx::detail::full_extent;
   } else {
@@ -3099,57 +2873,45 @@ decltype(auto) get_replacement_element(Tuple &&t) {
 }
 
 template <size_type TargetAxis, class Tuple, std::size_t... Is>
-auto make_replacement_args_impl(Tuple &&t, std::index_sequence<Is...>) {
+auto make_replacement_args_impl(Tuple&& t, std::index_sequence<Is...>) {
   return std::tuple{get_replacement_element<TargetAxis, Is>(std::forward<Tuple>(t))...};
 }
 
-template <size_type TargetAxis, class Tuple>
-auto make_replacement_args(Tuple &&t) {
+template <size_type TargetAxis, class Tuple> auto make_replacement_args(Tuple&& t) {
   return make_replacement_args_impl<TargetAxis>(
-      std::forward<Tuple>(t),
-      std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
+      std::forward<Tuple>(t), std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
 }
 
-template <class Array, class... Args>
-[[nodiscard]] auto make_ix_view(Array &&src, const ix_pack<Args...> &pack) {
+template <class Array, class... Args> [[nodiscard]] auto make_ix_view(Array&& src, const ix_pack<Args...>& pack) {
   constexpr size_type SrcRank = std::remove_cvref_t<Array>::rank();
   constexpr size_type PackSize = sizeof...(Args);
-  static_assert(PackSize <= SrcRank,
-                "Number of arguments in ix cannot exceed array rank");
+  static_assert(PackSize <= SrcRank, "Number of arguments in ix cannot exceed array rank");
 
-  auto padded_args = std::tuple_cat(
-      pack.arguments(),
-      make_full_extents_tuple(std::make_index_sequence<SrcRank - PackSize>{}));
+  auto padded_args =
+      std::tuple_cat(pack.arguments(), make_full_extents_tuple(std::make_index_sequence<SrcRank - PackSize>{}));
 
   using PaddedTuple = decltype(padded_args);
-  static_assert(count_indices<PaddedTuple>() == 1,
-                "ix requires exactly one discrete indices argument");
+  static_assert(count_indices<PaddedTuple>() == 1, "ix requires exactly one discrete indices argument");
 
   constexpr size_type TargetAxis = find_target_axis<PaddedTuple>();
   constexpr size_type NumScalars = count_scalars<PaddedTuple>();
   constexpr size_type ResultRank = SrcRank - NumScalars;
   static_assert(ResultRank >= 1, "Result rank must be at least 1");
 
-  constexpr size_type NewTargetAxis =
-      compute_new_target_axis<PaddedTuple, TargetAxis>();
+  constexpr size_type NewTargetAxis = compute_new_target_axis<PaddedTuple, TargetAxis>();
 
   auto indices_vec = to_indices_vector(std::get<TargetAxis>(padded_args));
 
   auto replacement_args = make_replacement_args<TargetAxis>(padded_args);
 
-  auto base_view = std::apply(
-      [&src](auto &&...args) {
-        return src(std::forward<decltype(args)>(args)...);
-      },
-      replacement_args);
+  auto base_view =
+      std::apply([&src](auto&&... args) { return src(std::forward<decltype(args)>(args)...); }, replacement_args);
 
   using base_view_type = std::decay_t<decltype(base_view)>;
-  static_assert(base_view_type::rank() == ResultRank,
-                "Base view rank must match ResultRank");
+  static_assert(base_view_type::rank() == ResultRank, "Base view rank must match ResultRank");
 
   for (auto idx : indices_vec) {
-    NUMCXX_ASSERT(idx < base_view.extent(NewTargetAxis),
-                  "indirect_view index out of bounds");
+    NUMCXX_ASSERT(idx < base_view.extent(NewTargetAxis), "indirect_view index out of bounds");
   }
 
   using element_type = typename base_view_type::element_type;
@@ -3170,15 +2932,13 @@ template <class Array, class... Args>
 
   return view_type(
       base_view.data_handle(), extents_type(view_extents),
-      accessor_type(std::move(indices_vec), NewTargetAxis, source_extents,
-                    view_extents, strides, reverse_dims));
+      accessor_type(std::move(indices_vec), NewTargetAxis, source_extents, view_extents, strides, reverse_dims));
 }
 
 } // namespace detail
 
 template <typename Layout, typename Extents>
-std::array<size_type, Extents::rank()>
-unravel_index(size_type i, const Extents &extents) {
+std::array<size_type, Extents::rank()> unravel_index(size_type i, const Extents& extents) {
   constexpr std::size_t rank = Extents::rank();
   std::array<size_type, rank> idx{};
 
@@ -3202,24 +2962,19 @@ unravel_index(size_type i, const Extents &extents) {
 // [numcxx.reduction]
 template <class ElementType, class Extents, class LayoutPolicy>
 template <value_expression Expr>
-  requires (!std::same_as<std::remove_cvref_t<Expr>,
-                          ndarray<ElementType, Extents, LayoutPolicy>> &&
-            !nc_is_broadcast_view_v<Expr> &&
-            (std::remove_cvref_t<Expr>::rank() == Extents::rank()))
-ndarray<ElementType, Extents, LayoutPolicy>::ndarray(const Expr &expr)
-    : elem_(make_expression_storage(
-          expr, std::make_index_sequence<extents_type::rank()>{})) {
+  requires(!std::same_as<std::remove_cvref_t<Expr>, ndarray<ElementType, Extents, LayoutPolicy>> &&
+           !nc_is_broadcast_view_v<Expr> && (std::remove_cvref_t<Expr>::rank() == Extents::rank()))
+ndarray<ElementType, Extents, LayoutPolicy>::ndarray(const Expr& expr)
+    : elem_(make_expression_storage(expr, std::make_index_sequence<extents_type::rank()>{})) {
   for (size_type i = 0; i < size(); ++i)
     flat_unchecked(i) = static_cast<value_type>(expr.flat_unchecked(i));
 }
 
 template <typename Tp, typename Ex, typename Lp>
-detail::reduction_mean_type_t<typename ndarray<Tp, Ex, Lp>::value_type>
-ndarray<Tp, Ex, Lp>::mean() const {
+detail::reduction_mean_type_t<typename ndarray<Tp, Ex, Lp>::value_type> ndarray<Tp, Ex, Lp>::mean() const {
   using result_type = detail::reduction_mean_type_t<value_type>;
   if (size() == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::mean(): cannot reduce an empty array");
+    NUMCXX_THROW(std::runtime_error, "ndarray::mean(): cannot reduce an empty array");
   result_type total{};
   for (size_type i = 0; i < size(); ++i)
     total += static_cast<result_type>(flat_unchecked(i));
@@ -3227,39 +2982,35 @@ ndarray<Tp, Ex, Lp>::mean() const {
 }
 
 template <typename Tp, typename Ex, typename Lp>
-detail::reduction_real_type_t<typename ndarray<Tp, Ex, Lp>::value_type>
-ndarray<Tp, Ex, Lp>::var() const {
+detail::reduction_real_type_t<typename ndarray<Tp, Ex, Lp>::value_type> ndarray<Tp, Ex, Lp>::var() const {
   using mean_type = detail::reduction_mean_type_t<value_type>;
   using result_type = detail::reduction_real_type_t<value_type>;
   if (size() == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::var(): cannot reduce an empty array");
+    NUMCXX_THROW(std::runtime_error, "ndarray::var(): cannot reduce an empty array");
   const mean_type average = mean();
   result_type total{};
   for (size_type i = 0; i < size(); ++i) {
-    const mean_type delta =
-        static_cast<mean_type>(flat_unchecked(i)) - average;
-    const result_type magnitude =
-        static_cast<result_type>(std::abs(delta));
+    const mean_type delta = static_cast<mean_type>(flat_unchecked(i)) - average;
+    const result_type magnitude = static_cast<result_type>(std::abs(delta));
     total += magnitude * magnitude;
   }
   return total / static_cast<result_type>(size());
 }
 
 template <typename Tp, typename Ex, typename Lp>
-detail::reduction_real_type_t<typename ndarray<Tp, Ex, Lp>::value_type>
-ndarray<Tp, Ex, Lp>::std() const {
+detail::reduction_real_type_t<typename ndarray<Tp, Ex, Lp>::value_type> ndarray<Tp, Ex, Lp>::std() const {
   if (size() == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::std(): cannot reduce an empty array");
+    NUMCXX_THROW(std::runtime_error, "ndarray::std(): cannot reduce an empty array");
   return std::sqrt(var());
 }
 
-template <typename Tp, typename Ex, typename Lp>
-bool ndarray<Tp, Ex, Lp>::any() const {
+template <typename Tp, typename Ex, typename Lp> bool ndarray<Tp, Ex, Lp>::any() const {
   for (size_type i = 0; i < size(); ++i) {
-    const value_type &value = flat_unchecked(i);
-    if constexpr (requires { value.real(); value.imag(); }) {
+    const value_type& value = flat_unchecked(i);
+    if constexpr (requires {
+                    value.real();
+                    value.imag();
+                  }) {
       if (value.real() != 0 || value.imag() != 0)
         return true;
     } else if (static_cast<bool>(value)) {
@@ -3269,11 +3020,13 @@ bool ndarray<Tp, Ex, Lp>::any() const {
   return false;
 }
 
-template <typename Tp, typename Ex, typename Lp>
-bool ndarray<Tp, Ex, Lp>::all() const {
+template <typename Tp, typename Ex, typename Lp> bool ndarray<Tp, Ex, Lp>::all() const {
   for (size_type i = 0; i < size(); ++i) {
-    const value_type &value = flat_unchecked(i);
-    if constexpr (requires { value.real(); value.imag(); }) {
+    const value_type& value = flat_unchecked(i);
+    if constexpr (requires {
+                    value.real();
+                    value.imag();
+                  }) {
       if (value.real() == 0 && value.imag() == 0)
         return false;
     } else if (!static_cast<bool>(value)) {
@@ -3286,8 +3039,7 @@ bool ndarray<Tp, Ex, Lp>::all() const {
 template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::size_type ndarray<Tp, Ex, Lp>::argmin() const {
   if (size() == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::argmin(): cannot reduce an empty array");
+    NUMCXX_THROW(std::runtime_error, "ndarray::argmin(): cannot reduce an empty array");
   size_type result = 0;
   for (size_type i = 1; i < size(); ++i)
     if (detail::reduction_less(flat_unchecked(i), flat_unchecked(result)))
@@ -3298,8 +3050,7 @@ typename ndarray<Tp, Ex, Lp>::size_type ndarray<Tp, Ex, Lp>::argmin() const {
 template <typename Tp, typename Ex, typename Lp>
 typename ndarray<Tp, Ex, Lp>::size_type ndarray<Tp, Ex, Lp>::argmax() const {
   if (size() == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::argmax(): cannot reduce an empty array");
+    NUMCXX_THROW(std::runtime_error, "ndarray::argmax(): cannot reduce an empty array");
   size_type result = 0;
   for (size_type i = 1; i < size(); ++i)
     if (detail::reduction_less(flat_unchecked(result), flat_unchecked(i)))
@@ -3307,89 +3058,58 @@ typename ndarray<Tp, Ex, Lp>::size_type ndarray<Tp, Ex, Lp>::argmax() const {
   return result;
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::sum(::numcxx::index_type axis) const
-{
-  return reduce_axis_impl(axis, "ndarray::sum(axis)", value_type{},
-                          [](const value_type &x, size_type, size_type) {
-                            return x;
-                          },
-                          std::plus<>{});
-}
-
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::min(::numcxx::index_type axis) const
-{
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::sum(::numcxx::index_type axis) const {
   return reduce_axis_impl(
-      axis, "ndarray::min(axis)", value_type{},
-      [](const value_type &x, size_type, size_type) { return x; },
-      [](const value_type &a, const value_type &b) {
-        return detail::reduction_less(b, a) ? b : a;
-      },
-      true);
+      axis, "ndarray::sum(axis)", value_type{}, [](const value_type& x, size_type, size_type) { return x; },
+      std::plus<>{});
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::max(::numcxx::index_type axis) const
-{
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::min(::numcxx::index_type axis) const {
   return reduce_axis_impl(
-      axis, "ndarray::max(axis)", value_type{},
-      [](const value_type &x, size_type, size_type) { return x; },
-      [](const value_type &a, const value_type &b) {
-        return detail::reduction_less(a, b) ? b : a;
-      },
-      true);
+      axis, "ndarray::min(axis)", value_type{}, [](const value_type& x, size_type, size_type) { return x; },
+      [](const value_type& a, const value_type& b) { return detail::reduction_less(b, a) ? b : a; }, true);
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::prod(::numcxx::index_type axis) const
-{
-  return reduce_axis_impl(axis, "ndarray::prod(axis)", value_type{1},
-                          [](const value_type &x, size_type, size_type) {
-                            return x;
-                          },
-                          std::multiplies<>{});
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::max(::numcxx::index_type axis) const {
+  return reduce_axis_impl(
+      axis, "ndarray::max(axis)", value_type{}, [](const value_type& x, size_type, size_type) { return x; },
+      [](const value_type& a, const value_type& b) { return detail::reduction_less(a, b) ? b : a; }, true);
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::mean(::numcxx::index_type axis) const
-{
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::prod(::numcxx::index_type axis) const {
+  return reduce_axis_impl(
+      axis, "ndarray::prod(axis)", value_type{1}, [](const value_type& x, size_type, size_type) { return x; },
+      std::multiplies<>{});
+}
+
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::mean(::numcxx::index_type axis) const {
   using result_type = detail::reduction_mean_type_t<value_type>;
   axis = normalize_reduction_axis(axis, "ndarray::mean(axis)");
   const size_type count = static_cast<size_type>(extent(axis));
   if (count == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::mean(axis): cannot reduce over empty axis");
+    NUMCXX_THROW(std::runtime_error, "ndarray::mean(axis): cannot reduce over empty axis");
   auto result = reduce_axis_impl(
       axis, "ndarray::mean(axis)", result_type{},
-      [](const value_type &x, size_type, size_type) {
-        return static_cast<result_type>(x);
-      },
-      std::plus<>{});
+      [](const value_type& x, size_type, size_type) { return static_cast<result_type>(x); }, std::plus<>{});
   const result_type divisor = static_cast<result_type>(count);
   for (size_type i = 0; i < result.size(); ++i)
     result.flat_unchecked(i) /= divisor;
   return result;
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::var(::numcxx::index_type axis) const
-{
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::var(::numcxx::index_type axis) const {
   using mean_type = detail::reduction_mean_type_t<value_type>;
   using result_type = detail::reduction_real_type_t<value_type>;
   axis = normalize_reduction_axis(axis, "ndarray::var(axis)");
   const size_type count = static_cast<size_type>(extent(axis));
   if (count == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::var(axis): cannot reduce over empty axis");
+    NUMCXX_THROW(std::runtime_error, "ndarray::var(axis): cannot reduce over empty axis");
   const auto averages = mean(axis);
   auto result = reduce_axis_impl(
       axis, "ndarray::var(axis)", result_type{},
-      [&](const value_type &x, size_type output_flat, size_type) {
-        const mean_type delta =
-            static_cast<mean_type>(x) - averages.flat_unchecked(output_flat);
-        const result_type magnitude =
-            static_cast<result_type>(std::abs(delta));
+      [&](const value_type& x, size_type output_flat, size_type) {
+        const mean_type delta = static_cast<mean_type>(x) - averages.flat_unchecked(output_flat);
+        const result_type magnitude = static_cast<result_type>(std::abs(delta));
         return magnitude * magnitude;
       },
       std::plus<>{});
@@ -3399,147 +3119,111 @@ auto ndarray<Tp, Ex, Lp>::var(::numcxx::index_type axis) const
   return result;
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::std(::numcxx::index_type axis) const
-{
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::std(::numcxx::index_type axis) const {
   axis = normalize_reduction_axis(axis, "ndarray::std(axis)");
   if (extent(axis) == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::std(axis): cannot reduce over empty axis");
+    NUMCXX_THROW(std::runtime_error, "ndarray::std(axis): cannot reduce over empty axis");
   auto result = var(axis);
   for (size_type i = 0; i < result.size(); ++i)
     result.flat_unchecked(i) = std::sqrt(result.flat_unchecked(i));
   return result;
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::any(::numcxx::index_type axis) const {
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::any(::numcxx::index_type axis) const {
   return reduce_axis_impl(
       axis, "ndarray::any(axis)", static_cast<unsigned char>(0),
-      [](const value_type &x, size_type, size_type) {
-        if constexpr (requires { x.real(); x.imag(); })
+      [](const value_type& x, size_type, size_type) {
+        if constexpr (requires {
+                        x.real();
+                        x.imag();
+                      })
           return static_cast<unsigned char>(x.real() != 0 || x.imag() != 0);
         else
           return static_cast<unsigned char>(static_cast<bool>(x));
       },
-      [](unsigned char a, unsigned char b) {
-        return static_cast<unsigned char>(a || b);
-      });
+      [](unsigned char a, unsigned char b) { return static_cast<unsigned char>(a || b); });
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::all(::numcxx::index_type axis) const {
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::all(::numcxx::index_type axis) const {
   return reduce_axis_impl(
       axis, "ndarray::all(axis)", static_cast<unsigned char>(1),
-      [](const value_type &x, size_type, size_type) {
-        if constexpr (requires { x.real(); x.imag(); })
+      [](const value_type& x, size_type, size_type) {
+        if constexpr (requires {
+                        x.real();
+                        x.imag();
+                      })
           return static_cast<unsigned char>(x.real() != 0 || x.imag() != 0);
         else
           return static_cast<unsigned char>(static_cast<bool>(x));
       },
-      [](unsigned char a, unsigned char b) {
-        return static_cast<unsigned char>(a && b);
-      });
+      [](unsigned char a, unsigned char b) { return static_cast<unsigned char>(a && b); });
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::argmin(::numcxx::index_type axis) const
-{
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::argmin(::numcxx::index_type axis) const {
   using item_type = std::pair<value_type, size_type>;
   axis = normalize_reduction_axis(axis, "ndarray::argmin(axis)");
   if (extent(axis) == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::argmin(axis): cannot reduce over empty axis");
+    NUMCXX_THROW(std::runtime_error, "ndarray::argmin(axis): cannot reduce over empty axis");
   auto pairs = reduce_axis_impl(
       axis, "ndarray::argmin(axis)", item_type{},
-      [](const value_type &x, size_type, size_type reduced) {
-        return item_type{x, reduced};
-      },
-      [](const item_type &a, const item_type &b) {
-        return detail::reduction_less(b.first, a.first) ? b : a;
-      },
-      true);
-  ndarray<size_type, typename decltype(pairs)::extents_type> result(
-      pairs.extents());
+      [](const value_type& x, size_type, size_type reduced) { return item_type{x, reduced}; },
+      [](const item_type& a, const item_type& b) { return detail::reduction_less(b.first, a.first) ? b : a; }, true);
+  ndarray<size_type, typename decltype(pairs)::extents_type> result(pairs.extents());
   for (size_type i = 0; i < result.size(); ++i)
     result.flat_unchecked(i) = pairs.flat_unchecked(i).second;
   return result;
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto ndarray<Tp, Ex, Lp>::argmax(::numcxx::index_type axis) const
-{
+template <typename Tp, typename Ex, typename Lp> auto ndarray<Tp, Ex, Lp>::argmax(::numcxx::index_type axis) const {
   using item_type = std::pair<value_type, size_type>;
   axis = normalize_reduction_axis(axis, "ndarray::argmax(axis)");
   if (extent(axis) == 0)
-    NUMCXX_THROW(std::runtime_error,
-                 "ndarray::argmax(axis): cannot reduce over empty axis");
+    NUMCXX_THROW(std::runtime_error, "ndarray::argmax(axis): cannot reduce over empty axis");
   auto pairs = reduce_axis_impl(
       axis, "ndarray::argmax(axis)", item_type{},
-      [](const value_type &x, size_type, size_type reduced) {
-        return item_type{x, reduced};
-      },
-      [](const item_type &a, const item_type &b) {
-        return detail::reduction_less(a.first, b.first) ? b : a;
-      },
-      true);
-  ndarray<size_type, typename decltype(pairs)::extents_type> result(
-      pairs.extents());
+      [](const value_type& x, size_type, size_type reduced) { return item_type{x, reduced}; },
+      [](const item_type& a, const item_type& b) { return detail::reduction_less(a.first, b.first) ? b : a; }, true);
+  ndarray<size_type, typename decltype(pairs)::extents_type> result(pairs.extents());
   for (size_type i = 0; i < result.size(); ++i)
     result.flat_unchecked(i) = pairs.flat_unchecked(i).second;
   return result;
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename ndarray<Tp, Ex, Lp>::const_reference
-ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
+typename ndarray<Tp, Ex, Lp>::const_reference ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
   if constexpr (std::is_same_v<layout_type, default_layout>)
     return data()[i];
   else {
     auto idx = unravel_index<default_layout>(i, extents());
 
-    const auto &mapping = elem_.mapping();
-    return std::apply(
-        [&](auto... idxs) -> decltype(auto) {
-          return data()[mapping(idxs...)];
-        },
-        idx);
+    const auto& mapping = elem_.mapping();
+    return std::apply([&](auto... idxs) -> decltype(auto) { return data()[mapping(idxs...)]; }, idx);
   }
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename ndarray<Tp, Ex, Lp>::reference
-ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) {
+typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat_unchecked(size_type i) {
   if constexpr (std::is_same_v<layout_type, default_layout>)
     return data()[i];
   else {
     auto idx = unravel_index<default_layout>(i, extents());
 
-    const auto &mapping = elem_.mapping();
-    return std::apply(
-        [&](auto... idxs) -> decltype(auto) {
-          return data()[mapping(idxs...)];
-        },
-        idx);
+    const auto& mapping = elem_.mapping();
+    return std::apply([&](auto... idxs) -> decltype(auto) { return data()[mapping(idxs...)]; }, idx);
   }
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename gslice_view<Tp, Ex, Lp>::const_reference
-gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
-  return flat_contiguous_ ? data_handle()[i]
-                          : data_handle()[calc_flat_offset(i)];
+typename gslice_view<Tp, Ex, Lp>::const_reference gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
+  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
 }
 
 template <typename Tp, typename Ex, typename Lp>
-typename gslice_view<Tp, Ex, Lp>::reference
-gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) {
-  return flat_contiguous_ ? data_handle()[i]
-                          : data_handle()[calc_flat_offset(i)];
+typename gslice_view<Tp, Ex, Lp>::reference gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) {
+  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
 }
 
-template <typename Tp, typename Ex, typename Lp>
-auto gslice_view<Tp, Ex, Lp>::eval() const {
+template <typename Tp, typename Ex, typename Lp> auto gslice_view<Tp, Ex, Lp>::eval() const {
   using result_type = ndarray<value_type, dextents<rank()>, default_layout>;
   auto result = [&]<size_type... Is>(std::index_sequence<Is...>) {
     return result_type(extent(Is)...);
@@ -3551,10 +3235,8 @@ auto gslice_view<Tp, Ex, Lp>::eval() const {
 
 template <class Tp, class Ex, class Lp>
 template <class BroadcastElement, ::numcxx::size_type Rank>
-ndarray<Tp, Ex, Lp>::ndarray(const broadcast_view<BroadcastElement, Rank> &bv)
-    : elem_(extents_type(bv.extents())) {
-  static_assert(Rank == Ex::rank(),
-                "Broadcast view rank must match ndarray rank");
+ndarray<Tp, Ex, Lp>::ndarray(const broadcast_view<BroadcastElement, Rank>& bv) : elem_(extents_type(bv.extents())) {
+  static_assert(Rank == Ex::rank(), "Broadcast view rank must match ndarray rank");
   for (size_type i = 0; i < size(); ++i)
     flat_unchecked(i) = static_cast<value_type>(bv.flat_unchecked(i));
 }
@@ -3567,8 +3249,7 @@ auto ndarray<Tp, Ex, Lp>::broadcast_to(Dims... dims) const {
 
 template <class Tp, class Ex, class Lp>
 template <std::integral Extent, ::numcxx::size_type Rank>
-auto ndarray<Tp, Ex, Lp>::broadcast_to(
-    const std::array<Extent, Rank> &shape) const {
+auto ndarray<Tp, Ex, Lp>::broadcast_to(const std::array<Extent, Rank>& shape) const {
   return detail::make_broadcast_view(*this, shape);
 }
 
@@ -3580,8 +3261,7 @@ auto gslice_view<Tp, Ex, Lp>::broadcast_to(Dims... dims) const {
 
 template <class Tp, class Ex, class Lp>
 template <std::integral Extent, ::numcxx::size_type Rank>
-auto gslice_view<Tp, Ex, Lp>::broadcast_to(
-    const std::array<Extent, Rank> &shape) const {
+auto gslice_view<Tp, Ex, Lp>::broadcast_to(const std::array<Extent, Rank>& shape) const {
   return detail::make_broadcast_view(*this, shape);
 }
 
@@ -3593,21 +3273,19 @@ auto broadcast_view<Tp, Rank>::broadcast_to(Dims... dims) const {
 
 template <class Tp, size_type Rank>
 template <std::integral Extent, ::numcxx::size_type TargetRank>
-auto broadcast_view<Tp, Rank>::broadcast_to(
-    const std::array<Extent, TargetRank> &shape) const {
+auto broadcast_view<Tp, Rank>::broadcast_to(const std::array<Extent, TargetRank>& shape) const {
   return detail::make_broadcast_view(*this, shape);
 }
 
 template <class Source, std::integral... Dims>
   requires detail::is_broadcast_source<std::remove_cvref_t<Source>>::value
-[[nodiscard]] auto broadcast_to(const Source &source, Dims... dims) {
+[[nodiscard]] auto broadcast_to(const Source& source, Dims... dims) {
   return detail::make_broadcast_view(source, dims...);
 }
 
 template <class Source, std::integral Extent, size_type Rank>
   requires detail::is_broadcast_source<std::remove_cvref_t<Source>>::value
-[[nodiscard]] auto broadcast_to(const Source &source,
-                                const std::array<Extent, Rank> &shape) {
+[[nodiscard]] auto broadcast_to(const Source& source, const std::array<Extent, Rank>& shape) {
   return detail::make_broadcast_view(source, shape);
 }
 
@@ -3621,8 +3299,7 @@ template <class Source, std::integral Extent, size_type Rank>
 // Provides evaluation and reduction APIs for a value expression.
 template <class ValExpr> class nc_val_expr {
   using RmExpr = std::remove_cvref_t<ValExpr>;
-  static_assert(nc_is_val_expr_v<RmExpr>,
-                "nc_val_expr requires a value expression");
+  static_assert(nc_is_val_expr_v<RmExpr>, "nc_val_expr requires a value expression");
 
   ValExpr expr_;
 
@@ -3641,26 +3318,18 @@ public:
   using ndarray_type = ndarray<value_type, extents_type, default_layout>;
 
   static constexpr rank_type rank() noexcept { return extents_type::rank(); }
-  static constexpr rank_type rank_dynamic() noexcept {
-    return extents_type::rank_dynamic();
-  }
-  static constexpr size_type static_extent(rank_type r) noexcept {
-    return extents_type::static_extent(r);
-  }
-  constexpr index_type extent(rank_type r) const noexcept {
-    return expr_.extent(r);
-  }
+  static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
+  static constexpr size_type static_extent(rank_type r) noexcept { return extents_type::static_extent(r); }
+  constexpr index_type extent(rank_type r) const noexcept { return expr_.extent(r); }
 
-  explicit nc_val_expr(const RmExpr &e) : expr_(e) {}
+  explicit nc_val_expr(const RmExpr& e) : expr_(e) {}
 
   [[nodiscard]] value_type flat(size_type i) const {
     detail::checked_index(i, size(), "nc_val_expr::flat");
     return flat_unchecked(i);
   }
   // Internal API (not stable): unchecked flat access; requires i < size().
-  [[nodiscard]] value_type flat_unchecked(size_type i) const {
-    return expr_.flat_unchecked(i);
-  }
+  [[nodiscard]] value_type flat_unchecked(size_type i) const { return expr_.flat_unchecked(i); }
 
   // TODO:
   // - Support lazy slicing of expressions, e.g. (a + b)(slice(...)).
@@ -3701,20 +3370,12 @@ public:
   [[nodiscard]] auto std(::numcxx::index_type axis) const { return eval().std(axis); }
   [[nodiscard]] auto any(::numcxx::index_type axis) const { return eval().any(axis); }
   [[nodiscard]] auto all(::numcxx::index_type axis) const { return eval().all(axis); }
-  [[nodiscard]] auto argmin(::numcxx::index_type axis) const {
-    return eval().argmin(axis);
-  }
-  [[nodiscard]] auto argmax(::numcxx::index_type axis) const {
-    return eval().argmax(axis);
-  }
+  [[nodiscard]] auto argmin(::numcxx::index_type axis) const { return eval().argmin(axis); }
+  [[nodiscard]] auto argmax(::numcxx::index_type axis) const { return eval().argmax(axis); }
 
-  [[nodiscard]] constexpr size_type size() const noexcept {
-    return expr_.size();
-  }
+  [[nodiscard]] constexpr size_type size() const noexcept { return expr_.size(); }
   [[nodiscard]] constexpr bool empty() const noexcept { return expr_.empty(); }
-  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
-    return expr_.extents();
-  }
+  [[nodiscard]] constexpr const extents_type& extents() const noexcept { return expr_.extents(); }
 
   value_type sum() const {
     const size_type n = size();
@@ -3757,7 +3418,7 @@ public:
   using element_type = Tp;
   using value_type = std::remove_cv_t<Tp>;
 
-  explicit nc_scalar_expr(const value_type &t, size_type s) : t_(t), s_(s) {}
+  explicit nc_scalar_expr(const value_type& t, size_type s) : t_(t), s_(s) {}
   [[nodiscard]] value_type flat(size_type) const { return t_; }
   [[nodiscard]] value_type flat_unchecked(size_type) const { return t_; }
   size_type size() const { return s_; }
@@ -3775,28 +3436,23 @@ template <class T> struct nc_operand_storage {
   using type = std::remove_cvref_t<T>;
 };
 
-template <class Tp, class Ex, class Lp>
-struct nc_operand_storage<ndarray<Tp, Ex, Lp>> {
-  using type = const ndarray<Tp, Ex, Lp> &;
+template <class Tp, class Ex, class Lp> struct nc_operand_storage<ndarray<Tp, Ex, Lp>> {
+  using type = const ndarray<Tp, Ex, Lp>&;
 };
 
-template <class Tp, class Ex, class Lp>
-struct nc_operand_storage<gslice_view<Tp, Ex, Lp>> {
-  using type = const gslice_view<Tp, Ex, Lp> &;
+template <class Tp, class Ex, class Lp> struct nc_operand_storage<gslice_view<Tp, Ex, Lp>> {
+  using type = const gslice_view<Tp, Ex, Lp>&;
 };
 
 template <class Tp> struct nc_operand_storage<mask_view<Tp>> {
-  using type = const mask_view<Tp> &;
+  using type = const mask_view<Tp>&;
 };
 
-template <class Tp, size_type Rank>
-struct nc_operand_storage<indirect_view<Tp, Rank>> {
-  using type = const indirect_view<Tp, Rank> &;
+template <class Tp, size_type Rank> struct nc_operand_storage<indirect_view<Tp, Rank>> {
+  using type = const indirect_view<Tp, Rank>&;
 };
 
-template <class T>
-using nc_operand_storage_t =
-    typename nc_operand_storage<std::remove_cvref_t<T>>::type;
+template <class T> using nc_operand_storage_t = typename nc_operand_storage<std::remove_cvref_t<T>>::type;
 
 } // namespace detail
 
@@ -3805,12 +3461,10 @@ template <class Op, class A0> struct nc_unary_op {
   detail::nc_operand_storage_t<A0> a0_;
 
   using RmA0 = std::remove_cvref_t<A0>;
-  static_assert(nc_has_extents_v<RmA0>,
-                "nc_unary_op requires an array operand");
+  static_assert(nc_has_extents_v<RmA0>, "nc_unary_op requires an array operand");
 
   // element
-  using value_type = std::decay_t<decltype(std::declval<Op>()(
-      std::declval<const A0 &>().flat(0)))>;
+  using value_type = std::decay_t<decltype(std::declval<Op>()(std::declval<const A0&>().flat(0)))>;
   using element_type = value_type;
 
   // extents
@@ -3820,31 +3474,21 @@ template <class Op, class A0> struct nc_unary_op {
   using rank_type = typename extents_type::rank_type;
 
   static constexpr rank_type rank() noexcept { return extents_type::rank(); }
-  static constexpr rank_type rank_dynamic() noexcept {
-    return extents_type::rank_dynamic();
-  }
-  static constexpr size_type static_extent(rank_type r) noexcept {
-    return extents_type::static_extent(r);
-  }
-  constexpr index_type extent(rank_type r) const noexcept {
-    return a0_.extent(r);
-  }
+  static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
+  static constexpr size_type static_extent(rank_type r) noexcept { return extents_type::static_extent(r); }
+  constexpr index_type extent(rank_type r) const noexcept { return a0_.extent(r); }
 
-  nc_unary_op(const Op &op, const A0 &a0) : op_(op), a0_(a0) {}
+  nc_unary_op(const Op& op, const A0& a0) : op_(op), a0_(a0) {}
 
   [[nodiscard]] value_type flat(size_type i) const { return flat_unchecked(i); }
 
-  [[nodiscard]] value_type flat_unchecked(size_type i) const {
-    return op_(a0_.flat_unchecked(i));
-  }
+  [[nodiscard]] value_type flat_unchecked(size_type i) const { return op_(a0_.flat_unchecked(i)); }
 
   [[nodiscard]] constexpr size_type size() const noexcept { return a0_.size(); }
 
   [[nodiscard]] constexpr bool empty() const noexcept { return a0_.empty(); }
 
-  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
-    return a0_.extents();
-  }
+  [[nodiscard]] constexpr const extents_type& extents() const noexcept { return a0_.extents(); }
 };
 
 template <class Op, class A0, class A1> struct nc_binary_op {
@@ -3854,35 +3498,26 @@ template <class Op, class A0, class A1> struct nc_binary_op {
 
   using RmA0 = std::remove_cvref_t<A0>;
   using RmA1 = std::remove_cvref_t<A1>;
-  static_assert(nc_has_extents_v<RmA0> || nc_has_extents_v<RmA1>,
-                "nc_binary_op requires at least one array operand");
+  static_assert(nc_has_extents_v<RmA0> || nc_has_extents_v<RmA1>, "nc_binary_op requires at least one array operand");
 
   // element
-  using value_type = std::decay_t<decltype(std::declval<Op>()(
-      std::declval<const A0 &>().flat(0), std::declval<const A1 &>().flat(0)))>;
+  using value_type =
+      std::decay_t<decltype(std::declval<Op>()(std::declval<const A0&>().flat(0), std::declval<const A1&>().flat(0)))>;
   using element_type = value_type;
 
   // extents
-  using array_operand_type =
-      std::conditional_t<nc_has_extents_v<RmA0>, RmA0, RmA1>;
+  using array_operand_type = std::conditional_t<nc_has_extents_v<RmA0>, RmA0, RmA1>;
   using extents_type = typename array_operand_type::extents_type;
   using index_type = typename extents_type::index_type;
   using size_type = typename extents_type::size_type;
   using rank_type = typename extents_type::rank_type;
 
   static constexpr rank_type rank() noexcept { return extents_type::rank(); }
-  static constexpr rank_type rank_dynamic() noexcept {
-    return extents_type::rank_dynamic();
-  }
-  static constexpr size_type static_extent(rank_type r) noexcept {
-    return extents_type::static_extent(r);
-  }
-  constexpr index_type extent(rank_type r) const noexcept {
-    return extents().extent(r);
-  }
+  static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
+  static constexpr size_type static_extent(rank_type r) noexcept { return extents_type::static_extent(r); }
+  constexpr index_type extent(rank_type r) const noexcept { return extents().extent(r); }
 
-  nc_binary_op(const Op &op, const A0 &a0, const A1 &a1)
-      : op_(op), a0_(a0), a1_(a1) {
+  nc_binary_op(const Op& op, const A0& a0, const A1& a1) : op_(op), a0_(a0), a1_(a1) {
     if constexpr (nc_has_extents_v<RmA0> && nc_has_extents_v<RmA1>)
       detail::check_shape_match(a0, a1);
   }
@@ -3903,7 +3538,7 @@ template <class Op, class A0, class A1> struct nc_binary_op {
 
   [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
 
-  [[nodiscard]] constexpr const extents_type &extents() const noexcept {
+  [[nodiscard]] constexpr const extents_type& extents() const noexcept {
     if constexpr (nc_has_extents_v<RmA0>) {
       return a0_.extents();
     } else {
@@ -3913,8 +3548,7 @@ template <class Op, class A0, class A1> struct nc_binary_op {
 };
 
 // ndarray
-template <class Tp, class Ex, class Lp>
-inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
+template <class Tp, class Ex, class Lp> inline void ndarray<Tp, Ex, Lp>::swap(ndarray& v) noexcept {
   std::swap(elem_, v.elem_);
 }
 
@@ -3930,37 +3564,33 @@ inline void ndarray<Tp, Ex, Lp>::swap(ndarray &v) noexcept {
 //     }
 // }
 
-template <class Tp, class Ex, class Lp>
-inline void swap(ndarray<Tp, Ex, Lp> &x, ndarray<Tp, Ex, Lp> &y) noexcept {
+template <class Tp, class Ex, class Lp> inline void swap(ndarray<Tp, Ex, Lp>& x, ndarray<Tp, Ex, Lp>& y) noexcept {
   x.swap(y);
 }
 
 namespace detail {
-template <class Op, class Expr> inline auto make_unary_op(const Expr &x) {
+template <class Op, class Expr> inline auto make_unary_op(const Expr& x) {
   using value_type = typename Expr::value_type;
   using OpType = nc_unary_op<Op, Expr>;
   OpType node(Op{}, x);
   return nc_val_expr<OpType>(node);
 }
 
-template <class Op, class Expr1, class Expr2>
-inline auto make_expr_expr(const Expr1 &x, const Expr2 &y) {
+template <class Op, class Expr1, class Expr2> inline auto make_expr_expr(const Expr1& x, const Expr2& y) {
   using value_type = typename Expr1::value_type;
   using OpType = nc_binary_op<Op, Expr1, Expr2>;
   OpType node(Op{}, x, y);
   return nc_val_expr<OpType>(node);
 }
 
-template <class Op, class Expr>
-inline auto make_expr_scalar(const Expr &x, const auto &y) {
+template <class Op, class Expr> inline auto make_expr_scalar(const Expr& x, const auto& y) {
   using scalar_type = std::remove_cvref_t<decltype(y)>;
   using OpType = nc_binary_op<Op, Expr, nc_scalar_expr<scalar_type>>;
   OpType node(Op{}, x, nc_scalar_expr<scalar_type>(y, x.size()));
   return nc_val_expr<OpType>(node);
 }
 
-template <class Op, class Expr>
-inline auto make_scalar_expr(const auto &x, const Expr &y) {
+template <class Op, class Expr> inline auto make_scalar_expr(const auto& x, const Expr& y) {
   using scalar_type = std::remove_cvref_t<decltype(x)>;
   using OpType = nc_binary_op<Op, nc_scalar_expr<scalar_type>, Expr>;
   OpType node(Op{}, nc_scalar_expr<scalar_type>(x, y.size()), y);
@@ -3977,26 +3607,20 @@ template <class T> struct complex_component<std::complex<T>> {
   static constexpr bool is_complex = true;
 };
 
-template <class T>
-using complex_component_t =
-    typename complex_component<std::remove_cvref_t<T>>::type;
+template <class T> using complex_component_t = typename complex_component<std::remove_cvref_t<T>>::type;
 
 template <class T, class U,
-          bool IsComplex =
-              complex_component<std::remove_cvref_t<T>>::is_complex ||
-              complex_component<std::remove_cvref_t<U>>::is_complex>
+          bool IsComplex = complex_component<std::remove_cvref_t<T>>::is_complex ||
+                           complex_component<std::remove_cvref_t<U>>::is_complex>
 struct promoted_type {
-  using type =
-      std::common_type_t<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
+  using type = std::common_type_t<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
 };
 
 template <class T, class U> struct promoted_type<T, U, true> {
-  using type = std::complex<
-      std::common_type_t<complex_component_t<T>, complex_component_t<U>>>;
+  using type = std::complex<std::common_type_t<complex_component_t<T>, complex_component_t<U>>>;
 };
 
-template <class T, class U>
-using promoted_type_t = typename promoted_type<T, U>::type;
+template <class T, class U> using promoted_type_t = typename promoted_type<T, U>::type;
 } // namespace detail
 
 // Expression nodes reference array-like operands; consume them before those
