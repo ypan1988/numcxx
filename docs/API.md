@@ -187,9 +187,10 @@ Provides three ways to access individual elements: multidimensional indexing, ph
 
 | | |
 |---|---|
-| **`(i, j, ...)`** | Unchecked multidimensional access using one index per dimension. |
-| **`[i]`** | Unchecked physical linear access at index `i`. |
+| **`(i, j, ...)`** | Checked multidimensional access using one index per dimension. |
+| **`[i, j, ...]` (C++23 TODO)** | Unchecked multidimensional access using one index per dimension. |
 | **`.at(i)`** | Checked physical linear access at index `i`. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
+| **`[i]`** | Unchecked physical linear access at index `i`. |
 | **`.flat(i)`** | Checked logical flattened access at index `i`, following the default layout independently of physical storage. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
 | **`.flat_unchecked(i)`** | Unchecked logical flattened access at index `i`, following the default layout independently of physical storage. |
 
