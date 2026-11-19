@@ -20,12 +20,11 @@
 ## Indexing and Slicing
 | | |
 |---|---|
-| **[element access](#element-access)** | element access via `()`, `[]` and `flat()` |
-| **[`slice`](#slice-def)** | describes a range of elements along one dimension |
-| **[`gslice`](#gslice-def)** | packages multidimensional index and slice arguments |
-| **[`gslice_view`](#gslice-view-def)** | view created by slicing an array |
-| **[`mask_view`](#mask-view-def)** | view selecting elements using a boolean mask |
-| **[`indirect_view`](#indirect-view-def)** | view selecting elements using indices |
+| **[element access](#element-access)** | multi-dim access via `()`, physical access via `[]` / `at()` and logical access via `flat()` / `flat_unchecked` |
+| **[`slice(start, stop, step=1)`](#slice-def)** | NumPy-style slice descriptor; one dimension per call |
+| **[ slicing / `gslice(...)`](#gslice-view-def)** | ranges and rank reduction via `()` or `[gslice(...)]`|
+| **[ fancy indexing / `ix(...)`](#indirect-view-def)** | discrete and mixed selection via `()` or `[ix(...)]` |
+| **[`mask`](#mask-view-def)** | boolean filtering via `[mask]` |
 
 
 <a id="member-functions-and-variables"></a>
