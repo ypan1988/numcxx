@@ -180,6 +180,7 @@ evaluating to an `ndarray` first.
 
 This section covers NumCxx slicing and the view types used to access selected elements without copying data.
 
+<a id="element-access"></a>
 ### Element access via `()`, `[]`, `at()` and `flat()/flat_unchecked()`
 
 Provides three ways to access individual elements: multidimensional indexing, physical linear indexing, and logical flattened indexing.
@@ -196,17 +197,12 @@ Provides three ways to access individual elements: multidimensional indexing, ph
 ### `slice`
 
 - `slice` describes a range of elements in one dimension using `start`, `stop`, and `step`.
-- It follows NumPy-style slicing:
-  - `start` is included.
-  - `stop` is excluded.
-  - `step` controls the interval between selected elements.
-  - Negative indices count from the end.
-  - A negative `step` selects elements in reverse order.
+- Slicing follows NumPy conventions: start is included, stop is excluded, negative indices count from the end, and a negative step selects elements in reverse order.
 
 - Forms:
   - `slice()` - select the whole dimension.
   - `slice(start, stop)` - select from `start` up to, but not including, `stop`.
-  - `slice(start, stop, step)` - select every `step`-th element between `start` and `stop`.
+  - `slice(start, stop, step)` - select every `step`-th element from `start` up to, but not including `stop`.
 
 - Common slices:
 
@@ -216,61 +212,12 @@ Provides three ways to access individual elements: multidimensional indexing, ph
   | `slice(1, 5)` | `[1:5]` | elements 1 through 4 |
   | `slice(0, 10, 2)` | `[0:10:2]` | every second element |
   | `slice(-3, {})` | `[-3:]` | the last three elements |
-  | `slice({}, 5)` | `[:5]` | from the beginning up to element 5 |
+  | `slice({}, 5)` | `[:5]` | from the beginning up to, but not including, element 5 |
   | `slice(2, {})` | `[2:]` | from element 2 to the end |
   | `slice({}, {}, 2)` | `[::2]` | every second element |
   | `slice({}, {}, -1)` | `[::-1]` | all elements in reverse order |
 
-- Missing values are written as `{}`:
-  - `slice({}, stop)` - omit `start`.
-  - `slice(start, {})` - omit `stop`.
-  - `slice({}, {}, step)` - omit both `start` and `stop`.
-
-- Slicing an `ndarray`:
-  - Use `operator()` with no more than one argument per dimension, or put the arguments in a `gslice` and pass it to `operator[]`.
-  - An integer selects one element along a dimension.
-  - A `slice` selects a range of elements.
-  - `full_extent` selects the whole dimension.
-  - Dimensions omitted from the end of the argument list are selected in full.
-  - A pair such as `{1, 4}` is a convenient range equivalent to `slice(1, 4)`.
-
-- Examples:
-
-      dmat A(4, 5);
-
-      auto rows = A(slice(1, 3), full_extent);
-      auto cols = A(full_extent, slice(0, 5, 2));
-      auto row  = A(1, full_extent);
-      auto rev  = A(slice({}, {}, -1), full_extent);
-      auto rows_by_subscript = A[gslice(slice(1, 3), full_extent)];
-
-  In the examples above:
-  - `rows` selects rows 1 and 2 and keeps all columns.
-  - `cols` keeps all rows and selects every second column.
-  - `row` selects row 1 and keeps all columns.
-  - `rev` keeps all columns and reverses the row order.
-
-- A slicing operation returns a `gslice_view` of the original array:
-  - The selected elements are not copied.
-  - Changes made through the view affect the original array.
-  - A new independent `ndarray` can be constructed from the view when a copy is needed.
-
-- Example of modifying the original array through a slice:
-
-      dmat A(4, 5);
-
-      auto middle = A(slice(1, 3), full_extent);
-      middle = 0.0;
-
-  This assigns `0.0` to rows 1 and 2 of `A`.
-
-- Notes:
-  - `start` is inclusive.
-  - `stop` is exclusive.
-  - Negative indices are interpreted relative to the end of the dimension.
-  - A negative `step` selects elements in reverse order.
-  - `step` must not be zero.
-  - Out-of-range `start` and `stop` values are clipped to the valid range.
+- Missing `start` and `stop` values are written as `{}` or `std::nullopt`.
 
 <a id="gslice-def"></a>
 ### `gslice`
