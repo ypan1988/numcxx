@@ -230,15 +230,35 @@ Provides three ways to access individual elements: multidimensional indexing, ph
 - `gslice` is a NumCxx argument-pack type; its representation is distinct from `std::gslice`.
 
 <a id="gslice-view-def"></a>
-### `gslice_view`
+### Slicing / `gslice(...)`
 
-- `gslice_view` is a multidimensional, non-owning view created by slicing an `ndarray` or another compatible view.
-- It preserves the shape of the selected elements, except for dimensions removed by integer indexing.
-- Elements can be read or modified through the view.
-- Changes made through the view affect the original array.
-- Assigning a scalar sets every selected element to that value.
-- Construct an `ndarray` from a `gslice_view` when an independent copy is required.
-- A `gslice_view` must not outlive the array or view from which it was created.
+- Slicing selects ranges and reduces dimensions using `()`, or equivalently by packaging the same selectors in `gslice(...)` and passing it to `[]`.
+- Each selector applies to one dimension:
+  - an integer selects one element and removes that dimension;
+  - a `slice` selects a range and retains that dimension;
+  - `full_extent` selects the whole dimension;
+  - a pair such as `{1, 4}` is equivalent to `slice(1, 4)`.
+- Trailing dimensions may be omitted and are selected in full.
+- If every dimension is indexed by an integer, the result is an element; see #element-access.
+
+- Examples:
+<br><br>
+
+      dmat A(4, 5);
+
+      auto row  = A(1, full_extent);
+      auto rows = A(slice(1, 3), full_extent);
+      auto cols = A(full_extent, slice(0, 5, 2));
+
+<br><br>
+
+- The same selections can be packaged with `gslice(...)`:
+
+      auto rows = A[gslice(slice(1, 3), full_extent)];
+
+  which is equivalent to:
+
+      auto rows = A(slice(1, 3), full_extent);
 
 <a id="mask-view-def"></a>
 ### `mask_view`
