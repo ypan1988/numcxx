@@ -180,36 +180,17 @@ evaluating to an `ndarray` first.
 
 This section covers NumCxx slicing and the view types used to access selected elements without copying data.
 
-<a id="element-access"></a>
-### Element access via `()`, `[]`, `at()` and `flat()`
+### Element access via `()`, `[]`, `at()` and `flat()/flat_unchecked()`
 
-Provides access to individual elements stored in an `ndarray`, `gslice_view`,
-`mask_view`, or `indirect_view`.
+Provides three ways to access individual elements: multidimensional indexing, physical linear indexing, and logical flattened indexing.
 
 | | |
 |---|---|
-| **`(i, j, ...)`** | Access an element or a subarray using up to one index per dimension. Omitted trailing dimensions are retained in a view. |
-| **`[i]`** | Unchecked access at flattened index `i`, following the object's physical storage layout. |
-| **`[slice]`** | Slice one dimension and retain later dimensions in a `gslice_view`. |
-| **`[gslice(...)]`** | Apply a packaged multidimensional selection, equivalent to `(...)`. |
-| **`.at(i)`** | Checked access at flattened index `i`, following the same physical storage layout as `[i]`. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
-| **`.flat(i)`** | Checked access at flattened index `i`, using the default NumCxx layout order, independent of the object's physical storage layout. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
-
-**Notes:**
-
-- indexing starts at `0`
-- `()` handles multiple indices and remains the multidimensional indexing and slicing syntax.
-- When every dimension is indexed by an integer, `()` returns an element reference.
-- When one or more dimensions remain, `()` returns a view; omitted trailing dimensions are treated as `full_extent`. For example, `A(1)` is equivalent to `A(1, full_extent)` for a 2-D array.
-- `[]` takes one selector: an integer for flattened access, a `slice` for single-axis slicing, a `gslice` for packaged multidimensional indexing, a boolean expression for mask selection, or an index collection for indirect selection.
-- `A[gslice(i, s, t)]` is equivalent to `A(i, s, t)`. A complete set of integer arguments selects an element; otherwise the result is a view.
-- Indices always refer to logical axes in order, for both row-major and column-major arrays.
-- NumCxx supports integer indices, `slice`, `full_extent`, and integral pair ranges. This is basic partial indexing, not full NumPy indexing; features such as ellipsis, new axes, and advanced array indices are not supported.
-- Integer `[]` access follows the C++ container convention: it does not check bounds; using an out-of-range index has undefined behavior.
-- `at()` checks bounds and throws `std::out_of_range` when the index is invalid
-- Checked accessors report invalid indices as `"<accessor>: index <i> out of bounds for size <size>"`, where `<accessor>` identifies the type and function (for example, `ndarray::flat`)
-- Linear `[]` and `at()` use physical storage order; `flat()` uses the default NumCxx layout order.
-- these conventions apply to the listed types' linear element access
+| **`(i, j, ...)`** | Unchecked multidimensional access using one index per dimension. |
+| **`[i]`** | Unchecked physical linear access at index `i`. |
+| **`.at(i)`** | Checked physical linear access at index `i`. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
+| **`.flat(i)`** | Checked logical flattened access at index `i`, following the default layout independently of physical storage. Throws `std::out_of_range` if `i` is out of range (when exceptions are enabled). |
+| **`.flat_unchecked(i)`** | Unchecked logical flattened access at index `i`, following the default layout independently of physical storage. |
 
 <a id="slice-def"></a>
 ### `slice`
