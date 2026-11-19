@@ -178,7 +178,25 @@ evaluating to an `ndarray` first.
 
 ## Indexing and Slicing
 
-This section covers NumCxx slicing and the view types used to access selected elements without copying data.
+Element access supports multidimensional, physical linear, and logical flattened indexing, with checked and unchecked forms.
+
+| Access | Checked | Unchecked |
+|---|---|---|
+| multidimensional | `A(i, j, ...)` | `A[i, j, ...]` (C++23 TODO) |
+| physical linear | `A.at(i)` | `A[i]` |
+| logical flattened | `A.flat(i)` | `A.flat_unchecked(i)` |
+
+<br><br>
+
+Selection is divided into basic slicing, fancy indexing, and mask indexing.
+
+| Operation | Selectors | Direct syntax | Packaged syntax | Result |
+|---|---|---|---|---|
+| basic slicing | integer, `slice`, pair, `full_extent` | `A(...)` | `A[gslice(...)]` | `gslice_view` |
+| fancy indexing | basic slicing + `uvec` | `A(...)` | `A[ix(...)]` | `indirect_view` |
+| mask indexing | boolean mask | - | `A[mask]` | `mask_view` |
+
+<br><br>
 
 <a id="element-access"></a>
 ### Element access via `()`, `[]`, `at()` and `flat()/flat_unchecked()`
@@ -219,15 +237,6 @@ Provides three ways to access individual elements: multidimensional indexing, ph
   | `slice({}, {}, -1)` | `[::-1]` | all elements in reverse order |
 
 - Missing `start` and `stop` values are written as `{}` or `std::nullopt`.
-
-<a id="gslice-def"></a>
-### `gslice`
-
-- `gslice` owns a value copy of one or more scalar indices, `slice` objects, `full_extent` markers, or integral pair ranges.
-- It packages the same multidimensional arguments accepted by `operator()`, so they can be passed as one selector to `operator[]`.
-- `A[gslice(1, slice(0, 4, 2))]` is equivalent to `A(1, slice(0, 4, 2))`.
-- A complete set of scalar indices accesses an element; partial or slicing selections produce a `gslice_view`.
-- `gslice` is a NumCxx argument-pack type; its representation is distinct from `std::gslice`.
 
 <a id="gslice-view-def"></a>
 ### Basic slicing
