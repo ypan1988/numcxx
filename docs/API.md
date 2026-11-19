@@ -260,18 +260,6 @@ Provides three ways to access individual elements: multidimensional indexing, ph
 
       auto rows = A(slice(1, 3), full_extent);
 
-<a id="mask-view-def"></a>
-### `mask_view`
-
-- `mask_view` is a non-owning view that selects elements for which a mask is `true`.
-- Mask selection is element-wise.
-- The mask must be compatible with the source array.
-- Selected elements can be read or modified through the view.
-- Changes made through the view affect the original array.
-- Assigning a scalar sets every selected element to that value.
-- Construct an `ndarray` from a `mask_view` when an independent copy is required.
-- A `mask_view` must not outlive the array and mask from which it was created.
-
 <a id="indirect-view-def"></a>
 ### Fancy indexing
 
@@ -307,3 +295,28 @@ Provides three ways to access individual elements: multidimensional indexing, ph
   which is equivalent to:
 
       auto rows = A(indices, full_extent);
+
+<a id="mask-view-def"></a>
+### Mask indexing
+
+- Mask indexing selects elements for which a boolean mask is `true`.
+- Use `[mask]` to apply a boolean expression or boolean array to an array.
+- The mask must have the same number of elements as the array.
+- Selected elements are returned as a one-dimensional `mask_view`, in logical flattened order.
+
+<br><br>
+
+- Examples:
+<br><br>
+
+      dmat A(4, 5);
+
+      auto positive = A[A > 0.0];
+
+<br><br>
+
+- A boolean array can also be used as the mask:
+<br><br>
+
+      bmat mask(4, 5);
+      auto selected = A[mask];
