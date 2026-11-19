@@ -20,11 +20,11 @@
 ## Indexing and Slicing
 | | |
 |---|---|
-| **[element access](#element-access)** | multi-dim access via `()`, physical access via `[]` / `at()` and logical access via `flat()` / `flat_unchecked` |
+| **[element access](#element-access)** | multi-dim access via `()`, physical access via `[]` / `at()` and logical access via `flat()` / `flat_unchecked()` |
 | **[`slice(start, stop, step=1)`](#slice-def)** | NumPy-style slice descriptor; one dimension per call |
-| **[basic slicing / `gslice(...)`](#gslice-view-def)** | ranges and rank reduction via `()` or `[gslice(...)]` |
-| **[fancy indexing / `ix(...)`](#indirect-view-def)** | discrete and mixed selection via `()` or `[ix(...)]` |
-| **[mask](#mask-view-def)** | boolean filtering via `[mask]` |
+| **[basic slicing](#gslice-view-def)** | ranges and rank reduction via `()` or `[gslice(...)]` |
+| **[fancy indexing](#indirect-view-def)** | discrete and mixed selection via `()` or `[ix(...)]` |
+| **[mask indexing](#mask-view-def)** | boolean filtering via `[mask]` |
 
 
 <a id="member-functions-and-variables"></a>
@@ -230,7 +230,7 @@ Provides three ways to access individual elements: multidimensional indexing, ph
 - `gslice` is a NumCxx argument-pack type; its representation is distinct from `std::gslice`.
 
 <a id="gslice-view-def"></a>
-### Basic slicing / `gslice(...)`
+### Basic slicing
 
 - Slicing selects ranges and reduces dimensions using `()`, or equivalently by packaging the same selectors in `gslice(...)` and passing it to `[]`.
 - Each selector applies to one dimension:
@@ -273,7 +273,7 @@ Provides three ways to access individual elements: multidimensional indexing, ph
 - A `mask_view` must not outlive the array and mask from which it was created.
 
 <a id="indirect-view-def"></a>
-### Fancy indexing / `ix(...)`
+### Fancy indexing
 
 - Fancy indexing selects elements using discrete indices, or combines discrete indices with basic slicing.
 - Use `ix(...)` to specify the selection:
