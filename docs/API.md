@@ -273,14 +273,37 @@ Provides three ways to access individual elements: multidimensional indexing, ph
 - A `mask_view` must not outlive the array and mask from which it was created.
 
 <a id="indirect-view-def"></a>
-### `indirect_view`
+### Fancy indexing / `ix(...)`
 
-- `indirect_view` is a non-owning view that selects elements using a collection of indices.
-- Elements are accessed in the order specified by the indices.
-- Selected elements can be read or modified through the view.
-- Changes made through the view affect the original array.
-- Assigning a scalar sets every selected element to that value.
-- Construct an `ndarray` from an `indirect_view` when an independent copy is required.
-- An `indirect_view` must not outlive the array and index collection from which it was created.
+- Fancy indexing selects elements using discrete indices, or combines discrete indices with basic slicing.
+- Use `ix(...)` to specify the selection:
+  - an integer selects one element and removes that dimension;
+  - an index vector selects elements at the specified indices and retains that dimension;
+  - a `slice` selects a range and retains that dimension;
+  - `full_extent` selects the whole dimension.
+- Indices in an index vector are selected in the order given.
+- The selection can be passed directly to `()`, or packaged in `ix(...)` and passed to `[]`.
 
-<br aria-hidden="true">
+<br><br>
+
+- Examples:
+<br><br>
+
+      dmat A(4, 5);
+
+      uvec indices = {0, 2};
+
+      auto rows  = A(indices, full_extent);
+      auto cols  = A(full_extent, indices);
+      auto mixed = A(indices, slice(1, 4));
+
+<br><br>
+
+- The same selections can be packaged with `ix(...)`:
+<br><br>
+
+      auto rows = A[ix(indices, full_extent)];
+
+  which is equivalent to:
+
+      auto rows = A(indices, full_extent);
