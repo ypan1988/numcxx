@@ -663,6 +663,12 @@ public:
   ndarray& operator=(detail::nested_initializer_list_t<value_type, extents_type::rank()> list);
 
   // element access using N-dimensional indices.
+#if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const { return to_mdspan()[std::forward<Idxs>(idxs)...]; }
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       { return to_mdspan()[std::forward<Idxs>(idxs)...]; }
+#endif
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
   [[nodiscard]] const_reference operator() (Idxs&&... idxs) const;
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
