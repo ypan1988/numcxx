@@ -390,34 +390,18 @@ template <class Tp>                         concept    integral_pair = is_integr
 
 template <class Tp> concept slice_specifier = scalar_index<Tp> || std::same_as<std::remove_cvref_t<Tp>, slice> ||
                                               std::same_as<std::remove_cvref_t<Tp>, detail::full_extent_t> || integral_pair<Tp>;
+template <class Tp> concept index_array     = std::same_as<std::remove_cvref_t<Tp>, uvec>;
 
 template <class... Idxs> concept all_scalar_indices   = (scalar_index<Idxs>  && ...);
 template <class... Args> concept all_slice_specifiers = (slice_specifier<Args> && ...);
-template <size_type Rank, class... Idxs> concept elem_access_arguments = all_scalar_indices<Idxs...> && sizeof...(Idxs) == Rank;
-template <size_type Rank, class... Args> concept gslice_view_arguments = sizeof...(Args) > 0 && (
-                                                                        (all_slice_specifiers<Args...> && !all_scalar_indices<Args...> && sizeof...(Args) <= Rank) ||
-                                                                        (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
 
-// Concept for discrete index argument (uvec only: 1D size_type array).
-// Explicitly excludes anything that is already a slice_specifier.
-template <class Tp>
-concept index_list_arg = !slice_specifier<Tp> &&
-                         (std::same_as<std::remove_cvref_t<Tp>, uvec> ||
-                          (requires {
-                            typename std::remove_cvref_t<Tp>::value_type;
-                            requires std::same_as<typename std::remove_cvref_t<Tp>::value_type, size_type>;
-                            requires std::remove_cvref_t<Tp>::rank() == 1;
-                          }));
-
-// Helper: each argument must be either a slice_specifier or an index_list_arg.
-template <class Tp> concept ix_arg = slice_specifier<Tp> || index_list_arg<Tp>;
-
-template <class... Args> constexpr size_type count_index_lists() { return ((index_list_arg<Args> ? 1 : 0) + ... + 0); }
-
-// Overload C concept: at least one discrete index list, exactly one, rest are slice_specifiers.
-template <size_type Rank, class... Args> concept indirect_view_arguments = sizeof...(Args) > 0 && sizeof...(Args) <= Rank &&
-                                                                          (ix_arg<Args> && ...) &&
-                                                                           count_index_lists<Args...>() == 1;
+template <size_type Rank, class... Idxs> concept   elem_access_arguments = (all_scalar_indices<Idxs...> && sizeof...(Idxs) == Rank);
+template <size_type Rank, class... Args> concept   gslice_view_arguments = (sizeof...(Args) > 0 && sizeof...(Args) <= Rank) && (
+                                                                           (all_slice_specifiers<Args...> && !all_scalar_indices<Args...>) ||
+                                                                           (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
+template <size_type Rank, class... Args> concept indirect_view_arguments = (sizeof...(Args) > 0 && sizeof...(Args) <= Rank) && (
+                                                                          ((slice_specifier<Args> || index_array<Args>) && ...) &&
+                                                                         (((index_array<Args> ? 1 : 0) + ... + 0) == 1));  
 
 namespace detail {
 
@@ -522,7 +506,6 @@ public:
 // [numcxx.gslice_and_ix]
 /// Generalized N-dimensional basic slicing wrapper.
 template <class... Args>
-  requires(sizeof...(Args) > 0 && (slice_specifier<Args> && ...))
 class gslice {
 public:
   constexpr explicit gslice(std::remove_cvref_t<Args>... args) : arguments_(std::move(args)...) {}
@@ -533,7 +516,6 @@ private:
 
 /// Generalized N-dimensional fancy indexing wrapper (basic slicing + 1 uvec).
 template <class... Args>
-  requires(sizeof...(Args) > 0 && (ix_arg<Args> && ...) && count_index_lists<Args...>() == 1)
 class ix {
 public:
   constexpr explicit ix(std::remove_cvref_t<Args>... args) : arguments_(std::move(args)...) {}
@@ -2547,7 +2529,7 @@ template <class T> std::vector<size_type> to_indices_vector(const T& arg) {
 
 template <class PaddedTuple, std::size_t... Is> constexpr size_type find_target_axis_impl(std::index_sequence<Is...>) {
   size_type found = sizeof...(Is);
-  ((index_list_arg<std::remove_cvref_t<std::tuple_element_t<Is, PaddedTuple>>> ? (found = Is, 0) : 0), ...);
+  ((index_array<std::remove_cvref_t<std::tuple_element_t<Is, PaddedTuple>>> ? (found = Is, 0) : 0), ...);
   return found;
 }
 
