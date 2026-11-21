@@ -310,26 +310,26 @@ using cx_fvec = vec<cx_float>     ; using cx_fmat = mat<cx_float>     ; using cx
 using cx_dvec = vec<cx_double>    ; using cx_dmat = mat<cx_double>    ; using cx_dcube = cube<cx_double>    ;  // complex double
 
 // -------- fixed-size --------
-using       ivec2 =  vec_fixed<index_type,2>      ; using       ivec3 =  vec_fixed<index_type,3>      ; using       ivec4 =  vec_fixed<index_type,4>      ;
-using       uvec2 =  vec_fixed<size_type, 2>      ; using       uvec3 =  vec_fixed<size_type, 3>      ; using       uvec4 =  vec_fixed<size_type, 4>      ;
-using       dvec2 =  vec_fixed<double,    2>      ; using       dvec3 =  vec_fixed<double,    3>      ; using       dvec4 =  vec_fixed<double,    4>      ;
-using       fvec2 =  vec_fixed<float,     2>      ; using       fvec3 =  vec_fixed<float,     3>      ; using       fvec4 =  vec_fixed<float,     4>      ;
-using    cx_fvec2 =  vec_fixed<cx_float,  2>      ; using    cx_fvec3 =  vec_fixed<cx_float,  3>      ; using    cx_fvec4 =  vec_fixed<cx_float,  4>      ;
-using    cx_dvec2 =  vec_fixed<cx_double, 2>      ; using    cx_dvec3 =  vec_fixed<cx_double, 3>      ; using    cx_dvec4 =  vec_fixed<cx_double, 4>      ;
+using       ivec2 =  vec_fixed<index_type, 2>      ; using       ivec3 =  vec_fixed<index_type, 3>      ; using       ivec4 =  vec_fixed<index_type, 4>      ;
+using       uvec2 =  vec_fixed<size_type,  2>      ; using       uvec3 =  vec_fixed<size_type,  3>      ; using       uvec4 =  vec_fixed<size_type,  4>      ;
+using       dvec2 =  vec_fixed<double,     2>      ; using       dvec3 =  vec_fixed<double,     3>      ; using       dvec4 =  vec_fixed<double,     4>      ;
+using       fvec2 =  vec_fixed<float,      2>      ; using       fvec3 =  vec_fixed<float,      3>      ; using       fvec4 =  vec_fixed<float,      4>      ;
+using    cx_fvec2 =  vec_fixed<cx_float,   2>      ; using    cx_fvec3 =  vec_fixed<cx_float,   3>      ; using    cx_fvec4 =  vec_fixed<cx_float,   4>      ;
+using    cx_dvec2 =  vec_fixed<cx_double,  2>      ; using    cx_dvec3 =  vec_fixed<cx_double,  3>      ; using    cx_dvec4 =  vec_fixed<cx_double,  4>      ;
 
-using      imat22 =  mat_fixed<index_type,2, 2>   ; using      imat33 =  mat_fixed<index_type,3, 3>   ; using      imat44 =  mat_fixed<index_type,4, 4>   ;
-using      umat22 =  mat_fixed<size_type, 2, 2>   ; using      umat33 =  mat_fixed<size_type, 3, 3>   ; using      umat44 =  mat_fixed<size_type, 4, 4>   ;
-using      dmat22 =  mat_fixed<double,    2, 2>   ; using      dmat33 =  mat_fixed<double,    3, 3>   ; using      dmat44 =  mat_fixed<double,    4, 4>   ;
-using      fmat22 =  mat_fixed<float,     2, 2>   ; using      fmat33 =  mat_fixed<float,     3, 3>   ; using      fmat44 =  mat_fixed<float,     4, 4>   ;
-using   cx_fmat22 =  mat_fixed<cx_float,  2, 2>   ; using   cx_fmat33 =  mat_fixed<cx_float,  3, 3>   ; using   cx_fmat44 =  mat_fixed<cx_float,  4, 4>   ;
-using   cx_dmat22 =  mat_fixed<cx_double, 2, 2>   ; using   cx_dmat33 =  mat_fixed<cx_double, 3, 3>   ; using   cx_dmat44 =  mat_fixed<cx_double, 4, 4>   ;
+using      imat22 =  mat_fixed<index_type, 2, 2>   ; using      imat33 =  mat_fixed<index_type, 3, 3>   ; using      imat44 =  mat_fixed<index_type, 4, 4>   ;
+using      umat22 =  mat_fixed<size_type,  2, 2>   ; using      umat33 =  mat_fixed<size_type,  3, 3>   ; using      umat44 =  mat_fixed<size_type,  4, 4>   ;
+using      dmat22 =  mat_fixed<double,     2, 2>   ; using      dmat33 =  mat_fixed<double,     3, 3>   ; using      dmat44 =  mat_fixed<double,     4, 4>   ;
+using      fmat22 =  mat_fixed<float,      2, 2>   ; using      fmat33 =  mat_fixed<float,      3, 3>   ; using      fmat44 =  mat_fixed<float,      4, 4>   ;
+using   cx_fmat22 =  mat_fixed<cx_float,   2, 2>   ; using   cx_fmat33 =  mat_fixed<cx_float,   3, 3>   ; using   cx_fmat44 =  mat_fixed<cx_float,   4, 4>   ;
+using   cx_dmat22 =  mat_fixed<cx_double,  2, 2>   ; using   cx_dmat33 =  mat_fixed<cx_double,  3, 3>   ; using   cx_dmat44 =  mat_fixed<cx_double,  4, 4>   ;
 
-using    icube222 = cube_fixed<index_type,2, 2, 2>; using    icube333 = cube_fixed<index_type,3, 3, 3>; using    icube444 = cube_fixed<index_type,4, 4, 4>;
-using    ucube222 = cube_fixed<size_type, 2, 2, 2>; using    ucube333 = cube_fixed<size_type, 3, 3, 3>; using    ucube444 = cube_fixed<size_type, 4, 4, 4>;
-using    dcube222 = cube_fixed<double,    2, 2, 2>; using    dcube333 = cube_fixed<double,    3, 3, 3>; using    dcube444 = cube_fixed<double,    4, 4, 4>;
-using    fcube222 = cube_fixed<float,     2, 2, 2>; using    fcube333 = cube_fixed<float,     3, 3, 3>; using    fcube444 = cube_fixed<float,     4, 4, 4>;
-using cx_fcube222 = cube_fixed<cx_float,  2, 2, 2>; using cx_fcube333 = cube_fixed<cx_float,  3, 3, 3>; using cx_fcube444 = cube_fixed<cx_float,  4, 4, 4>;
-using cx_dcube222 = cube_fixed<cx_double, 2, 2, 2>; using cx_dcube333 = cube_fixed<cx_double, 3, 3, 3>; using cx_dcube444 = cube_fixed<cx_double, 4, 4, 4>;
+using    icube222 = cube_fixed<index_type, 2, 2, 2>; using    icube333 = cube_fixed<index_type, 3, 3, 3>; using    icube444 = cube_fixed<index_type, 4, 4, 4>;
+using    ucube222 = cube_fixed<size_type,  2, 2, 2>; using    ucube333 = cube_fixed<size_type,  3, 3, 3>; using    ucube444 = cube_fixed<size_type,  4, 4, 4>;
+using    dcube222 = cube_fixed<double,     2, 2, 2>; using    dcube333 = cube_fixed<double,     3, 3, 3>; using    dcube444 = cube_fixed<double,     4, 4, 4>;
+using    fcube222 = cube_fixed<float,      2, 2, 2>; using    fcube333 = cube_fixed<float,      3, 3, 3>; using    fcube444 = cube_fixed<float,      4, 4, 4>;
+using cx_fcube222 = cube_fixed<cx_float,   2, 2, 2>; using cx_fcube333 = cube_fixed<cx_float,   3, 3, 3>; using cx_fcube444 = cube_fixed<cx_float,   4, 4, 4>;
+using cx_dcube222 = cube_fixed<cx_double,  2, 2, 2>; using cx_dcube333 = cube_fixed<cx_double,  3, 3, 3>; using cx_dcube444 = cube_fixed<cx_double,  4, 4, 4>;
 
 namespace detail {
 template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
@@ -519,7 +519,7 @@ public:
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
 };
 
-// [numcxx.gslice]
+// [numcxx.gslice_and_ix]
 /// Generalized N-dimensional slice descriptor.
 ///
 /// Stores the index and slice specifiers for each dimension as a single
@@ -528,22 +528,12 @@ template <class... Args>
   requires(sizeof...(Args) > 0 && (slice_specifier<Args> && ...))
 class gslice {
 public:
-  constexpr explicit gslice(std::remove_cvref_t<Args>... args)
-      : arguments_(std::move(args)...) {}
-
-  // Returns the stored N-dimensional index and slice specifiers.
-  [[nodiscard]] constexpr const auto &arguments() const noexcept {
-    return arguments_;
-  }
-
+  constexpr explicit gslice(std::remove_cvref_t<Args>... args) : arguments_(std::move(args)...) {}
+  [[nodiscard]] constexpr const auto &arguments() const noexcept { return arguments_; }
 private:
   std::tuple<std::remove_cvref_t<Args>...> arguments_;
 };
 
-// Deduce and store selector types by value.
-template <class... Args> gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
-
-// [numcxx.ix]
 /// Generalized N-dimensional indirect index descriptor (basic slicing + 1 uvec).
 ///
 /// Stores the index, slice, and discrete index specifiers for each dimension as a single
@@ -552,20 +542,15 @@ template <class... Args>
   requires(sizeof...(Args) > 0 && (ix_arg<Args> && ...) && count_index_lists<Args...>() == 1)
 class ix {
 public:
-  constexpr explicit ix(std::remove_cvref_t<Args>... args)
-      : arguments_(std::move(args)...) {}
-
-  // Returns the stored index, slice, and discrete index specifiers.
-  [[nodiscard]] constexpr const auto &arguments() const noexcept {
-    return arguments_;
-  }
-
+  constexpr explicit ix(std::remove_cvref_t<Args>... args) : arguments_(std::move(args)...) {}
+  [[nodiscard]] constexpr const auto &arguments() const noexcept { return arguments_;}
 private:
   std::tuple<std::remove_cvref_t<Args>...> arguments_;
 };
 
 // Deduce and store selector types by value.
-template <class... Args> ix(Args &&...) -> ix<std::remove_cvref_t<Args>...>;
+template <class... Args> gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
+template <class... Args> ix    (Args &&...) -> ix    <std::remove_cvref_t<Args>...>;
 
 // [numcxx.ndarray]
 namespace detail {
