@@ -520,10 +520,7 @@ public:
 };
 
 // [numcxx.gslice_and_ix]
-/// Generalized N-dimensional slice descriptor.
-///
-/// Stores the index and slice specifiers for each dimension as a single
-/// selector object, enabling valarray-style selection via operator[].
+/// Generalized N-dimensional basic slicing wrapper.
 template <class... Args>
   requires(sizeof...(Args) > 0 && (slice_specifier<Args> && ...))
 class gslice {
@@ -534,10 +531,7 @@ private:
   std::tuple<std::remove_cvref_t<Args>...> arguments_;
 };
 
-/// Generalized N-dimensional indirect index descriptor (basic slicing + 1 uvec).
-///
-/// Stores the index, slice, and discrete index specifiers for each dimension as a single
-/// selector object, enabling valarray-style selection via operator[].
+/// Generalized N-dimensional fancy indexing wrapper (basic slicing + 1 uvec).
 template <class... Args>
   requires(sizeof...(Args) > 0 && (ix_arg<Args> && ...) && count_index_lists<Args...>() == 1)
 class ix {
