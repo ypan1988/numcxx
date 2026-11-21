@@ -452,12 +452,12 @@ template <typename Tp                  > struct nested_initializer_list<Tp, 0> {
 template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
 } // namespace detail
 
-namespace detail::index_utils {
+namespace detail::indexing {
 template <class MdSpan, class... Idxs> requires all_scalar_indices<Idxs...>
 [[nodiscard]] decltype(auto) get_element(MdSpan&& src,                                                        Idxs&&... idxs);
 template <class MdSpan, class... Idxs> requires all_scalar_indices<Idxs...>
 [[nodiscard]] decltype(auto) get_element(MdSpan&& src, const std::array<bool, sizeof...(Idxs)>& reverse_dims, Idxs&&... idxs);
-} // namespace detail::index_utils
+} // namespace detail::indexing
 
 // [numcxx.slice]
 /// A NumPy-style slice `start:stop:step`
@@ -659,9 +659,9 @@ public:
   [[nodiscard]]       reference operator[] (Idxs&&... idxs)       { return                                  to_mdspan() [std::forward<Idxs>(idxs)...]; }
 #endif
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { return detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { return detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
@@ -2309,7 +2309,7 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
 }
 
 namespace detail {
-namespace index_utils {
+namespace indexing {
 inline size_type normalize_index(index_type idx, size_type dim_len) {
   index_type len = static_cast<index_type>(dim_len);
   index_type res = (idx < 0) ? idx + len : idx;
@@ -2348,16 +2348,13 @@ template <class MdSpan, class... Idxs>
 
   return helper(std::make_index_sequence<sizeof...(Idxs)>{});
 }
-} // namespace index_utils
-
-namespace slice_utils {
 
 // Convert a scalar index to a submdspan index argument.
 inline size_type to_submdspan_arg(index_type idx, size_type dim_len, bool& is_index, bool& reversed,
                                   bool src_reversed = false) {
   is_index = true;
   reversed = false;
-  return index_utils::normalize_and_reverse_index(idx, dim_len, src_reversed);
+  return normalize_and_reverse_index(idx, dim_len, src_reversed);
 }
 
 // Convert a slice to a submdspan strided_slice argument.
@@ -2677,7 +2674,7 @@ auto make_indirect_view_padded_with_reverse_dims(MdSpan&& src, const std::array<
   return make_indirect_view_from_base<NewTargetAxis>(std::move(base_view), std::move(indices_vec));
 }
 
-} // namespace slice_utils
+} // namespace indexing
 } // namespace detail
 
 // ============================================================================
@@ -2687,14 +2684,14 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) const {
-  return detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+  return detail::indexing::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) {
-  return detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+  return detail::indexing::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 // ============================================================================
@@ -2704,9 +2701,9 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
-  return has_reversed_dim_ ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+  return has_reversed_dim_ ? detail::indexing::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
                                  to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-                           : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(
+                           : detail::indexing::make_indirect_view_padded<Extents::rank()>(
                                  to_mdspan(), std::forward<Args>(args)...);
 }
 
@@ -2714,9 +2711,9 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
-  return has_reversed_dim_ ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+  return has_reversed_dim_ ? detail::indexing::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
                                  to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-                           : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(
+                           : detail::indexing::make_indirect_view_padded<Extents::rank()>(
                                  to_mdspan(), std::forward<Args>(args)...);
 }
 
@@ -2725,8 +2722,8 @@ template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
 auto gslice_view<Tp, Extents, Lp>::operator()(Idxs&&... idxs) const -> const_reference {
-  return has_reversed_dim_ ? detail::index_utils::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
-                           : detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
+  return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
+                           : detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
@@ -2734,22 +2731,22 @@ template <typename... Idxs>
   requires elem_access_arguments<Extents::rank(), Idxs...>
 [[nodiscard]]
 auto gslice_view<Tp, Extents, Lp>::operator()(Idxs&&... idxs) -> reference {
-  return has_reversed_dim_ ? detail::index_utils::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
-                           : detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
+  return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
+                           : detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) const {
-  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+  return detail::indexing::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) {
-  return detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+  return detail::indexing::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
@@ -2757,9 +2754,9 @@ template <typename... Args>
   requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
   return has_reversed_dim_
-             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
+             ? detail::indexing::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
                    to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+             : detail::indexing::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
@@ -2767,9 +2764,9 @@ template <typename... Args>
   requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
   return has_reversed_dim_
-             ? detail::slice_utils::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
+             ? detail::indexing::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
                    to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-             : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+             : detail::indexing::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Layout, typename Extents>
