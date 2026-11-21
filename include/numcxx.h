@@ -269,7 +269,6 @@ template <class Tp, class Ex, class Lp> class    gslice_view;
 template <class Tp>                     class      mask_view;
 template <class Tp, size_type Rank>     class  indirect_view;
 template <class Tp, size_type Rank>     class broadcast_view;
-template <class... Args>                struct       ix_pack;
 
 template <class ValExpr>                struct   nc_val_expr;
 template <class Op, class A0>           struct   nc_unary_op;
@@ -344,9 +343,6 @@ auto make_indirect_view(
     MdSpan &&src, std::vector<size_type> indices, size_type target_axis,
     std::array<bool, Rank> reverse_dims = {})
     -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
-
-template <class Array, class... Args>
-auto make_ix_view(Array &&src, const ix_pack<Args...> &pack);
 }
 
 // Value-expression types participate in NumCxx expression evaluation.
@@ -548,20 +544,28 @@ private:
 template <class... Args> gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
 
 // [numcxx.ix]
-/// Multidimensional indirect index pack.
+/// Generalized N-dimensional indirect index descriptor (basic slicing + 1 uvec).
+///
+/// Stores the index, slice, and discrete index specifiers for each dimension as a single
+/// selector object, enabling valarray-style selection via operator[].
 template <class... Args>
-struct ix_pack {
-  std::tuple<Args...> args;
-  constexpr explicit ix_pack(Args... a) : args(std::move(a)...) {}
-  [[nodiscard]] constexpr const auto &arguments() const noexcept { return args; }
-};
-template <class... Args>
-ix_pack(Args...) -> ix_pack<std::decay_t<Args>...>;
+  requires(sizeof...(Args) > 0 && (ix_arg<Args> && ...) && count_index_lists<Args...>() == 1)
+class ix {
+public:
+  constexpr explicit ix(std::remove_cvref_t<Args>... args)
+      : arguments_(std::move(args)...) {}
 
-template <class... Args>
-constexpr auto ix(Args &&...args) {
-  return ix_pack(std::forward<Args>(args)...);
-}
+  // Returns the stored index, slice, and discrete index specifiers.
+  [[nodiscard]] constexpr const auto &arguments() const noexcept {
+    return arguments_;
+  }
+
+private:
+  std::tuple<std::remove_cvref_t<Args>...> arguments_;
+};
+
+// Deduce and store selector types by value.
+template <class... Args> ix(Args &&...) -> ix<std::remove_cvref_t<Args>...>;
 
 // [numcxx.ndarray]
 namespace detail {
@@ -716,10 +720,10 @@ public:
   [[nodiscard]] auto operator()(        Args&&...           args) const;
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator()(        Args&&...           args)      ;
-  template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...>&        x) const { return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, x.arguments()); }
-  template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...>&        x)       { return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, x.arguments()); }
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator[](const ix<Args...>&             x) const { return  detail::apply_indices(*this, x.arguments()); }
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator[](const ix<Args...>&             x)       { return  detail::apply_indices(*this, x.arguments()); }
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
@@ -1001,7 +1005,7 @@ public:
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator()(        Args&&...           args)      ;
 
-  // subset operations using discrete (indirect) indexing via ix_pack arguments.
+  // subset operations using discrete (indirect) indexing via ix arguments or direct operator().
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator()(        Args&&...           args) const;
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
@@ -1017,15 +1021,11 @@ public:
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
-  // subset operations with ix (multidimensional indirect view): forward to operator()
-  template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) const {
-    return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, selection.arguments());
-  }
-  template <class... Args>
-  [[nodiscard]] auto operator[](const ix_pack<Args...> &selection) {
-    return std::apply([this](const auto &...a) -> decltype(auto) { return (*this)(a...); }, selection.arguments());
-  }
+  // subset operations with ix (multidimensional indirect view).
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator[](const ix<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
+  template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
+  [[nodiscard]] auto operator[](const ix<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
@@ -2545,6 +2545,157 @@ auto make_gslice_view_padded_with_reverse_dims(MdSpan&& src, const std::array<bo
   }
 }
 
+template <class T> std::vector<size_type> to_indices_vector(const T& arg) {
+  if constexpr (requires { arg.data(); arg.size(); }) {
+    return std::vector<size_type>(arg.data(), arg.data() + arg.size());
+  } else if constexpr (requires { arg.begin(); arg.end(); }) {
+    return std::vector<size_type>(arg.begin(), arg.end());
+  } else {
+    std::vector<size_type> res;
+    res.reserve(std::size(arg));
+    for (auto v : arg) {
+      res.push_back(static_cast<size_type>(v));
+    }
+    return res;
+  }
+}
+
+template <class PaddedTuple, std::size_t... Is> constexpr size_type find_target_axis_impl(std::index_sequence<Is...>) {
+  size_type found = sizeof...(Is);
+  ((index_list_arg<std::remove_cvref_t<std::tuple_element_t<Is, PaddedTuple>>> ? (found = Is, 0) : 0), ...);
+  return found;
+}
+
+template <class PaddedTuple> constexpr size_type find_target_axis() {
+  return find_target_axis_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+}
+
+template <class PaddedTuple, std::size_t... Is> constexpr size_type count_scalars_impl(std::index_sequence<Is...>) {
+  return ((scalar_index<std::remove_cvref_t<std::tuple_element_t<Is, PaddedTuple>>> ? 1 : 0) + ... + 0);
+}
+
+template <class PaddedTuple> constexpr size_type count_scalars() {
+  return count_scalars_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+}
+
+template <class PaddedTuple, size_type TAxis, std::size_t... Is>
+constexpr size_type compute_new_target_axis_impl(std::index_sequence<Is...>) {
+  return TAxis - (((Is < TAxis && scalar_index<std::remove_cvref_t<std::tuple_element_t<Is, PaddedTuple>>>) ? 1 : 0) + ... + 0);
+}
+
+template <class PaddedTuple, size_type TAxis> constexpr size_type compute_new_target_axis() {
+  return compute_new_target_axis_impl<PaddedTuple, TAxis>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
+}
+
+template <size_type TargetAxis, size_type I, class Tuple> decltype(auto) get_replacement_element(Tuple&& t) {
+  if constexpr (I == TargetAxis) {
+    return ::numcxx::detail::full_extent;
+  } else {
+    return std::get<I>(std::forward<Tuple>(t));
+  }
+}
+
+template <size_type TargetAxis, class Tuple, std::size_t... Is>
+auto make_replacement_args_impl(Tuple&& t, std::index_sequence<Is...>) {
+  return std::tuple{get_replacement_element<TargetAxis, Is>(std::forward<Tuple>(t))...};
+}
+
+template <size_type TargetAxis, class Tuple> auto make_replacement_args(Tuple&& t) {
+  return make_replacement_args_impl<TargetAxis>(
+      std::forward<Tuple>(t), std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
+}
+
+template <size_type NewTargetAxis, class BaseView>
+auto make_indirect_view_from_base(BaseView&& base_view, std::vector<size_type> indices_vec) {
+  using base_view_type = std::decay_t<BaseView>;
+  constexpr size_type ResultRank = base_view_type::rank();
+
+  for (auto idx : indices_vec) {
+    NUMCXX_ASSERT(idx < base_view.extent(NewTargetAxis), "indirect_view index out of bounds");
+  }
+
+  using element_type = typename base_view_type::element_type;
+  using view_type = indirect_view<element_type, ResultRank>;
+  using extents_type = typename view_type::extents_type;
+  using accessor_type = typename view_type::accessor_type;
+
+  std::array<size_type, ResultRank> source_extents{};
+  std::array<size_type, ResultRank> view_extents{};
+  std::array<size_type, ResultRank> strides{};
+  for (size_type r = 0; r < ResultRank; ++r) {
+    source_extents[r] = static_cast<size_type>(base_view.extent(r));
+    view_extents[r] = source_extents[r];
+    strides[r] = static_cast<size_type>(base_view.stride(r));
+  }
+  view_extents[NewTargetAxis] = indices_vec.size();
+  std::array<bool, ResultRank> reverse_dims = base_view.reverse_dims();
+
+  return view_type(
+      base_view.data_handle(), extents_type(view_extents),
+      accessor_type(std::move(indices_vec), NewTargetAxis, source_extents, view_extents, strides, reverse_dims));
+}
+
+template <std::size_t Rank, typename MdSpan, typename... Args>
+[[nodiscard]]
+auto make_indirect_view_padded(MdSpan&& src, Args&&... args) {
+  static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
+
+  auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
+                                    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                                      return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
+                                    }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+
+  using PaddedTuple = decltype(padded_args);
+  constexpr size_type TargetAxis = find_target_axis<PaddedTuple>();
+  constexpr size_type NumScalars = count_scalars<PaddedTuple>();
+  constexpr size_type ResultRank = Rank - NumScalars;
+  static_assert(ResultRank >= 1, "Result rank must be at least 1");
+  constexpr size_type NewTargetAxis = compute_new_target_axis<PaddedTuple, TargetAxis>();
+
+  auto indices_vec = to_indices_vector(std::get<TargetAxis>(padded_args));
+  auto replacement_args = make_replacement_args<TargetAxis>(padded_args);
+
+  auto base_view = std::apply(
+      [&src](auto&&... idxs) {
+        return make_gslice_view(std::forward<MdSpan>(src), std::forward<decltype(idxs)>(idxs)...);
+      },
+      replacement_args);
+
+  return make_indirect_view_from_base<NewTargetAxis>(std::move(base_view), std::move(indices_vec));
+}
+
+template <std::size_t Rank, typename MdSpan, std::size_t N, typename... Args>
+[[nodiscard]]
+auto make_indirect_view_padded_with_reverse_dims(MdSpan&& src, const std::array<bool, N>& src_reverse_dims,
+                                                 Args&&... args) {
+  static_assert(N == Rank, "src_reverse_dims must match array rank");
+  static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
+
+  auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
+                                    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                                      return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
+                                    }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+
+  using PaddedTuple = decltype(padded_args);
+  constexpr size_type TargetAxis = find_target_axis<PaddedTuple>();
+  constexpr size_type NumScalars = count_scalars<PaddedTuple>();
+  constexpr size_type ResultRank = Rank - NumScalars;
+  static_assert(ResultRank >= 1, "Result rank must be at least 1");
+  constexpr size_type NewTargetAxis = compute_new_target_axis<PaddedTuple, TargetAxis>();
+
+  auto indices_vec = to_indices_vector(std::get<TargetAxis>(padded_args));
+  auto replacement_args = make_replacement_args<TargetAxis>(padded_args);
+
+  auto base_view = std::apply(
+      [&src, &src_reverse_dims](auto&&... idxs) {
+        return make_gslice_view_with_reverse_dims(std::forward<MdSpan>(src), src_reverse_dims,
+                                                  std::forward<decltype(idxs)>(idxs)...);
+      },
+      replacement_args);
+
+  return make_indirect_view_from_base<NewTargetAxis>(std::move(base_view), std::move(indices_vec));
+}
+
 } // namespace slice_utils
 } // namespace detail
 
@@ -2555,14 +2706,14 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) const {
-  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+  return detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto ndarray<Tp, Extents, Lp>::operator()(Args&&... args) {
-  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+  return detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 // ============================================================================
@@ -2572,14 +2723,20 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
-  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+  return has_reversed_dim_
+             ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
-  return detail::make_ix_view(*this, ix_pack<std::decay_t<Args>...>(std::forward<Args>(args)...));
+  return has_reversed_dim_
+             ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
@@ -2650,139 +2807,6 @@ template <typename... Args>
              : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
-// [numcxx.ix_view]
-namespace detail {
-
-template <class T> struct is_indices_arg : std::bool_constant<index_list_arg<T>> {};
-
-template <class T> inline constexpr bool is_indices_arg_v = is_indices_arg<T>::value;
-
-template <class T> std::vector<size_type> to_indices_vector(const T& arg) {
-  if constexpr (requires { arg.data(); arg.size(); }) {
-    return std::vector<size_type>(arg.data(), arg.data() + arg.size());
-  } else if constexpr (requires { arg.begin(); arg.end(); }) {
-    return std::vector<size_type>(arg.begin(), arg.end());
-  } else {
-    std::vector<size_type> res;
-    res.reserve(std::size(arg));
-    for (auto v : arg) {
-      res.push_back(static_cast<size_type>(v));
-    }
-    return res;
-  }
-}
-
-template <class PaddedTuple, std::size_t... Is> constexpr size_type find_target_axis_impl(std::index_sequence<Is...>) {
-  size_type found = sizeof...(Is);
-  ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? (found = Is, 0) : 0), ...);
-  return found;
-}
-
-template <class PaddedTuple> constexpr size_type find_target_axis() {
-  return find_target_axis_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
-}
-
-template <class PaddedTuple, std::size_t... Is> constexpr size_type count_indices_impl(std::index_sequence<Is...>) {
-  return ((is_indices_arg_v<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) + ... + 0);
-}
-
-template <class PaddedTuple> constexpr size_type count_indices() {
-  return count_indices_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
-}
-
-template <class PaddedTuple, std::size_t... Is> constexpr size_type count_scalars_impl(std::index_sequence<Is...>) {
-  return ((scalar_index<std::tuple_element_t<Is, PaddedTuple>> ? 1 : 0) + ... + 0);
-}
-
-template <class PaddedTuple> constexpr size_type count_scalars() {
-  return count_scalars_impl<PaddedTuple>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
-}
-
-template <class PaddedTuple, size_type TAxis, std::size_t... Is>
-constexpr size_type compute_new_target_axis_impl(std::index_sequence<Is...>) {
-  return TAxis - (((Is < TAxis && scalar_index<std::tuple_element_t<Is, PaddedTuple>>) ? 1 : 0) + ... + 0);
-}
-
-template <class PaddedTuple, size_type TAxis> constexpr size_type compute_new_target_axis() {
-  return compute_new_target_axis_impl<PaddedTuple, TAxis>(std::make_index_sequence<std::tuple_size_v<PaddedTuple>>{});
-}
-
-template <std::size_t... Is> auto make_full_extents_tuple(std::index_sequence<Is...>) {
-  return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
-}
-
-template <size_type TargetAxis, size_type I, class Tuple> decltype(auto) get_replacement_element(Tuple&& t) {
-  if constexpr (I == TargetAxis) {
-    return ::numcxx::detail::full_extent;
-  } else {
-    return std::get<I>(std::forward<Tuple>(t));
-  }
-}
-
-template <size_type TargetAxis, class Tuple, std::size_t... Is>
-auto make_replacement_args_impl(Tuple&& t, std::index_sequence<Is...>) {
-  return std::tuple{get_replacement_element<TargetAxis, Is>(std::forward<Tuple>(t))...};
-}
-
-template <size_type TargetAxis, class Tuple> auto make_replacement_args(Tuple&& t) {
-  return make_replacement_args_impl<TargetAxis>(
-      std::forward<Tuple>(t), std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
-}
-
-template <class Array, class... Args> [[nodiscard]] auto make_ix_view(Array&& src, const ix_pack<Args...>& pack) {
-  constexpr size_type SrcRank = std::remove_cvref_t<Array>::rank();
-  constexpr size_type PackSize = sizeof...(Args);
-  static_assert(PackSize <= SrcRank, "Number of arguments in ix cannot exceed array rank");
-
-  auto padded_args =
-      std::tuple_cat(pack.arguments(), make_full_extents_tuple(std::make_index_sequence<SrcRank - PackSize>{}));
-
-  using PaddedTuple = decltype(padded_args);
-  static_assert(count_indices<PaddedTuple>() == 1, "ix requires exactly one discrete indices argument");
-
-  constexpr size_type TargetAxis = find_target_axis<PaddedTuple>();
-  constexpr size_type NumScalars = count_scalars<PaddedTuple>();
-  constexpr size_type ResultRank = SrcRank - NumScalars;
-  static_assert(ResultRank >= 1, "Result rank must be at least 1");
-
-  constexpr size_type NewTargetAxis = compute_new_target_axis<PaddedTuple, TargetAxis>();
-
-  auto indices_vec = to_indices_vector(std::get<TargetAxis>(padded_args));
-
-  auto replacement_args = make_replacement_args<TargetAxis>(padded_args);
-
-  auto base_view =
-      std::apply([&src](auto&&... args) { return src(std::forward<decltype(args)>(args)...); }, replacement_args);
-
-  using base_view_type = std::decay_t<decltype(base_view)>;
-  static_assert(base_view_type::rank() == ResultRank, "Base view rank must match ResultRank");
-
-  for (auto idx : indices_vec) {
-    NUMCXX_ASSERT(idx < base_view.extent(NewTargetAxis), "indirect_view index out of bounds");
-  }
-
-  using element_type = typename base_view_type::element_type;
-  using view_type = indirect_view<element_type, ResultRank>;
-  using extents_type = typename view_type::extents_type;
-  using accessor_type = typename view_type::accessor_type;
-
-  std::array<size_type, ResultRank> source_extents{};
-  std::array<size_type, ResultRank> view_extents{};
-  std::array<size_type, ResultRank> strides{};
-  for (size_type r = 0; r < ResultRank; ++r) {
-    source_extents[r] = static_cast<size_type>(base_view.extent(r));
-    view_extents[r] = source_extents[r];
-    strides[r] = static_cast<size_type>(base_view.stride(r));
-  }
-  view_extents[NewTargetAxis] = indices_vec.size();
-  std::array<bool, ResultRank> reverse_dims = base_view.reverse_dims();
-
-  return view_type(
-      base_view.data_handle(), extents_type(view_extents),
-      accessor_type(std::move(indices_vec), NewTargetAxis, source_extents, view_extents, strides, reverse_dims));
-}
-
-} // namespace detail
 
 template <typename Layout, typename Extents>
 std::array<size_type, Extents::rank()> unravel_index(size_type i, const Extents& extents) {
