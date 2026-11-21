@@ -452,6 +452,13 @@ template <typename Tp                  > struct nested_initializer_list<Tp, 0> {
 template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
 } // namespace detail
 
+namespace detail::index_utils {
+template <class MdSpan, class... Idxs> requires all_scalar_indices<Idxs...>
+[[nodiscard]] decltype(auto) get_element(MdSpan&& src,                                                        Idxs&&... idxs);
+template <class MdSpan, class... Idxs> requires all_scalar_indices<Idxs...>
+[[nodiscard]] decltype(auto) get_element(MdSpan&& src, const std::array<bool, sizeof...(Idxs)>& reverse_dims, Idxs&&... idxs);
+} // namespace detail::index_utils
+
 // [numcxx.slice]
 /// A NumPy-style slice `start:stop:step`
 class slice {
@@ -647,14 +654,14 @@ public:
   // element access using N-dimensional indices.
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const { return to_mdspan()[std::forward<Idxs>(idxs)...]; }
+  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const { return                                  to_mdspan() [std::forward<Idxs>(idxs)...]; }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       { return to_mdspan()[std::forward<Idxs>(idxs)...]; }
+  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       { return                                  to_mdspan() [std::forward<Idxs>(idxs)...]; }
 #endif
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const;
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator() (Idxs&&... idxs)      ;
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
@@ -2704,22 +2711,6 @@ template <typename... Args>
              ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
                    to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
              : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <typename... Idxs>
-  requires elem_access_arguments<Extents::rank(), Idxs...>
-[[nodiscard]]
-auto ndarray<Tp, Extents, Lp>::operator()(Idxs&&... idxs) const -> const_reference {
-  return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <typename... Idxs>
-  requires elem_access_arguments<Extents::rank(), Idxs...>
-[[nodiscard]]
-auto ndarray<Tp, Extents, Lp>::operator()(Idxs&&... idxs) -> reference {
-  return detail::index_utils::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
