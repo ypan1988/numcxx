@@ -341,9 +341,9 @@ TEST(NdarrayIndirectTest, IndexArrayAndGsliceSource) {
   rows[0] = 0;
   rows[1] = 2;
   auto view = a[numcxx::ix(rows)];
-  static_assert(std::is_same_v<decltype(view), numcxx::indirect_view<int, 2>>, "view type");
-  static_assert(std::is_same_v<decltype(view(1, 1)), int&>, "element type");
-  int val = view(1, 1);
+  static_assert(std::is_same_v<decltype(view), numcxx::indirect_view<numcxx::index_type, 2>>, "view type");
+  static_assert(std::is_same_v<decltype(view(1, 1)), numcxx::index_type&>, "element type");
+  numcxx::index_type val = view(1, 1);
   EXPECT_EQ(val, 5);
 
   auto reversed = a(numcxx::full_extent, numcxx::slice({}, {}, -1));

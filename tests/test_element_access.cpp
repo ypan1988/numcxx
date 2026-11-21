@@ -132,7 +132,7 @@ TEST(ElementAccess, NdarrayScalarReturnType) {
 
   auto x = a(1, 2);
 
-  static_assert(std::is_same_v<decltype(x), int>);
+  static_assert(std::is_same_v<decltype(x), numcxx::index_type>);
   EXPECT_EQ(x, 12);
 }
 

@@ -127,7 +127,7 @@ TEST(IndirectViewIxTest, ConstArrayAndViews) {
   auto cols = a[ix(full_extent, {1, 2})];
   EXPECT_EQ(cols(0, 0), 2);
   EXPECT_EQ(cols(1, 1), 6);
-  static_assert(std::is_same_v<decltype(cols(0, 0)), const int&>);
+  static_assert(std::is_same_v<decltype(cols(0, 0)), const index_type&>);
 }
 
 TEST(IndirectViewIxTest, ExpressionAndScalarAssignment) {
