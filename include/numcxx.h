@@ -682,27 +682,27 @@ public:
 
   // subset operations using N-dimensional slice specifiers, directly or via gslice.
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator()(             Args&&...      args) const;
+  [[nodiscard]] auto operator()(             Args    &&...  args) const;
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator()(             Args&&...      args)      ;
+  [[nodiscard]] auto operator()(             Args    &&...  args)      ;
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator[](const gslice<Args...>&        gs) const { return  detail::apply_indices(*this, gs.arguments()); }
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator[](const gslice<Args...>&        gs)       { return  detail::apply_indices(*this, gs.arguments()); }
-
-  // subset operations with slice (equivalent to [gslice(slice)]).
-  [[nodiscard]] auto operator[](const  slice&                  s) const { return                                    (*this)(s); }
-  [[nodiscard]] auto operator[](const  slice&                  s)       { return                                    (*this)(s); }
+  [[nodiscard]] auto operator[](const  slice         &         s) const { return                       (*this)[gslice(s)]     ; }
+  [[nodiscard]] auto operator[](const  slice         &         s)       { return                       (*this)[gslice(s)]     ; }
 
   // subset operations using N-dimensional slice specifiers with one index list, directly or via ix.
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator()(        Args&&...           args) const;
+  [[nodiscard]] auto operator()(             Args    &&...  args) const;
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator()(        Args&&...           args)      ;
+  [[nodiscard]] auto operator()(             Args    &&...  args)      ;
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const ix<Args...>&             x) const { return  detail::apply_indices(*this, x.arguments()); }
+  [[nodiscard]] auto operator[](const     ix<Args...>&        il) const { return  detail::apply_indices(*this, il.arguments()); }
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const ix<Args...>&             x)       { return  detail::apply_indices(*this, x.arguments()); }
+  [[nodiscard]] auto operator[](const     ix<Args...>&        il)       { return  detail::apply_indices(*this, il.arguments()); }
+  [[nodiscard]] auto operator[](const   uvec         &         l) const { return                       (*this)[    ix(l)]     ; }
+  [[nodiscard]] auto operator[](const   uvec         &         l)       { return                       (*this)[    ix(l)]     ; }
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
