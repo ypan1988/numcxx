@@ -402,14 +402,16 @@ template <size_type Rank, class... Args> concept gslice_view_arguments = sizeof.
                                                                         (all_slice_specifiers<Args...> && !all_scalar_indices<Args...> && sizeof...(Args) <= Rank) ||
                                                                         (all_scalar_indices<Args...> && sizeof...(Args) < Rank));
 
-// Concept for discrete (fancy) index list arguments (vector, initializer_list, 1D ndarray, etc.)
+// Concept for discrete index argument (uvec only: 1D size_type array).
 // Explicitly excludes anything that is already a slice_specifier.
-// Accepts: containers with begin()/end(), contiguous arrays with data()/size(), or initializer_list.
-template <class Tp> concept index_list_container = requires(const std::remove_cvref_t<Tp> &t) { t.size(); t.begin(); t.end(); } ||
-                                                   requires(const std::remove_cvref_t<Tp> &t) { t.size(); t.data(); };
-template <class Tp> concept index_list_arg = !slice_specifier<Tp> && (index_list_container<Tp> ||
-                                                                      std::same_as<std::remove_cvref_t<Tp>, std::initializer_list<size_type>> ||
-                                                                      std::same_as<std::remove_cvref_t<Tp>, std::initializer_list<int>>);
+template <class Tp>
+concept index_list_arg = !slice_specifier<Tp> &&
+                         (std::same_as<std::remove_cvref_t<Tp>, uvec> ||
+                          (requires {
+                            typename std::remove_cvref_t<Tp>::value_type;
+                            requires std::same_as<typename std::remove_cvref_t<Tp>::value_type, size_type>;
+                            requires std::remove_cvref_t<Tp>::rank() == 1;
+                          }));
 
 // Helper: each argument must be either a slice_specifier or an index_list_arg.
 template <class Tp> concept ix_arg = slice_specifier<Tp> || index_list_arg<Tp>;
@@ -556,146 +558,9 @@ struct ix_pack {
 template <class... Args>
 ix_pack(Args...) -> ix_pack<std::decay_t<Args>...>;
 
-// Helper overloads to allow syntax like ix({0, 2}), ix(full_extent, {1, 3}), etc.
-// 1 argument
-inline auto ix(std::initializer_list<size_type> il) {
-  return ix_pack<std::vector<size_type>>(std::vector<size_type>(il));
-}
-template <class T0>
-auto ix(T0 &&a0) {
-  return ix_pack<std::decay_t<T0>>(std::forward<T0>(a0));
-}
-
-// 2 arguments
-template <class T0, class T1>
-auto ix(T0 &&a0, T1 &&a1) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>>(std::forward<T0>(a0),
-                                                     std::forward<T1>(a1));
-}
-template <class T1>
-auto ix(std::initializer_list<size_type> a0, T1 &&a1) {
-  return ix_pack<std::vector<size_type>, std::decay_t<T1>>(
-      std::vector<size_type>(a0), std::forward<T1>(a1));
-}
-template <class T0>
-auto ix(T0 &&a0, std::initializer_list<size_type> a1) {
-  return ix_pack<std::decay_t<T0>, std::vector<size_type>>(
-      std::forward<T0>(a0), std::vector<size_type>(a1));
-}
-
-// 3 arguments
-template <class T0, class T1, class T2>
-auto ix(T0 &&a0, T1 &&a1, T2 &&a2) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2));
-}
-template <class T1, class T2>
-auto ix(std::initializer_list<size_type> a0, T1 &&a1, T2 &&a2) {
-  return ix_pack<std::vector<size_type>, std::decay_t<T1>, std::decay_t<T2>>(
-      std::vector<size_type>(a0), std::forward<T1>(a1), std::forward<T2>(a2));
-}
-template <class T0, class T2>
-auto ix(T0 &&a0, std::initializer_list<size_type> a1, T2 &&a2) {
-  return ix_pack<std::decay_t<T0>, std::vector<size_type>, std::decay_t<T2>>(
-      std::forward<T0>(a0), std::vector<size_type>(a1), std::forward<T2>(a2));
-}
-template <class T0, class T1>
-auto ix(T0 &&a0, T1 &&a1, std::initializer_list<size_type> a2) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::vector<size_type>>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::vector<size_type>(a2));
-}
-
-// 4 arguments
-template <class T0, class T1, class T2, class T3>
-auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::decay_t<T3>>(std::forward<T0>(a0), std::forward<T1>(a1),
-                                   std::forward<T2>(a2), std::forward<T3>(a3));
-}
-template <class T1, class T2, class T3>
-auto ix(std::initializer_list<size_type> a0, T1 &&a1, T2 &&a2, T3 &&a3) {
-  return ix_pack<std::vector<size_type>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::decay_t<T3>>(std::vector<size_type>(a0),
-                                   std::forward<T1>(a1), std::forward<T2>(a2),
-                                   std::forward<T3>(a3));
-}
-template <class T0, class T2, class T3>
-auto ix(T0 &&a0, std::initializer_list<size_type> a1, T2 &&a2, T3 &&a3) {
-  return ix_pack<std::decay_t<T0>, std::vector<size_type>, std::decay_t<T2>,
-                 std::decay_t<T3>>(std::forward<T0>(a0),
-                                   std::vector<size_type>(a1),
-                                   std::forward<T2>(a2), std::forward<T3>(a3));
-}
-template <class T0, class T1, class T3>
-auto ix(T0 &&a0, T1 &&a1, std::initializer_list<size_type> a2, T3 &&a3) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::vector<size_type>,
-                 std::decay_t<T3>>(std::forward<T0>(a0), std::forward<T1>(a1),
-                                   std::vector<size_type>(a2),
-                                   std::forward<T3>(a3));
-}
-template <class T0, class T1, class T2>
-auto ix(T0 &&a0, T1 &&a1, T2 &&a2, std::initializer_list<size_type> a3) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::vector<size_type>>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
-      std::vector<size_type>(a3));
-}
-
-// 5 arguments
-template <class T0, class T1, class T2, class T3, class T4>
-auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3, T4 &&a4) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::decay_t<T3>, std::decay_t<T4>>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
-      std::forward<T3>(a3), std::forward<T4>(a4));
-}
-template <class T1, class T2, class T3, class T4>
-auto ix(std::initializer_list<size_type> a0, T1 &&a1, T2 &&a2, T3 &&a3, T4 &&a4) {
-  return ix_pack<std::vector<size_type>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::decay_t<T3>, std::decay_t<T4>>(
-      std::vector<size_type>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
-      std::forward<T3>(a3), std::forward<T4>(a4));
-}
-template <class T0, class T2, class T3, class T4>
-auto ix(T0 &&a0, std::initializer_list<size_type> a1, T2 &&a2, T3 &&a3, T4 &&a4) {
-  return ix_pack<std::decay_t<T0>, std::vector<size_type>, std::decay_t<T2>,
-                 std::decay_t<T3>, std::decay_t<T4>>(
-      std::forward<T0>(a0), std::vector<size_type>(a1), std::forward<T2>(a2),
-      std::forward<T3>(a3), std::forward<T4>(a4));
-}
-template <class T0, class T1, class T3, class T4>
-auto ix(T0 &&a0, T1 &&a1, std::initializer_list<size_type> a2, T3 &&a3, T4 &&a4) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::vector<size_type>,
-                 std::decay_t<T3>, std::decay_t<T4>>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::vector<size_type>(a2),
-      std::forward<T3>(a3), std::forward<T4>(a4));
-}
-template <class T0, class T1, class T2, class T4>
-auto ix(T0 &&a0, T1 &&a1, T2 &&a2, std::initializer_list<size_type> a3, T4 &&a4) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::vector<size_type>, std::decay_t<T4>>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
-      std::vector<size_type>(a3), std::forward<T4>(a4));
-}
-template <class T0, class T1, class T2, class T3>
-auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3, std::initializer_list<size_type> a4) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::decay_t<T3>, std::vector<size_type>>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
-      std::forward<T3>(a3), std::vector<size_type>(a4));
-}
-
-// 6+ arguments variadic fallback
-template <class T0, class T1, class T2, class T3, class T4, class T5,
-          class... Rest>
-auto ix(T0 &&a0, T1 &&a1, T2 &&a2, T3 &&a3, T4 &&a4, T5 &&a5,
-        Rest &&...rest) {
-  return ix_pack<std::decay_t<T0>, std::decay_t<T1>, std::decay_t<T2>,
-                 std::decay_t<T3>, std::decay_t<T4>, std::decay_t<T5>,
-                 std::decay_t<Rest>...>(
-      std::forward<T0>(a0), std::forward<T1>(a1), std::forward<T2>(a2),
-      std::forward<T3>(a3), std::forward<T4>(a4), std::forward<T5>(a5),
-      std::forward<Rest>(rest)...);
+template <class... Args>
+constexpr auto ix(Args &&...args) {
+  return ix_pack(std::forward<Args>(args)...);
 }
 
 // [numcxx.ndarray]
@@ -2788,25 +2653,15 @@ template <typename... Args>
 // [numcxx.ix_view]
 namespace detail {
 
-template <class T> struct is_indices_arg : std::bool_constant<!slice_specifier<T>> {};
+template <class T> struct is_indices_arg : std::bool_constant<index_list_arg<T>> {};
 
 template <class T> inline constexpr bool is_indices_arg_v = is_indices_arg<T>::value;
 
 template <class T> std::vector<size_type> to_indices_vector(const T& arg) {
-  if constexpr (std::is_same_v<std::decay_t<T>, std::vector<size_type>>) {
-    return arg;
-  } else if constexpr (std::is_same_v<std::decay_t<T>, std::initializer_list<size_type>>) {
+  if constexpr (requires { arg.data(); arg.size(); }) {
+    return std::vector<size_type>(arg.data(), arg.data() + arg.size());
+  } else if constexpr (requires { arg.begin(); arg.end(); }) {
     return std::vector<size_type>(arg.begin(), arg.end());
-  } else if constexpr (requires {
-                         arg.data();
-                         arg.size();
-                       }) {
-    std::vector<size_type> res;
-    res.reserve(arg.size());
-    for (size_type i = 0; i < arg.size(); ++i) {
-      res.push_back(static_cast<size_type>(arg.data()[i]));
-    }
-    return res;
   } else {
     std::vector<size_type> res;
     res.reserve(std::size(arg));
