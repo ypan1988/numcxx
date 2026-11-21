@@ -2480,16 +2480,30 @@ auto make_gslice_view_with_reverse_dims(MdSpan&& src, const std::array<bool, N>&
   return make_gslice_view_impl(std::forward<MdSpan>(src), src_reverse_dims, std::forward<Args>(args)...);
 }
 
+template <std::size_t... Is>
+[[nodiscard]] constexpr auto make_full_extents(std::index_sequence<Is...>) {
+  return std::tuple{((void)Is, full_extent)...};
+}
+
+template <std::size_t N>
+[[nodiscard]] constexpr auto make_full_extents() {
+  return make_full_extents(std::make_index_sequence<N>{});
+}
+
+template <std::size_t N, class... Args>
+[[nodiscard]] constexpr auto pad_with_full_extents(Args&&... args) {
+  return std::tuple_cat(
+      std::forward_as_tuple(std::forward<Args>(args)...),
+      make_full_extents<N>());
+}
+
 template <std::size_t Rank, typename MdSpan, typename... Args>
 [[nodiscard]]
 auto make_gslice_view_padded(MdSpan&& src, Args&&... args) {
   if constexpr (sizeof...(Args) > Rank) {
     static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
   } else {
-    auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
-                                      [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-                                        return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
-                                      }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+    auto padded_args = pad_with_full_extents<Rank - sizeof...(Args)>(std::forward<Args>(args)...);
     return std::apply(
         [&src](auto&&... indices) {
           return make_gslice_view(std::forward<MdSpan>(src), std::forward<decltype(indices)>(indices)...);
@@ -2506,10 +2520,7 @@ auto make_gslice_view_padded_with_reverse_dims(MdSpan&& src, const std::array<bo
   if constexpr (sizeof...(Args) > Rank) {
     static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
   } else {
-    auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
-                                      [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-                                        return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
-                                      }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+    auto padded_args = pad_with_full_extents<Rank - sizeof...(Args)>(std::forward<Args>(args)...);
     return std::apply(
         [&src, &src_reverse_dims](auto&&... indices) {
           return make_gslice_view_with_reverse_dims(std::forward<MdSpan>(src), src_reverse_dims,
@@ -2614,10 +2625,7 @@ template <std::size_t Rank, typename MdSpan, typename... Args>
 auto make_indirect_view_padded(MdSpan&& src, Args&&... args) {
   static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
 
-  auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
-                                    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-                                      return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
-                                    }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+  auto padded_args = pad_with_full_extents<Rank - sizeof...(Args)>(std::forward<Args>(args)...);
 
   using PaddedTuple = decltype(padded_args);
   constexpr size_type TargetAxis = find_target_axis<PaddedTuple>();
@@ -2645,10 +2653,7 @@ auto make_indirect_view_padded_with_reverse_dims(MdSpan&& src, const std::array<
   static_assert(N == Rank, "src_reverse_dims must match array rank");
   static_assert(sizeof...(Args) <= Rank, "Number of arguments cannot exceed array rank");
 
-  auto padded_args = std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...),
-                                    [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-                                      return std::tuple{((void)Is, ::numcxx::detail::full_extent)...};
-                                    }(std::make_index_sequence<Rank - sizeof...(Args)>{}));
+  auto padded_args = pad_with_full_extents<Rank - sizeof...(Args)>(std::forward<Args>(args)...);
 
   using PaddedTuple = decltype(padded_args);
   constexpr size_type TargetAxis = find_target_axis<PaddedTuple>();
