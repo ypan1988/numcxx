@@ -2480,21 +2480,16 @@ auto make_gslice_view_with_reverse_dims(MdSpan&& src, const std::array<bool, N>&
   return make_gslice_view_impl(std::forward<MdSpan>(src), src_reverse_dims, std::forward<Args>(args)...);
 }
 
-template <std::size_t... Is>
-[[nodiscard]] constexpr auto make_full_extents(std::index_sequence<Is...>) {
+template <std::size_t... Is> [[nodiscard]] constexpr auto make_full_extents(std::index_sequence<Is...>) {
   return std::tuple{((void)Is, full_extent)...};
 }
 
-template <std::size_t N>
-[[nodiscard]] constexpr auto make_full_extents() {
+template <std::size_t N> [[nodiscard]] constexpr auto make_full_extents() {
   return make_full_extents(std::make_index_sequence<N>{});
 }
 
-template <std::size_t N, class... Args>
-[[nodiscard]] constexpr auto pad_with_full_extents(Args&&... args) {
-  return std::tuple_cat(
-      std::forward_as_tuple(std::forward<Args>(args)...),
-      make_full_extents<N>());
+template <std::size_t N, class... Args> [[nodiscard]] constexpr auto pad_with_full_extents(Args&&... args) {
+  return std::tuple_cat(std::forward_as_tuple(std::forward<Args>(args)...), make_full_extents<N>());
 }
 
 template <std::size_t Rank, typename MdSpan, typename... Args>
@@ -2531,9 +2526,15 @@ auto make_gslice_view_padded_with_reverse_dims(MdSpan&& src, const std::array<bo
 }
 
 template <class T> std::vector<size_type> to_indices_vector(const T& arg) {
-  if constexpr (requires { arg.data(); arg.size(); }) {
+  if constexpr (requires {
+                  arg.data();
+                  arg.size();
+                }) {
     return std::vector<size_type>(arg.data(), arg.data() + arg.size());
-  } else if constexpr (requires { arg.begin(); arg.end(); }) {
+  } else if constexpr (requires {
+                         arg.begin();
+                         arg.end();
+                       }) {
     return std::vector<size_type>(arg.begin(), arg.end());
   } else {
     std::vector<size_type> res;
@@ -2565,7 +2566,8 @@ template <class PaddedTuple> constexpr size_type count_scalars() {
 
 template <class PaddedTuple, size_type TAxis, std::size_t... Is>
 constexpr size_type compute_new_target_axis_impl(std::index_sequence<Is...>) {
-  return TAxis - (((Is < TAxis && scalar_index<std::remove_cvref_t<std::tuple_element_t<Is, PaddedTuple>>>) ? 1 : 0) + ... + 0);
+  return TAxis -
+         (((Is < TAxis && scalar_index<std::remove_cvref_t<std::tuple_element_t<Is, PaddedTuple>>>) ? 1 : 0) + ... + 0);
 }
 
 template <class PaddedTuple, size_type TAxis> constexpr size_type compute_new_target_axis() {
@@ -2702,20 +2704,20 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
-  return has_reversed_dim_
-             ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
-                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-             : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+  return has_reversed_dim_ ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+                                 to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+                           : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(
+                                 to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
-  return has_reversed_dim_
-             ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
-                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-             : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
+  return has_reversed_dim_ ? detail::slice_utils::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+                                 to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+                           : detail::slice_utils::make_indirect_view_padded<Extents::rank()>(
+                                 to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
@@ -2769,7 +2771,6 @@ template <typename... Args>
                    to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
              : detail::slice_utils::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
-
 
 template <typename Layout, typename Extents>
 std::array<size_type, Extents::rank()> unravel_index(size_type i, const Extents& extents) {
