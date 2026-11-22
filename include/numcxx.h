@@ -531,6 +531,69 @@ private:
 template <class... Args> gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
 template <class... Args> ix    (Args &&...) -> ix    <std::remove_cvref_t<Args>...>;
 
+// [numcxx.mdspan_desc]
+namespace detail {
+namespace indexing {
+
+template <class MdSpan>
+class mdspan_desc {
+public:
+  static constexpr size_type rank = MdSpan::extents_type::rank();
+
+  constexpr mdspan_desc(MdSpan src, std::array<bool, rank> reverse_dims = {})
+      : src_(std::move(src)), reverse_dims_(reverse_dims) {}
+
+  template <class... Idxs>
+  constexpr void check_indices(Idxs&&... idxs) const {
+    static_assert(sizeof...(Idxs) == rank, "Number of indices must match the rank of the mdspan");
+    const std::array<index_type, rank> indices{static_cast<index_type>(idxs)...};
+    for (size_type i = 0; i < rank; ++i) {
+      const index_type dim_len = static_cast<index_type>(src_.extent(i));
+      const index_type idx = indices[i];
+      if (idx < -dim_len || idx >= dim_len) {
+        throw std::out_of_range("index " + std::to_string(idx) +
+                                " is out of bounds for axis " + std::to_string(i) +
+                                " with size " + std::to_string(dim_len));
+      }
+    }
+  }
+
+  template <class... Idxs> requires (sizeof...(Idxs) == rank)
+  [[nodiscard]] constexpr decltype(auto) get_element(Idxs&&... idxs) const {
+    return get_element_impl(std::make_index_sequence<rank>{}, std::forward<Idxs>(idxs)...);
+  }
+
+private:
+  [[noreturn]] inline void throw_index_out_of_range(index_type idx, size_type axis, size_type dim_len) {
+    throw std::out_of_range("index " + std::to_string(idx) +
+                            " is out of bounds for axis " + std::to_string(axis) +
+                            " with size " + std::to_string(dim_len));
+  }
+
+  [[nodiscard]] static constexpr size_type normalize_index(index_type idx, size_type dim_len,
+                                                           bool reversed = false) noexcept {
+    const index_type len = static_cast<index_type>(dim_len);
+    const index_type res = (idx < 0) ? idx + len : idx;
+    const size_type n = static_cast<size_type>(res);
+    return reversed ? dim_len - 1 - n : n;
+  }
+
+  template <std::size_t... Is, class... Idxs>
+  [[nodiscard]] constexpr decltype(auto) get_element_impl(std::index_sequence<Is...>,
+                                                          Idxs&&... idxs) const {
+    return src_(normalize_index(static_cast<index_type>(idxs),
+                                static_cast<size_type>(src_.extent(Is)),
+                                reverse_dims_[Is])...);
+  }
+
+private:
+  MdSpan src_;
+  std::array<bool, rank> reverse_dims_;
+};
+
+}
+}
+
 // [numcxx.ndarray]
 namespace detail {
 template <class Ex>          struct static_extents_size;
@@ -625,7 +688,7 @@ public:
   constexpr ndarray(const ndarray &v) = default;
   constexpr ndarray(ndarray &&v) noexcept = default;
   template <class... SizeTypes> explicit constexpr ndarray(SizeTypes... dyn_exts) : elem_(Extents(dyn_exts...)) {}
-  ndarray(const    gslice_view<ElementType, Extents, LayoutPolicy> &sv) : elem_(sv.to_mdspan()) {}
+  ndarray(const   gslice_view<ElementType, Extents, LayoutPolicy> &sv) : elem_(sv.to_mdspan()) {}
   ndarray(const     mask_view<ElementType>                        &mv) : elem_(mv.to_mdspan()) {}
   ndarray(const indirect_view<ElementType, Extents::rank()> &iv)
       : elem_(iv.to_mdspan()) {}
@@ -650,14 +713,14 @@ public:
   // element access using N-dimensional indices.
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const { return                               to_mdspan() [std::forward<Idxs>(idxs)...]; }
+  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const {                               return desc_.get_element(std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       { return                               to_mdspan() [std::forward<Idxs>(idxs)...]; }
+  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       {                               return desc_.get_element(std::forward<Idxs>(idxs)...); }
 #endif
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { return detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element(std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { return detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element(std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
@@ -891,6 +954,7 @@ private:
 
 private:
   mdarray_type elem_;
+  detail::indexing::mdspan_desc<mdspan_type> desc_{to_mdspan()};
   // std::vector<size_type> logical_offset_;
 };
 
@@ -1984,6 +2048,7 @@ ndarray<Tp, Ex, Lp>::ndarray(detail::nested_initializer_list_t<element_type, ext
     // dynamic extents: use derived shape
     elem_ = mdarray_type(derived);
   }
+  desc_ = detail::indexing::mdspan_desc(elem_.to_mdspan());
 
   // flatten data
   auto it = elem_.data();
