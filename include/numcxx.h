@@ -453,7 +453,7 @@ template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
 auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices, size_type target_axis, std::array<bool, Rank> reverse_dims = {})
     -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
 
-} // namespace detail::indexing
+} // namespace detail
 
 // [numcxx.slice]
 /// A NumPy-style slice `start:stop:step`
@@ -2308,16 +2308,14 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
 
 namespace detail {
 namespace indexing {
-inline size_type normalize_index(index_type idx, size_type dim_len) {
+inline size_type normalize_index(index_type idx, size_type dim_len, bool reversed = false) {
   index_type len = static_cast<index_type>(dim_len);
   index_type res = (idx < 0) ? idx + len : idx;
+  
   // Empty dimensions are valid for slicing but cannot be scalar-indexed.
   NUMCXX_ASSERT(res >= 0 && res < len, "Index out of bounds");
-  return static_cast<size_type>(res);
-}
 
-inline size_type normalize_and_reverse_index(index_type idx, size_type dim_len, bool reversed) {
-  const size_type n = normalize_index(idx, dim_len);
+  const size_type n = static_cast<size_type>(res);
   return reversed ? dim_len - 1 - n : n;
 }
 
@@ -2340,8 +2338,7 @@ template <class MdSpan, class... Idxs>
                                          Idxs&&... idxs) {
   auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
     const std::array<size_type, sizeof...(Idxs)> dims = {static_cast<size_type>(src.extent(Is))...};
-    return std::forward<MdSpan>(src)(
-        normalize_and_reverse_index(static_cast<index_type>(idxs), dims[Is], reverse_dims[Is])...);
+    return std::forward<MdSpan>(src)(normalize_index(static_cast<index_type>(idxs), dims[Is], reverse_dims[Is])...);
   };
 
   return helper(std::make_index_sequence<sizeof...(Idxs)>{});
@@ -2352,7 +2349,7 @@ inline size_type to_submdspan_arg(index_type idx, size_type dim_len, bool& is_in
                                   bool src_reversed = false) {
   is_index = true;
   reversed = false;
-  return normalize_and_reverse_index(idx, dim_len, src_reversed);
+  return normalize_index(idx, dim_len, src_reversed);
 }
 
 // Convert a slice to a submdspan strided_slice argument.
