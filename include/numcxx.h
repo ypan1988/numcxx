@@ -654,9 +654,9 @@ public:
   // element access using N-dimensional indices.
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const { return                                  to_mdspan() [std::forward<Idxs>(idxs)...]; }
+  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const { return                               to_mdspan() [std::forward<Idxs>(idxs)...]; }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       { return                                  to_mdspan() [std::forward<Idxs>(idxs)...]; }
+  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       { return                               to_mdspan() [std::forward<Idxs>(idxs)...]; }
 #endif
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
   [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { return detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...); }
@@ -957,9 +957,11 @@ public:
 
   // element access using N-dimensional indices.
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const;
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
+                                                                                             : detail::indexing::get_element(to_mdspan(),                std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator() (Idxs&&... idxs)      ;
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
+                                                                                             : detail::indexing::get_element(to_mdspan(),                std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
@@ -2715,24 +2717,6 @@ template <typename... Args>
                                  to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
                            : detail::indexing::make_indirect_view_padded<Extents::rank()>(
                                  to_mdspan(), std::forward<Args>(args)...);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <typename... Idxs>
-  requires elem_access_arguments<Extents::rank(), Idxs...>
-[[nodiscard]]
-auto gslice_view<Tp, Extents, Lp>::operator()(Idxs&&... idxs) const -> const_reference {
-  return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
-                           : detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
-}
-
-template <typename Tp, typename Extents, typename Lp>
-template <typename... Idxs>
-  requires elem_access_arguments<Extents::rank(), Idxs...>
-[[nodiscard]]
-auto gslice_view<Tp, Extents, Lp>::operator()(Idxs&&... idxs) -> reference {
-  return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
-                           : detail::indexing::get_element(to_mdspan(), std::forward<Idxs>(idxs)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
