@@ -331,20 +331,6 @@ using    fcube222 = cube_fixed<float,      2, 2, 2>; using    fcube333 = cube_fi
 using cx_fcube222 = cube_fixed<cx_float,   2, 2, 2>; using cx_fcube333 = cube_fixed<cx_float,   3, 3, 3>; using cx_fcube444 = cube_fixed<cx_float,   4, 4, 4>;
 using cx_dcube222 = cube_fixed<cx_double,  2, 2, 2>; using cx_dcube333 = cube_fixed<cx_double,  3, 3, 3>; using cx_dcube444 = cube_fixed<cx_double,  4, 4, 4>;
 
-namespace detail {
-template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
-auto make_indirect_view(
-    MdSpan &&src, std::vector<size_type> indices,
-    std::array<bool, Rank> reverse_dims = {})
-    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
-
-template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
-auto make_indirect_view(
-    MdSpan &&src, std::vector<size_type> indices, size_type target_axis,
-    std::array<bool, Rank> reverse_dims = {})
-    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
-}
-
 // Value-expression types participate in NumCxx expression evaluation.
 template <class ValExpr>                struct nc_is_val_expr                             : std::false_type {};
 template <class Tp, class Ex, class Lp> struct nc_is_val_expr<       ndarray<Tp, Ex, Lp>> : std::true_type  {};
@@ -452,11 +438,21 @@ template <typename Tp                  > struct nested_initializer_list<Tp, 0> {
 template <typename Tp, std::size_t Rank>  using nested_initializer_list_t = typename nested_initializer_list<Tp, Rank>::type;
 } // namespace detail
 
-namespace detail::indexing {
+namespace detail {
+namespace indexing {
 template <class MdSpan, class... Idxs> requires all_scalar_indices<Idxs...>
 [[nodiscard]] decltype(auto) get_element(MdSpan&& src,                                                        Idxs&&... idxs);
 template <class MdSpan, class... Idxs> requires all_scalar_indices<Idxs...>
 [[nodiscard]] decltype(auto) get_element(MdSpan&& src, const std::array<bool, sizeof...(Idxs)>& reverse_dims, Idxs&&... idxs);
+} // namespace indexing
+
+template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
+auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices,                        std::array<bool, Rank> reverse_dims = {})
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
+template <class MdSpan, size_type Rank = std::remove_cvref_t<MdSpan>::rank()>
+auto make_indirect_view(MdSpan &&src, std::vector<size_type> indices, size_type target_axis, std::array<bool, Rank> reverse_dims = {})
+    -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank>;
+
 } // namespace detail::indexing
 
 // [numcxx.slice]
