@@ -543,9 +543,8 @@ public:
   constexpr mdspan_desc(MdSpan src, std::array<bool, rank> reverse_dims = {})
       : src_(std::move(src)), reverse_dims_(reverse_dims) {}
 
-  template <class... Idxs>
+  template <class... Idxs> requires (sizeof...(Idxs) == rank)
   constexpr void check_indices(Idxs&&... idxs) const {
-    static_assert(sizeof...(Idxs) == rank, "Number of indices must match the rank of the mdspan");
     const std::array<index_type, rank> indices{static_cast<index_type>(idxs)...};
     for (size_type i = 0; i < rank; ++i) {
       const index_type dim_len = static_cast<index_type>(src_.extent(i));
@@ -560,16 +559,23 @@ public:
 
   template <class... Idxs> requires (sizeof...(Idxs) == rank)
   [[nodiscard]] constexpr decltype(auto) get_element(Idxs&&... idxs) const {
-    return get_element_impl(std::make_index_sequence<rank>{}, std::forward<Idxs>(idxs)...);
+    const auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
+      return src_(normalize_index(static_cast<index_type>(idxs),
+                                  static_cast<size_type>(src_.extent(Is)),
+                                  reverse_dims_[Is])...); };
+    return helper(std::make_index_sequence<rank>{});
+  }
+
+  template <class... Idxs> requires (sizeof...(Idxs) == rank)
+  [[nodiscard]] constexpr decltype(auto) get_element_unchecked(Idxs&&... idxs) const {
+    const auto helper = [&]<std::size_t... Is>(std::index_sequence<Is...>) -> decltype(auto) {
+      return src_(  reverse_index(static_cast<size_type>(idxs),
+                                  static_cast<size_type>(src_.extent(Is)),
+                                  reverse_dims_[Is])...); };
+    return helper(std::make_index_sequence<rank>{});
   }
 
 private:
-  [[noreturn]] inline void throw_index_out_of_range(index_type idx, size_type axis, size_type dim_len) {
-    throw std::out_of_range("index " + std::to_string(idx) +
-                            " is out of bounds for axis " + std::to_string(axis) +
-                            " with size " + std::to_string(dim_len));
-  }
-
   [[nodiscard]] static constexpr size_type normalize_index(index_type idx, size_type dim_len,
                                                            bool reversed = false) noexcept {
     const index_type len = static_cast<index_type>(dim_len);
@@ -578,12 +584,9 @@ private:
     return reversed ? dim_len - 1 - n : n;
   }
 
-  template <std::size_t... Is, class... Idxs>
-  [[nodiscard]] constexpr decltype(auto) get_element_impl(std::index_sequence<Is...>,
-                                                          Idxs&&... idxs) const {
-    return src_(normalize_index(static_cast<index_type>(idxs),
-                                static_cast<size_type>(src_.extent(Is)),
-                                reverse_dims_[Is])...);
+  [[nodiscard]] static constexpr size_type   reverse_index(size_type idx, size_type dim_len,
+                                                           bool reversed = false) noexcept {
+    return reversed ? dim_len - 1 - idx : idx;
   }
 
 private:
@@ -713,14 +716,14 @@ public:
   // element access using N-dimensional indices.
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const {                               return desc_.get_element(std::forward<Idxs>(idxs)...); }
+  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       {                               return desc_.get_element(std::forward<Idxs>(idxs)...); }
+  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
 #endif
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element(std::forward<Idxs>(idxs)...); }
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element(std::forward<Idxs>(idxs)...); }
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
