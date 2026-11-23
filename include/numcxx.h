@@ -203,19 +203,6 @@ inline void throw_exception(const std::string& msg) {
 #endif
 }
 
-template <std::integral Index>
-[[noreturn]]
-inline void throw_index_out_of_range(Index i, NUMCXX_SIZE_TYPE size, const char* what) {
-  const std::string message =
-      std::string(what) + ": index " + std::to_string(i) + " out of bounds for size " + std::to_string(size);
-  NUMCXX_THROW(std::out_of_range, message);
-}
-
-inline void checked_index(NUMCXX_SIZE_TYPE i, NUMCXX_SIZE_TYPE size, const char* what) {
-  if (i >= size)
-    throw_index_out_of_range(i, size, what);
-}
-
 //===----------------------------------------------------------------------===//
 // Backend Configuration
 //===----------------------------------------------------------------------===//
@@ -535,6 +522,20 @@ template <class... Args> ix    (Args &&...) -> ix    <std::remove_cvref_t<Args>.
 namespace detail {
 namespace indexing {
 
+template <std::integral Index>
+[[noreturn]]
+inline void throw_index_out_of_range(Index i, NUMCXX_SIZE_TYPE size, const char* what) {
+  const std::string message =
+      std::string(what) + ": index " + std::to_string(i) + " out of bounds for size " + std::to_string(size);
+  NUMCXX_THROW(std::out_of_range, message);
+}
+
+inline void check_index(NUMCXX_SIZE_TYPE i, NUMCXX_SIZE_TYPE size, const char* what) {
+  if (i >= size)
+    throw_index_out_of_range(i, size, what);
+}
+
+
 template <class MdSpan>
 class mdspan_desc {
 public:
@@ -728,14 +729,14 @@ public:
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i)      ;
-  [[nodiscard]] const_reference flat          (size_type i) const { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
-  [[nodiscard]]       reference flat          (size_type i)       { detail::checked_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
+  [[nodiscard]] const_reference flat          (size_type i) const { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
+  [[nodiscard]]       reference flat          (size_type i)       { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
 
   // flattened element access in physical storage order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                    return         data()[i]; }
-  [[nodiscard]]       reference operator[]    (size_type i)       {                                                    return         data()[i]; }
-  [[nodiscard]] const_reference at            (size_type i) const { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
-  [[nodiscard]]       reference at            (size_type i)       { detail::checked_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
+  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                            return         data()[i]; }
+  [[nodiscard]]       reference operator[]    (size_type i)       {                                                            return         data()[i]; }
+  [[nodiscard]] const_reference at            (size_type i) const { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
+  [[nodiscard]]       reference at            (size_type i)       { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
 
   // basic slicing using slice specifiers (i.e., slice, full_extent, std::pair, or scalar index).
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
@@ -1029,14 +1030,14 @@ public:
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
   [[nodiscard]]       reference flat_unchecked(size_type i)      ;
-  [[nodiscard]] const_reference flat          (size_type i) const { detail::checked_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
-  [[nodiscard]]       reference flat          (size_type i)       { detail::checked_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
+  [[nodiscard]] const_reference flat          (size_type i) const { detail::indexing::check_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
+  [[nodiscard]]       reference flat          (size_type i)       { detail::indexing::check_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
 
   // flattened element access in physical storage order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                        return data_handle()[calc_offset(i)]; }
-  [[nodiscard]]       reference operator[]    (size_type i)       {                                                        return data_handle()[calc_offset(i)]; }
-  [[nodiscard]] const_reference at            (size_type i) const { detail::checked_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
-  [[nodiscard]]       reference at            (size_type i)       { detail::checked_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
+  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                                return data_handle()[calc_offset(i)]; }
+  [[nodiscard]]       reference operator[]    (size_type i)       {                                                                return data_handle()[calc_offset(i)]; }
+  [[nodiscard]] const_reference at            (size_type i) const { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
+  [[nodiscard]]       reference at            (size_type i)       { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
 
   // subset operations using N-dimensional slice specifiers.
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
@@ -1321,7 +1322,7 @@ public:
   }
 
   [[nodiscard]] const_reference flat(size_type i) const {
-    detail::checked_index(i, size(), "broadcast_view::flat");
+    detail::indexing::check_index(i, size(), "broadcast_view::flat");
     return flat_unchecked(i);
   }
 
@@ -1544,21 +1545,21 @@ public:
     return flat_unchecked(i);
   }
   [[nodiscard]] const_reference at(size_type i) const {
-    detail::checked_index(i, size(), "mask_view::at");
+    detail::indexing::check_index(i, size(), "mask_view::at");
     return (*this)[i];
   }
   [[nodiscard]] reference at(size_type i) {
-    detail::checked_index(i, size(), "mask_view::at");
+    detail::indexing::check_index(i, size(), "mask_view::at");
     return (*this)[i];
   }
 
   // flattened element access using the default_layout order, independent of the actual storage layout.
   [[nodiscard]] const_reference flat(size_type i) const {
-    detail::checked_index(i, size(), "mask_view::flat");
+    detail::indexing::check_index(i, size(), "mask_view::flat");
     return flat_unchecked(i);
   }
   [[nodiscard]] reference flat(size_type i) {
-    detail::checked_index(i, size(), "mask_view::flat");
+    detail::indexing::check_index(i, size(), "mask_view::flat");
     return flat_unchecked(i);
   }
   // Internal API (not stable): unchecked flat access; requires i < size().
@@ -1763,19 +1764,19 @@ public:
   [[nodiscard]] reference operator[](size_type i) { return flat_unchecked(i); }
   [[nodiscard]] const_reference operator[](size_type i) const { return flat_unchecked(i); }
   [[nodiscard]] reference at(size_type i) {
-    detail::checked_index(i, size(), "indirect_view::at");
+    detail::indexing::check_index(i, size(), "indirect_view::at");
     return flat_unchecked(i);
   }
   [[nodiscard]] const_reference at(size_type i) const {
-    detail::checked_index(i, size(), "indirect_view::at");
+    detail::indexing::check_index(i, size(), "indirect_view::at");
     return flat_unchecked(i);
   }
   [[nodiscard]] reference flat(size_type i) {
-    detail::checked_index(i, size(), "indirect_view::flat");
+    detail::indexing::check_index(i, size(), "indirect_view::flat");
     return flat_unchecked(i);
   }
   [[nodiscard]] const_reference flat(size_type i) const {
-    detail::checked_index(i, size(), "indirect_view::flat");
+    detail::indexing::check_index(i, size(), "indirect_view::flat");
     return flat_unchecked(i);
   }
   [[nodiscard]] reference flat_unchecked(size_type i) {
@@ -3202,7 +3203,7 @@ public:
   explicit nc_val_expr(const RmExpr& e) : expr_(e) {}
 
   [[nodiscard]] value_type flat(size_type i) const {
-    detail::checked_index(i, size(), "nc_val_expr::flat");
+    detail::indexing::check_index(i, size(), "nc_val_expr::flat");
     return flat_unchecked(i);
   }
   // Internal API (not stable): unchecked flat access; requires i < size().
