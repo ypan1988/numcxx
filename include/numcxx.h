@@ -522,19 +522,15 @@ template <class... Args> ix    (Args &&...) -> ix    <std::remove_cvref_t<Args>.
 namespace detail {
 namespace indexing {
 
-template <std::integral Index>
-[[noreturn]]
-inline void throw_index_out_of_range(Index i, NUMCXX_SIZE_TYPE size, const char* what) {
-  const std::string message =
-      std::string(what) + ": index " + std::to_string(i) + " out of bounds for size " + std::to_string(size);
-  NUMCXX_THROW(std::out_of_range, message);
+inline void check_index(index_type i, size_type size, const char* what) {
+  const index_type n = static_cast<index_type>(size);
+  if (i < -n || i >= n) {
+    const std::string message = std::string(what) + ": index " + 
+                                std::to_string(i) + " out of bounds for size " + 
+                                std::to_string(size);
+    NUMCXX_THROW(std::out_of_range, message);
+  }
 }
-
-inline void check_index(NUMCXX_SIZE_TYPE i, NUMCXX_SIZE_TYPE size, const char* what) {
-  if (i >= size)
-    throw_index_out_of_range(i, size, what);
-}
-
 
 template <class MdSpan>
 class mdspan_desc {
@@ -551,9 +547,10 @@ public:
       const index_type dim_len = static_cast<index_type>(src_.extent(i));
       const index_type idx = indices[i];
       if (idx < -dim_len || idx >= dim_len) {
-        throw std::out_of_range("index " + std::to_string(idx) +
-                                " is out of bounds for axis " + std::to_string(i) +
-                                " with size " + std::to_string(dim_len));
+        const std::string message = "index " + std::to_string(idx) +
+                                    " is out of bounds for axis " + std::to_string(i) +
+                                    " with size " + std::to_string(dim_len);
+        NUMCXX_THROW(std::out_of_range, message);        
       }
     }
   }
