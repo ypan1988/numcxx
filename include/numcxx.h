@@ -1007,7 +1007,7 @@ public:
   gslice_view(const gslice_view &) = default;
   gslice_view(gslice_view &&) noexcept = default;
   explicit gslice_view(mdspan_type span, std::array<bool, extents_type::rank()> reverse = {})
-    : span_(span), reverse_dims_(reverse),
+    : span_(span), reverse_dims_(reverse), desc_(span, reverse),
       has_reversed_dim_(std::any_of(reverse.begin(), reverse.end(), [](bool b) { return b; })),
       flat_contiguous_(is_flat_contiguous(span, reverse)) {}
   ~gslice_view() = default;
@@ -1275,6 +1275,8 @@ private:
 private:
   mdspan_type span_;
   std::array<bool, extents_type::rank()> reverse_dims_{};
+  detail::indexing::mdspan_desc<mdspan_type> desc_{span_};
+
   bool has_reversed_dim_;
   bool flat_contiguous_;
   // std::vector<size_type> logical_offset_;
@@ -1606,8 +1608,8 @@ public:
   [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
 
   // mdspan interoperability
-         constexpr  const_mdspan_type                to_mdspan() const noexcept { return span_          ; }
-         constexpr        mdspan_type                to_mdspan()       noexcept { return span_          ; }
+                constexpr      const_mdspan_type    to_mdspan() const noexcept { return span_              ; }
+                constexpr            mdspan_type    to_mdspan()       noexcept { return span_              ; }
   // clang-format on
 
 private:
@@ -1625,6 +1627,7 @@ private:
     extents_type ext(offsets.size());
     auto acc = detail::mask_accessor<element_type>(std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
+    desc_ = detail::indexing::mdspan_desc<mdspan_type>(span_);
   }
 
   template <typename MdSpan> explicit mask_view(const MdSpan& data_span, std::vector<size_type> offsets) {
@@ -1632,6 +1635,7 @@ private:
     extents_type ext(offsets.size());
     auto acc = detail::mask_accessor<element_type>(std::move(offsets));
     span_ = mdspan_type(base, ext, acc);
+    desc_ = detail::indexing::mdspan_desc<mdspan_type>(span_);
   }
 
   template <template <class> class Op> auto apply_unary_op() const {
@@ -1655,6 +1659,7 @@ private:
   template <class, class, class> friend class gslice_view;
 
   mdspan_type span_;
+  detail::indexing::mdspan_desc<mdspan_type> desc_{span_};
 };
 
 namespace detail {
@@ -1745,7 +1750,7 @@ public:
 
   indirect_view() = delete;
   indirect_view(data_handle_type data, extents_type extents, accessor_type accessor)
-      : span_(data, extents, std::move(accessor)) {}
+      : span_(data, extents, std::move(accessor)), desc_(span_) {}
 
   template <class... Idxs>
     requires elem_access_arguments<Rank, Idxs...>
@@ -1924,6 +1929,7 @@ private:
   }
   template <class, ::numcxx::size_type> friend class indirect_view;
   mdspan_type span_;
+  detail::indexing::mdspan_desc<mdspan_type> desc_{span_};
 };
 
 namespace detail {
