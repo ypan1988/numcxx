@@ -547,6 +547,10 @@ template <class MdSpan>
 class mdspan_desc {
 public:
   using mdspan_type = MdSpan;
+  using extents_type  = typename mdspan_type::extents_type;
+  using layout_type   = typename mdspan_type::layout_type;
+  using accessor_type = typename mdspan_type::accessor_type;
+
   static constexpr size_type rank = MdSpan::extents_type::rank();
 
   constexpr mdspan_desc(MdSpan src, std::array<bool, rank> reverse_dims = {})
@@ -554,6 +558,8 @@ public:
 
   [[nodiscard]] constexpr const mdspan_type& source() const noexcept { return src_; }
   [[nodiscard]] constexpr       mdspan_type& source()       noexcept { return src_; }
+  [[nodiscard]] constexpr         size_type    size() const noexcept { return static_cast<size_type>(src_.size()); }
+  [[nodiscard]] constexpr         size_type  extent(size_type axis) const noexcept { return static_cast<size_type>(src_.extent(axis)); }
 
   template <class... Idxs> requires (sizeof...(Idxs) == rank)
   constexpr void check_indices(Idxs&&... idxs) const {
@@ -588,7 +594,38 @@ public:
     return helper(std::make_index_sequence<rank>{});
   }
 
+  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) const {
+    return src_.accessor().access(src_.data_handle(), calc_offset(i));
+  }
+
+  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) {
+    return src_.accessor().access(src_.data_handle(), calc_offset(i));
+  }
+
 private:
+  size_type calc_offset(size_type i) const noexcept {
+    if (size() == 0)
+      return 0;
+    size_type offset = 0, remaining = i;
+    auto process_dim = [&](size_type r) {
+      size_type dim_len = extent(r);
+      size_type idx = remaining % dim_len;
+      if (reverse_dims_[r]) {
+        idx = dim_len - 1 - idx;
+      }
+      offset += idx * src_.stride(r);
+      remaining /= dim_len;
+    };
+    if constexpr (std::is_same_v<layout_type, default_layout>) {
+      for (size_type r = rank; r-- > 0;)
+        process_dim(r);
+    } else {
+      for (size_type r = 0; r < rank; ++r)
+        process_dim(r);
+    }
+    return offset;
+  }
+
   MdSpan src_;
   std::array<bool, rank> reverse_dims_;
 };
@@ -1036,8 +1073,8 @@ public:
   [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "gslice_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
 
   // flattened element access in physical storage order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const_reference operator[]    ( size_type i) const {                                                                return data_handle()[calc_offset(i)]; }
-  [[nodiscard]]       reference operator[]    ( size_type i)       {                                                                return data_handle()[calc_offset(i)]; }
+  [[nodiscard]] const_reference operator[]    ( size_type i) const {                                                                return desc_.get_linear_unchecked(i); }
+  [[nodiscard]]       reference operator[]    ( size_type i)       {                                                                return desc_.get_linear_unchecked(i); }
   [[nodiscard]] const_reference at            (index_type i) const { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
   [[nodiscard]]       reference at            (index_type i)       { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
 
@@ -1197,29 +1234,6 @@ private:
           return false;
     }
     return true;
-  }
-
-  size_type calc_offset(size_type i) const noexcept {
-    if (size() == 0)
-      return 0;
-    size_type offset = 0, remaining = i;
-    auto process_dim = [&](rank_type r) {
-      size_type dim_len = extent(r);
-      size_type idx = remaining % dim_len;
-      if (reverse_dims_[r]) {
-        idx = dim_len - 1 - idx;
-      }
-      offset += idx * span_.stride(r);
-      remaining /= dim_len;
-    };
-    if constexpr (std::is_same_v<layout_type, layout_right>) {
-      for (rank_type r = rank(); r-- > 0;)
-        process_dim(r);
-    } else {
-      for (rank_type r = 0; r < rank(); ++r)
-        process_dim(r);
-    }
-    return offset;
   }
 
   size_type calc_flat_offset(size_type i) const noexcept {
