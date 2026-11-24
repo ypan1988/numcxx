@@ -532,13 +532,28 @@ inline void check_index(index_type i, size_type size, const char* what) {
   }
 }
 
+[[nodiscard]] constexpr size_type normalize_index(index_type idx, size_type dim_len, bool reversed = false) noexcept {
+  const index_type len = static_cast<index_type>(dim_len);
+  const index_type res = (idx < 0) ? idx + len : idx;
+  const size_type n = static_cast<size_type>(res);
+  return reversed ? dim_len - 1 - n : n;
+}
+
+[[nodiscard]] constexpr size_type reverse_index(size_type idx, size_type dim_len, bool reversed = false) noexcept {
+  return reversed ? dim_len - 1 - idx : idx;
+}
+
 template <class MdSpan>
 class mdspan_desc {
 public:
+  using mdspan_type = MdSpan;
   static constexpr size_type rank = MdSpan::extents_type::rank();
 
   constexpr mdspan_desc(MdSpan src, std::array<bool, rank> reverse_dims = {})
       : src_(std::move(src)), reverse_dims_(reverse_dims) {}
+
+  [[nodiscard]] constexpr const mdspan_type& source() const noexcept { return src_; }
+  [[nodiscard]] constexpr       mdspan_type& source()       noexcept { return src_; }
 
   template <class... Idxs> requires (sizeof...(Idxs) == rank)
   constexpr void check_indices(Idxs&&... idxs) const {
@@ -571,20 +586,6 @@ public:
                                   static_cast<size_type>(src_.extent(Is)),
                                   reverse_dims_[Is])...); };
     return helper(std::make_index_sequence<rank>{});
-  }
-
-private:
-  [[nodiscard]] static constexpr size_type normalize_index(index_type idx, size_type dim_len,
-                                                           bool reversed = false) noexcept {
-    const index_type len = static_cast<index_type>(dim_len);
-    const index_type res = (idx < 0) ? idx + len : idx;
-    const size_type n = static_cast<size_type>(res);
-    return reversed ? dim_len - 1 - n : n;
-  }
-
-  [[nodiscard]] static constexpr size_type   reverse_index(size_type idx, size_type dim_len,
-                                                           bool reversed = false) noexcept {
-    return reversed ? dim_len - 1 - idx : idx;
   }
 
 private:
@@ -714,26 +715,26 @@ public:
   // element access using N-dimensional indices.
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+  [[nodiscard]] const_reference operator[]  (Idxs&&... idxs) const {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+  [[nodiscard]]       reference operator[]  (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
 #endif
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
+  [[nodiscard]] const_reference operator()  (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
+  [[nodiscard]]       reference operator()  (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
-  [[nodiscard]] const_reference flat_unchecked(size_type i) const;
-  [[nodiscard]]       reference flat_unchecked(size_type i)      ;
-  [[nodiscard]] const_reference flat          (size_type i) const { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
-  [[nodiscard]]       reference flat          (size_type i)       { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(i); }
+  [[nodiscard]] const_reference flat_unchecked( size_type i) const;
+  [[nodiscard]]       reference flat_unchecked( size_type i)      ;
+  [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+  [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
 
   // flattened element access in physical storage order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                            return         data()[i]; }
-  [[nodiscard]]       reference operator[]    (size_type i)       {                                                            return         data()[i]; }
-  [[nodiscard]] const_reference at            (size_type i) const { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
-  [[nodiscard]]       reference at            (size_type i)       { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[i]; }
+  [[nodiscard]] const_reference operator[]    ( size_type i) const {                                                            return         data()[i]; }
+  [[nodiscard]]       reference operator[]    ( size_type i)       {                                                            return         data()[i]; }
+  [[nodiscard]] const_reference at            (index_type i) const { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]]       reference at            (index_type i)       { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
 
   // basic slicing using slice specifiers (i.e., slice, full_extent, std::pair, or scalar index).
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
@@ -1017,12 +1018,16 @@ public:
   gslice_view &operator=(gslice_view &&) noexcept = default;
 
   // element access using N-dimensional indices.
+#if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
-                                                                                             : detail::indexing::get_element(to_mdspan(),                std::forward<Idxs>(idxs)...); }
+  [[nodiscard]] const_reference operator[] (Idxs&&... idxs) const {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { return has_reversed_dim_ ? detail::indexing::get_element(to_mdspan(), reverse_dims_, std::forward<Idxs>(idxs)...)
-                                                                                             : detail::indexing::get_element(to_mdspan(),                std::forward<Idxs>(idxs)...); }
+  [[nodiscard]]       reference operator[] (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+#endif
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]] const_reference operator() (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
+  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  [[nodiscard]]       reference operator() (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
   [[nodiscard]] const_reference flat_unchecked(size_type i) const;
@@ -1536,39 +1541,16 @@ public:
   mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
 
-  // Linear access in view order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const_reference operator[](size_type i) const {
-    return flat_unchecked(i);
-  }
-  [[nodiscard]] reference operator[](size_type i) {
-    return flat_unchecked(i);
-  }
-  [[nodiscard]] const_reference at(size_type i) const {
-    detail::indexing::check_index(i, size(), "mask_view::at");
-    return (*this)[i];
-  }
-  [[nodiscard]] reference at(size_type i) {
-    detail::indexing::check_index(i, size(), "mask_view::at");
-    return (*this)[i];
-  }
-
-  // flattened element access using the default_layout order, independent of the actual storage layout.
-  [[nodiscard]] const_reference flat(size_type i) const {
-    detail::indexing::check_index(i, size(), "mask_view::flat");
-    return flat_unchecked(i);
-  }
-  [[nodiscard]] reference flat(size_type i) {
-    detail::indexing::check_index(i, size(), "mask_view::flat");
-    return flat_unchecked(i);
-  }
-  // Internal API (not stable): unchecked flat access; requires i < size().
-  // Bypass mdspan::operator[] to avoid any potential bounds checking.
-  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
-    return span_.accessor().offset(span_.data_handle(), i)[0];
-  }
-  [[nodiscard]] reference flat_unchecked(size_type i) {
-    return span_.accessor().offset(span_.data_handle(), i)[0];
-  }
+  [[nodiscard]] const_reference     operator()(index_type i) const { desc_.check_indices(i); return desc_.get_element(i); }
+  [[nodiscard]]       reference     operator()(index_type i)       { desc_.check_indices(i); return desc_.get_element(i); }
+  [[nodiscard]] const_reference     operator[]( size_type i) const { return flat_unchecked(i); }
+  [[nodiscard]]       reference     operator[]( size_type i)       { return flat_unchecked(i); }
+  [[nodiscard]] const_reference             at(index_type i) const { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]]       reference             at(index_type i)       { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]] const_reference flat_unchecked( size_type i) const { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
+  [[nodiscard]]       reference flat_unchecked( size_type i)       { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
+  [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "mask_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+  [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "mask_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
 
   // unary operators:
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
@@ -2380,17 +2362,6 @@ constexpr auto slice::normalize(size_type dim_len) const noexcept -> normalized_
 
 namespace detail {
 namespace indexing {
-inline size_type normalize_index(index_type idx, size_type dim_len, bool reversed = false) {
-  index_type len = static_cast<index_type>(dim_len);
-  index_type res = (idx < 0) ? idx + len : idx;
-  
-  // Empty dimensions are valid for slicing but cannot be scalar-indexed.
-  NUMCXX_ASSERT(res >= 0 && res < len, "Index out of bounds");
-
-  const size_type n = static_cast<size_type>(res);
-  return reversed ? dim_len - 1 - n : n;
-}
-
 // Element access with no reversed source dimensions.
 template <class MdSpan, class... Idxs>
   requires all_scalar_indices<Idxs...>
