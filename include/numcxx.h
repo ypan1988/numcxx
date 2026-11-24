@@ -1030,16 +1030,16 @@ public:
   [[nodiscard]]       reference operator() (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of the physical storage layout.
-  [[nodiscard]] const_reference flat_unchecked(size_type i) const;
-  [[nodiscard]]       reference flat_unchecked(size_type i)      ;
-  [[nodiscard]] const_reference flat          (size_type i) const { detail::indexing::check_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
-  [[nodiscard]]       reference flat          (size_type i)       { detail::indexing::check_index(i, size(), "gslice_view::flat"); return             flat_unchecked(i); }
+  [[nodiscard]] const_reference flat_unchecked( size_type i) const;
+  [[nodiscard]]       reference flat_unchecked( size_type i)      ;
+  [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "gslice_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+  [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "gslice_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
 
   // flattened element access in physical storage order: operator[] is unchecked; at() checks bounds.
-  [[nodiscard]] const_reference operator[]    (size_type i) const {                                                                return data_handle()[calc_offset(i)]; }
-  [[nodiscard]]       reference operator[]    (size_type i)       {                                                                return data_handle()[calc_offset(i)]; }
-  [[nodiscard]] const_reference at            (size_type i) const { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
-  [[nodiscard]]       reference at            (size_type i)       { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return                    (*this)[i]; }
+  [[nodiscard]] const_reference operator[]    ( size_type i) const {                                                                return data_handle()[calc_offset(i)]; }
+  [[nodiscard]]       reference operator[]    ( size_type i)       {                                                                return data_handle()[calc_offset(i)]; }
+  [[nodiscard]] const_reference at            (index_type i) const { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]]       reference at            (index_type i)       { detail::indexing::check_index(i, size(), "gslice_view::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
 
   // subset operations using N-dimensional slice specifiers.
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
