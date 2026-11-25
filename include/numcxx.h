@@ -253,8 +253,8 @@ using default_layout = layout_right;
                                         class          slice;
 template <class Tp, class Ex, class Lp> class        ndarray;
 template <class Tp, class Ex, class Lp> class    gslice_view;
-template <class Tp>                     class      mask_view;
 template <class Tp, size_type Rank>     class  indirect_view;
+template <class Tp>                     class      mask_view;
 template <class Tp, size_type Rank>     class broadcast_view;
 
 template <class ValExpr>                struct   nc_val_expr;
@@ -1302,363 +1302,6 @@ private:
 };
 
 namespace detail {
-struct broadcast_view_factory;
-}
-
-// A read-only, non-owning view with explicit zero-stride broadcast axes.
-// It intentionally has no mdspan conversion: layout_stride requires unique
-// mappings, while a broadcast mapping is non-unique by definition.
-template <class ElementType, size_type Rank> class broadcast_view {
-public:
-  using element_type = std::remove_const_t<ElementType>;
-  using value_type = std::remove_cv_t<ElementType>;
-  using extents_type = dextents<Rank>;
-  using index_type = typename extents_type::index_type;
-  using size_type = typename extents_type::size_type;
-  using rank_type = typename extents_type::rank_type;
-  using const_reference = const value_type&;
-
-  static constexpr rank_type rank() noexcept { return extents_type::rank(); }
-  static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
-  static constexpr size_type static_extent(rank_type r) noexcept { return extents_type::static_extent(r); }
-  constexpr index_type extent(rank_type r) const noexcept { return extents_.extent(r); }
-  constexpr index_type stride(rank_type r) const noexcept { return strides_[r]; }
-
-  template <typename... Idxs>
-    requires all_scalar_indices<Idxs...>
-  [[nodiscard]] const_reference operator()(Idxs... idxs) const {
-    static_assert(sizeof...(Idxs) == Rank, "Number of arguments must match broadcast_view rank");
-    const std::array<index_type, Rank> indices{static_cast<index_type>(idxs)...};
-    size_type offset = 0;
-    for (rank_type r = 0; r < rank(); ++r) {
-      const index_type dim_size = static_cast<index_type>(extent(r));
-      const index_type index = indices[r] < 0 ? indices[r] + dim_size : indices[r];
-      NUMCXX_ASSERT(index >= 0 && index < dim_size, "broadcast_view index out of bounds");
-      offset += static_cast<size_type>(index) * static_cast<size_type>(stride(r));
-    }
-    return data_[offset];
-  }
-
-  [[nodiscard]] const_reference flat(size_type i) const {
-    detail::indexing::check_index(i, size(), "broadcast_view::flat");
-    return flat_unchecked(i);
-  }
-
-  // Internal API (not stable): unchecked flat access; requires i < size().
-  // Broadcast indexing still computes the multidimensional storage offset.
-  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
-    std::array<size_type, Rank> indices{};
-    if constexpr (std::is_same_v<default_layout, layout_right>) {
-      for (rank_type r = rank(); r-- > 0;) {
-        indices[r] = i % extent(r);
-        i /= extent(r);
-      }
-    } else {
-      for (rank_type r = 0; r < rank(); ++r) {
-        indices[r] = i % extent(r);
-        i /= extent(r);
-      }
-    }
-    size_type offset = 0;
-    for (rank_type r = 0; r < rank(); ++r)
-      offset += indices[r] * static_cast<size_type>(stride(r));
-    return data_[offset];
-  }
-
-  [[nodiscard]] constexpr size_type size() const noexcept {
-    size_type result = 1;
-    for (rank_type r = 0; r < rank(); ++r)
-      result *= static_cast<size_type>(extent(r));
-    return result;
-  }
-  [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
-  [[nodiscard]] constexpr const extents_type& extents() const noexcept { return extents_; }
-  [[nodiscard]] constexpr const value_type* data_handle() const noexcept { return data_; }
-  [[nodiscard]] constexpr bool is_unique() const noexcept {
-    for (rank_type r = 0; r < rank(); ++r)
-      if (extent(r) > 1 && stride(r) == 0)
-        return false;
-    return true;
-  }
-  [[nodiscard]] constexpr bool is_exhaustive() const noexcept { return exhaustive_; }
-  [[nodiscard]] static constexpr bool is_always_unique() noexcept { return false; }
-  [[nodiscard]] static constexpr bool is_always_exhaustive() noexcept { return false; }
-  [[nodiscard]] static constexpr bool is_always_strided() noexcept { return true; }
-
-  template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
-  template <std::integral Extent, ::numcxx::size_type TargetRank>
-  [[nodiscard]] auto broadcast_to(const std::array<Extent, TargetRank>& shape) const;
-
-  [[nodiscard]] auto eval() const { return ndarray<value_type, extents_type>(*this); }
-
-private:
-  friend struct detail::broadcast_view_factory;
-
-  broadcast_view(const value_type* data, const extents_type& extents, const std::array<index_type, Rank>& strides,
-                 bool exhaustive)
-      : data_(data), extents_(extents), strides_(strides), exhaustive_(exhaustive) {}
-
-  const value_type* data_;
-  extents_type extents_;
-  std::array<index_type, Rank> strides_;
-  bool exhaustive_;
-};
-
-namespace detail {
-struct broadcast_view_factory {
-  template <class T, size_type Rank>
-  static auto create(const T* data, const ::numcxx::dextents<Rank>& extents,
-                     const std::array<typename ::numcxx::dextents<Rank>::index_type, Rank>& strides, bool exhaustive) {
-    return broadcast_view<T, Rank>(data, extents, strides, exhaustive);
-  }
-};
-
-template <std::integral Extent> size_type checked_broadcast_extent(Extent extent) {
-  if constexpr (std::is_signed_v<Extent>)
-    if (extent < 0)
-      NUMCXX_THROW(std::invalid_argument, "broadcast_to: target extents must be non-negative");
-  return static_cast<size_type>(extent);
-}
-
-template <class Source, std::integral Extent, size_type TargetRank>
-auto make_broadcast_view(const Source& source, const std::array<Extent, TargetRank>& target_shape) {
-  constexpr size_type source_rank = Source::rank();
-  using value_type = typename Source::value_type;
-  using index_type = typename Source::index_type;
-  using extents_type = ::numcxx::dextents<TargetRank>;
-
-  if constexpr (source_rank > TargetRank) {
-    NUMCXX_THROW(std::invalid_argument, "broadcast_to: target rank must be at least the source rank");
-  } else {
-    std::array<size_type, TargetRank> shape{};
-    std::transform(target_shape.begin(), target_shape.end(), shape.begin(),
-                   [](Extent extent) { return checked_broadcast_extent(extent); });
-
-    if constexpr (requires { source.has_reversed_dim(); })
-      if (source.has_reversed_dim())
-        NUMCXX_THROW(std::invalid_argument, "broadcast_to: reversed gslice_view sources are not "
-                                            "supported; materialize with eval() first");
-
-    std::array<index_type, TargetRank> strides{};
-    constexpr size_type leading_dims = TargetRank - source_rank;
-    bool exhaustive = source.is_exhaustive();
-    for (size_type r = 0; r < leading_dims; ++r)
-      if (shape[r] > 1)
-        exhaustive = false;
-
-    for (size_type r = 0; r < source_rank; ++r) {
-      const size_type source_extent = static_cast<size_type>(source.extent(r));
-      const size_type target_extent = shape[leading_dims + r];
-      if (source_extent != target_extent && source_extent != 1) {
-        const std::string message = "broadcast_to: incompatible extent at dimension " +
-                                    std::to_string(leading_dims + r) + " (source " + std::to_string(source_extent) +
-                                    ", target " + std::to_string(target_extent) + ")";
-        NUMCXX_THROW(std::invalid_argument, message.c_str());
-      }
-      strides[leading_dims + r] =
-          source_extent == target_extent ? static_cast<index_type>(source.stride(r)) : index_type{};
-      if (source_extent != target_extent && target_extent > 1)
-        exhaustive = false;
-    }
-
-    const extents_type extents(shape);
-    const auto* data = [&]() {
-      if constexpr (requires { source.to_mdspan(); })
-        return source.to_mdspan().data_handle();
-      else
-        return source.data_handle();
-    }();
-    return broadcast_view_factory::create<value_type, TargetRank>(data, extents, strides, exhaustive);
-  }
-}
-
-template <class Source, std::integral... Dims> auto make_broadcast_view(const Source& source, Dims... dims) {
-  static_assert(sizeof...(Dims) > 0, "broadcast_to requires at least one target extent");
-  constexpr size_type target_rank = sizeof...(Dims);
-  const std::array<size_type, target_rank> shape{checked_broadcast_extent(dims)...};
-  return make_broadcast_view(source, shape);
-}
-
-template <class T> struct is_broadcast_source : std::false_type {};
-template <class Tp, class Ex, class Lp> struct is_broadcast_source<ndarray<Tp, Ex, Lp>> : std::true_type {};
-template <class Tp, class Ex, class Lp> struct is_broadcast_source<gslice_view<Tp, Ex, Lp>> : std::true_type {};
-template <class Tp, size_type Rank> struct is_broadcast_source<broadcast_view<Tp, Rank>> : std::true_type {};
-
-// clang-format off
-template <class Tp> class mask_accessor {
-public:
-  using element_type     = Tp;
-  using reference        = element_type &;
-  using data_handle_type = element_type *;
-  using offset_policy    = mask_accessor;
-
-           mask_accessor() = default;
-  explicit mask_accessor(std::vector<size_type> idxs) : indices_(std::move(idxs)) {}
-
-  reference access(const data_handle_type p, const size_type i) const noexcept {
-    NUMCXX_ASSERT(i < indices_.size(), "mask_accessor::access: index out of bounds");
-    return p[indices_[i]];
-  }
-  
-  data_handle_type offset(const data_handle_type p, const size_type i) const noexcept { return p + indices_[i]         ; }
-  friend bool operator==(const mask_accessor &a, const mask_accessor &b)   noexcept { return a.indices_ == b.indices_; }
-  friend bool operator!=(const mask_accessor &a, const mask_accessor &b)   noexcept { return        !(a == b)        ; }
-
-private:
-  std::vector<size_type> indices_;
-};
-// clang-format on
-} // namespace detail
-
-// [numcxx.mask_view]
-template <class ElementType> class mask_view {
-public:
-  // clang-format off
-  // element
-  using element_type = ElementType;
-  using   value_type = std::remove_cv_t<element_type>;
-
-  // extents
-  using extents_type = dextents<1>;
-  using   index_type = typename extents_type::index_type;
-  using    size_type = typename extents_type::size_type;
-  using    rank_type = typename extents_type::rank_type;
-
-  // layout and accessor
-  using         layout_type = default_layout;
-  using const_accessor_type = detail::mask_accessor<const element_type>;
-  using       accessor_type = detail::mask_accessor<      element_type>;
-
-  // mdspan
-  using   const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type, const_accessor_type>;
-  using         mdspan_type = detail::mdspan<      element_type, extents_type, layout_type,       accessor_type>;
-
-  // reference
-  using const_reference = typename const_mdspan_type::reference;
-  using       reference = typename       mdspan_type::reference;
-
-  // data_handle
-  using const_data_handle_type = typename const_mdspan_type::data_handle_type;
-  using       data_handle_type = typename       mdspan_type::data_handle_type;
-
-  static constexpr  rank_type  rank        (           )       noexcept { return extents_type::rank()          ; }
-  static constexpr  rank_type  rank_dynamic(           )       noexcept { return extents_type::rank_dynamic()  ; }
-  static constexpr  size_type static_extent(rank_type r)       noexcept { return extents_type::static_extent(r); }
-         constexpr index_type        extent(rank_type r) const noexcept { return span_.extent(r)               ; }
-
-  //--------------------------------------------------------------------------------
-  // [numcxx.mask_view.cons], mask_view constructors, destructor, and assignment
-
-  // construct/destroy:
-  mask_view() = delete;
-  mask_view(const mask_view &) = default;
-  mask_view(mask_view &&) noexcept = default;
-  ~mask_view() = default;
-
-  [[nodiscard]] const_reference     operator()(index_type i) const { desc_.check_indices(i); return desc_.get_element(i); }
-  [[nodiscard]]       reference     operator()(index_type i)       { desc_.check_indices(i); return desc_.get_element(i); }
-  [[nodiscard]] const_reference     operator[]( size_type i) const { return flat_unchecked(i); }
-  [[nodiscard]]       reference     operator[]( size_type i)       { return flat_unchecked(i); }
-  [[nodiscard]] const_reference             at(index_type i) const { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
-  [[nodiscard]]       reference             at(index_type i)       { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
-  [[nodiscard]] const_reference flat_unchecked( size_type i) const { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
-  [[nodiscard]]       reference flat_unchecked( size_type i)       { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
-  [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "mask_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
-  [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "mask_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
-
-  // unary operators:
-  auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
-  auto operator-() const { return apply_unary_op<std::negate>          (); }
-  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
-  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
-
-  // computed assignment:
-  mask_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
-  mask_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
-  mask_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
-  mask_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
-  mask_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
-  mask_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
-  mask_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
-  mask_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
-  mask_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
-  mask_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
-  mask_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
-
-  template <value_expression Expr> mask_view &operator=  (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
-  template <value_expression Expr> mask_view &operator+= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
-  template <value_expression Expr> mask_view &operator-= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
-  template <value_expression Expr> mask_view &operator*= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
-  template <value_expression Expr> mask_view &operator/= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
-  template <value_expression Expr> mask_view &operator%= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
-  template <value_expression Expr> mask_view &operator&= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
-  template <value_expression Expr> mask_view &operator|= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
-  template <value_expression Expr> mask_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
-  template <value_expression Expr> mask_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
-  template <value_expression Expr> mask_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
-
-  // observers
-  [[nodiscard]] constexpr              size_type         size() const noexcept { return span_.size()       ; }
-  [[nodiscard]] constexpr                   bool        empty() const noexcept { return span_.empty()      ; }
-  [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
-  [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
-
-  // mdspan interoperability
-                constexpr      const_mdspan_type    to_mdspan() const noexcept { return span_              ; }
-                constexpr            mdspan_type    to_mdspan()       noexcept { return span_              ; }
-  // clang-format on
-
-private:
-  template <typename MdSpan, typename BoolExpr> explicit mask_view(const MdSpan& data_span, const BoolExpr& expr) {
-    std::vector<size_type> offsets;
-    offsets.reserve(expr.size());
-
-    const auto& mapping = data_span.mapping();
-    for (size_type i = 0; i < expr.size(); ++i) {
-      if (static_cast<bool>(expr.flat_unchecked(i)))
-        offsets.push_back(mapping(i));
-    }
-
-    auto base = data_span.data_handle();
-    extents_type ext(offsets.size());
-    auto acc = detail::mask_accessor<element_type>(std::move(offsets));
-    span_ = mdspan_type(base, ext, acc);
-    desc_ = detail::indexing::mdspan_desc<mdspan_type>(span_);
-  }
-
-  template <typename MdSpan> explicit mask_view(const MdSpan& data_span, std::vector<size_type> offsets) {
-    auto base = data_span.data_handle();
-    extents_type ext(offsets.size());
-    auto acc = detail::mask_accessor<element_type>(std::move(offsets));
-    span_ = mdspan_type(base, ext, acc);
-    desc_ = detail::indexing::mdspan_desc<mdspan_type>(span_);
-  }
-
-  template <template <class> class Op> auto apply_unary_op() const {
-    return detail::make_unary_op<Op<value_type>>(*this);
-  }
-
-  template <typename Op> mask_view& apply_scalar_op(Op&& op, const value_type& x) {
-    for (size_type i = 0; i < size(); ++i)
-      op(flat_unchecked(i), x);
-    return *this;
-  }
-
-  template <class Op, class Expr> mask_view& apply_expr_op(Op&& op, const Expr& expr) {
-    detail::check_shape_match(*this, expr);
-    for (size_type i = 0; i < size(); ++i)
-      op(flat_unchecked(i), expr.flat_unchecked(i));
-    return *this;
-  }
-
-  template <class, class, class> friend class ndarray;
-  template <class, class, class> friend class gslice_view;
-
-  mdspan_type span_;
-  detail::indexing::mdspan_desc<mdspan_type> desc_{span_};
-};
-
-namespace detail {
 template <class Tp, size_type Rank> class indirect_accessor {
 public:
   using element_type = Tp;
@@ -1957,6 +1600,365 @@ auto make_indirect_view(MdSpan&& src, std::vector<size_type> indices, std::array
     -> indirect_view<typename std::remove_cvref_t<MdSpan>::element_type, Rank> {
   return make_indirect_view(std::forward<MdSpan>(src), std::move(indices), 0, reverse_dims);
 }
+} // namespace detail
+
+namespace detail {
+// clang-format off
+template <class Tp> class mask_accessor {
+public:
+  using element_type     = Tp;
+  using reference        = element_type &;
+  using data_handle_type = element_type *;
+  using offset_policy    = mask_accessor;
+
+           mask_accessor() = default;
+  explicit mask_accessor(std::vector<size_type> idxs) : indices_(std::move(idxs)) {}
+
+  reference access(const data_handle_type p, const size_type i) const noexcept {
+    NUMCXX_ASSERT(i < indices_.size(), "mask_accessor::access: index out of bounds");
+    return p[indices_[i]];
+  }
+  
+  data_handle_type offset(const data_handle_type p, const size_type i) const noexcept { return p + indices_[i]         ; }
+  friend bool operator==(const mask_accessor &a, const mask_accessor &b)   noexcept { return a.indices_ == b.indices_; }
+  friend bool operator!=(const mask_accessor &a, const mask_accessor &b)   noexcept { return        !(a == b)        ; }
+
+private:
+  std::vector<size_type> indices_;
+};
+// clang-format on
+} // namespace detail
+
+// [numcxx.mask_view]
+template <class ElementType> class mask_view {
+public:
+  // clang-format off
+  // element
+  using element_type = ElementType;
+  using   value_type = std::remove_cv_t<element_type>;
+
+  // extents
+  using extents_type = dextents<1>;
+  using   index_type = typename extents_type::index_type;
+  using    size_type = typename extents_type::size_type;
+  using    rank_type = typename extents_type::rank_type;
+
+  // layout and accessor
+  using         layout_type = default_layout;
+  using const_accessor_type = detail::mask_accessor<const element_type>;
+  using       accessor_type = detail::mask_accessor<      element_type>;
+
+  // mdspan
+  using   const_mdspan_type = detail::mdspan<const element_type, extents_type, layout_type, const_accessor_type>;
+  using         mdspan_type = detail::mdspan<      element_type, extents_type, layout_type,       accessor_type>;
+
+  // reference
+  using const_reference = typename const_mdspan_type::reference;
+  using       reference = typename       mdspan_type::reference;
+
+  // data_handle
+  using const_data_handle_type = typename const_mdspan_type::data_handle_type;
+  using       data_handle_type = typename       mdspan_type::data_handle_type;
+
+  static constexpr  rank_type  rank        (           )       noexcept { return extents_type::rank()          ; }
+  static constexpr  rank_type  rank_dynamic(           )       noexcept { return extents_type::rank_dynamic()  ; }
+  static constexpr  size_type static_extent(rank_type r)       noexcept { return extents_type::static_extent(r); }
+         constexpr index_type        extent(rank_type r) const noexcept { return span_.extent(r)               ; }
+
+  //--------------------------------------------------------------------------------
+  // [numcxx.mask_view.cons], mask_view constructors, destructor, and assignment
+
+  // construct/destroy:
+  mask_view() = delete;
+  mask_view(const mask_view &) = default;
+  mask_view(mask_view &&) noexcept = default;
+  ~mask_view() = default;
+
+  [[nodiscard]] const_reference     operator()(index_type i) const { desc_.check_indices(i); return desc_.get_element(i); }
+  [[nodiscard]]       reference     operator()(index_type i)       { desc_.check_indices(i); return desc_.get_element(i); }
+  [[nodiscard]] const_reference     operator[]( size_type i) const { return flat_unchecked(i); }
+  [[nodiscard]]       reference     operator[]( size_type i)       { return flat_unchecked(i); }
+  [[nodiscard]] const_reference             at(index_type i) const { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]]       reference             at(index_type i)       { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]] const_reference flat_unchecked( size_type i) const { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
+  [[nodiscard]]       reference flat_unchecked( size_type i)       { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
+  [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "mask_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+  [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "mask_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+
+  // unary operators:
+  auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
+  auto operator-() const { return apply_unary_op<std::negate>          (); }
+  auto operator~() const { return apply_unary_op<detail::nc_bit_not>   (); }
+  auto operator!() const { return apply_unary_op<std::logical_not>     (); }
+
+  // computed assignment:
+  mask_view &operator=  (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a = b  ; }, x); }
+  mask_view &operator+= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a += b ; }, x); }
+  mask_view &operator-= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a -= b ; }, x); }
+  mask_view &operator*= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a *= b ; }, x); }
+  mask_view &operator/= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a /= b ; }, x); }
+  mask_view &operator%= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a %= b ; }, x); }
+  mask_view &operator&= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a &= b ; }, x); }
+  mask_view &operator|= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a |= b ; }, x); }
+  mask_view &operator^= (const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a ^= b ; }, x); }
+  mask_view &operator<<=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a <<= b; }, x); }
+  mask_view &operator>>=(const value_type &x) { return apply_scalar_op([](value_type &a, value_type b) { a >>= b; }, x); }
+
+  template <value_expression Expr> mask_view &operator=  (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a = b  ; }, v); }
+  template <value_expression Expr> mask_view &operator+= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a += b ; }, v); }
+  template <value_expression Expr> mask_view &operator-= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a -= b ; }, v); }
+  template <value_expression Expr> mask_view &operator*= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a *= b ; }, v); }
+  template <value_expression Expr> mask_view &operator/= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a /= b ; }, v); }
+  template <value_expression Expr> mask_view &operator%= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a %= b ; }, v); }
+  template <value_expression Expr> mask_view &operator&= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a &= b ; }, v); }
+  template <value_expression Expr> mask_view &operator|= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a |= b ; }, v); }
+  template <value_expression Expr> mask_view &operator^= (const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a ^= b ; }, v); }
+  template <value_expression Expr> mask_view &operator<<=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, v); }
+  template <value_expression Expr> mask_view &operator>>=(const Expr& v) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, v); }
+
+  // observers
+  [[nodiscard]] constexpr              size_type         size() const noexcept { return span_.size()       ; }
+  [[nodiscard]] constexpr                   bool        empty() const noexcept { return span_.empty()      ; }
+  [[nodiscard]] constexpr const     extents_type&     extents() const noexcept { return span_.extents()    ; }
+  [[nodiscard]] constexpr const data_handle_type& data_handle() const noexcept { return span_.data_handle(); }
+
+  // mdspan interoperability
+                constexpr      const_mdspan_type    to_mdspan() const noexcept { return span_              ; }
+                constexpr            mdspan_type    to_mdspan()       noexcept { return span_              ; }
+  // clang-format on
+
+private:
+  template <typename MdSpan, typename BoolExpr> explicit mask_view(const MdSpan& data_span, const BoolExpr& expr) {
+    std::vector<size_type> offsets;
+    offsets.reserve(expr.size());
+
+    const auto& mapping = data_span.mapping();
+    for (size_type i = 0; i < expr.size(); ++i) {
+      if (static_cast<bool>(expr.flat_unchecked(i)))
+        offsets.push_back(mapping(i));
+    }
+
+    auto base = data_span.data_handle();
+    extents_type ext(offsets.size());
+    auto acc = detail::mask_accessor<element_type>(std::move(offsets));
+    span_ = mdspan_type(base, ext, acc);
+    desc_ = detail::indexing::mdspan_desc<mdspan_type>(span_);
+  }
+
+  template <typename MdSpan> explicit mask_view(const MdSpan& data_span, std::vector<size_type> offsets) {
+    auto base = data_span.data_handle();
+    extents_type ext(offsets.size());
+    auto acc = detail::mask_accessor<element_type>(std::move(offsets));
+    span_ = mdspan_type(base, ext, acc);
+    desc_ = detail::indexing::mdspan_desc<mdspan_type>(span_);
+  }
+
+  template <template <class> class Op> auto apply_unary_op() const {
+    return detail::make_unary_op<Op<value_type>>(*this);
+  }
+
+  template <typename Op> mask_view& apply_scalar_op(Op&& op, const value_type& x) {
+    for (size_type i = 0; i < size(); ++i)
+      op(flat_unchecked(i), x);
+    return *this;
+  }
+
+  template <class Op, class Expr> mask_view& apply_expr_op(Op&& op, const Expr& expr) {
+    detail::check_shape_match(*this, expr);
+    for (size_type i = 0; i < size(); ++i)
+      op(flat_unchecked(i), expr.flat_unchecked(i));
+    return *this;
+  }
+
+  template <class, class, class> friend class ndarray;
+  template <class, class, class> friend class gslice_view;
+
+  mdspan_type span_;
+  detail::indexing::mdspan_desc<mdspan_type> desc_{span_};
+};
+
+namespace detail {
+struct broadcast_view_factory;
+}
+
+// A read-only, non-owning view with explicit zero-stride broadcast axes.
+// It intentionally has no mdspan conversion: layout_stride requires unique
+// mappings, while a broadcast mapping is non-unique by definition.
+template <class ElementType, size_type Rank> class broadcast_view {
+public:
+  using element_type = std::remove_const_t<ElementType>;
+  using value_type = std::remove_cv_t<ElementType>;
+  using extents_type = dextents<Rank>;
+  using index_type = typename extents_type::index_type;
+  using size_type = typename extents_type::size_type;
+  using rank_type = typename extents_type::rank_type;
+  using const_reference = const value_type&;
+
+  static constexpr rank_type rank() noexcept { return extents_type::rank(); }
+  static constexpr rank_type rank_dynamic() noexcept { return extents_type::rank_dynamic(); }
+  static constexpr size_type static_extent(rank_type r) noexcept { return extents_type::static_extent(r); }
+  constexpr index_type extent(rank_type r) const noexcept { return extents_.extent(r); }
+  constexpr index_type stride(rank_type r) const noexcept { return strides_[r]; }
+
+  template <typename... Idxs>
+    requires all_scalar_indices<Idxs...>
+  [[nodiscard]] const_reference operator()(Idxs... idxs) const {
+    static_assert(sizeof...(Idxs) == Rank, "Number of arguments must match broadcast_view rank");
+    const std::array<index_type, Rank> indices{static_cast<index_type>(idxs)...};
+    size_type offset = 0;
+    for (rank_type r = 0; r < rank(); ++r) {
+      const index_type dim_size = static_cast<index_type>(extent(r));
+      const index_type index = indices[r] < 0 ? indices[r] + dim_size : indices[r];
+      NUMCXX_ASSERT(index >= 0 && index < dim_size, "broadcast_view index out of bounds");
+      offset += static_cast<size_type>(index) * static_cast<size_type>(stride(r));
+    }
+    return data_[offset];
+  }
+
+  [[nodiscard]] const_reference flat(size_type i) const {
+    detail::indexing::check_index(i, size(), "broadcast_view::flat");
+    return flat_unchecked(i);
+  }
+
+  // Internal API (not stable): unchecked flat access; requires i < size().
+  // Broadcast indexing still computes the multidimensional storage offset.
+  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
+    std::array<size_type, Rank> indices{};
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
+      for (rank_type r = rank(); r-- > 0;) {
+        indices[r] = i % extent(r);
+        i /= extent(r);
+      }
+    } else {
+      for (rank_type r = 0; r < rank(); ++r) {
+        indices[r] = i % extent(r);
+        i /= extent(r);
+      }
+    }
+    size_type offset = 0;
+    for (rank_type r = 0; r < rank(); ++r)
+      offset += indices[r] * static_cast<size_type>(stride(r));
+    return data_[offset];
+  }
+
+  [[nodiscard]] constexpr size_type size() const noexcept {
+    size_type result = 1;
+    for (rank_type r = 0; r < rank(); ++r)
+      result *= static_cast<size_type>(extent(r));
+    return result;
+  }
+  [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
+  [[nodiscard]] constexpr const extents_type& extents() const noexcept { return extents_; }
+  [[nodiscard]] constexpr const value_type* data_handle() const noexcept { return data_; }
+  [[nodiscard]] constexpr bool is_unique() const noexcept {
+    for (rank_type r = 0; r < rank(); ++r)
+      if (extent(r) > 1 && stride(r) == 0)
+        return false;
+    return true;
+  }
+  [[nodiscard]] constexpr bool is_exhaustive() const noexcept { return exhaustive_; }
+  [[nodiscard]] static constexpr bool is_always_unique() noexcept { return false; }
+  [[nodiscard]] static constexpr bool is_always_exhaustive() noexcept { return false; }
+  [[nodiscard]] static constexpr bool is_always_strided() noexcept { return true; }
+
+  template <std::integral... Dims> [[nodiscard]] auto broadcast_to(Dims... dims) const;
+  template <std::integral Extent, ::numcxx::size_type TargetRank>
+  [[nodiscard]] auto broadcast_to(const std::array<Extent, TargetRank>& shape) const;
+
+  [[nodiscard]] auto eval() const { return ndarray<value_type, extents_type>(*this); }
+
+private:
+  friend struct detail::broadcast_view_factory;
+
+  broadcast_view(const value_type* data, const extents_type& extents, const std::array<index_type, Rank>& strides,
+                 bool exhaustive)
+      : data_(data), extents_(extents), strides_(strides), exhaustive_(exhaustive) {}
+
+  const value_type* data_;
+  extents_type extents_;
+  std::array<index_type, Rank> strides_;
+  bool exhaustive_;
+};
+
+namespace detail {
+struct broadcast_view_factory {
+  template <class T, size_type Rank>
+  static auto create(const T* data, const ::numcxx::dextents<Rank>& extents,
+                     const std::array<typename ::numcxx::dextents<Rank>::index_type, Rank>& strides, bool exhaustive) {
+    return broadcast_view<T, Rank>(data, extents, strides, exhaustive);
+  }
+};
+
+template <std::integral Extent> size_type checked_broadcast_extent(Extent extent) {
+  if constexpr (std::is_signed_v<Extent>)
+    if (extent < 0)
+      NUMCXX_THROW(std::invalid_argument, "broadcast_to: target extents must be non-negative");
+  return static_cast<size_type>(extent);
+}
+
+template <class Source, std::integral Extent, size_type TargetRank>
+auto make_broadcast_view(const Source& source, const std::array<Extent, TargetRank>& target_shape) {
+  constexpr size_type source_rank = Source::rank();
+  using value_type = typename Source::value_type;
+  using index_type = typename Source::index_type;
+  using extents_type = ::numcxx::dextents<TargetRank>;
+
+  if constexpr (source_rank > TargetRank) {
+    NUMCXX_THROW(std::invalid_argument, "broadcast_to: target rank must be at least the source rank");
+  } else {
+    std::array<size_type, TargetRank> shape{};
+    std::transform(target_shape.begin(), target_shape.end(), shape.begin(),
+                   [](Extent extent) { return checked_broadcast_extent(extent); });
+
+    if constexpr (requires { source.has_reversed_dim(); })
+      if (source.has_reversed_dim())
+        NUMCXX_THROW(std::invalid_argument, "broadcast_to: reversed gslice_view sources are not "
+                                            "supported; materialize with eval() first");
+
+    std::array<index_type, TargetRank> strides{};
+    constexpr size_type leading_dims = TargetRank - source_rank;
+    bool exhaustive = source.is_exhaustive();
+    for (size_type r = 0; r < leading_dims; ++r)
+      if (shape[r] > 1)
+        exhaustive = false;
+
+    for (size_type r = 0; r < source_rank; ++r) {
+      const size_type source_extent = static_cast<size_type>(source.extent(r));
+      const size_type target_extent = shape[leading_dims + r];
+      if (source_extent != target_extent && source_extent != 1) {
+        const std::string message = "broadcast_to: incompatible extent at dimension " +
+                                    std::to_string(leading_dims + r) + " (source " + std::to_string(source_extent) +
+                                    ", target " + std::to_string(target_extent) + ")";
+        NUMCXX_THROW(std::invalid_argument, message.c_str());
+      }
+      strides[leading_dims + r] =
+          source_extent == target_extent ? static_cast<index_type>(source.stride(r)) : index_type{};
+      if (source_extent != target_extent && target_extent > 1)
+        exhaustive = false;
+    }
+
+    const extents_type extents(shape);
+    const auto* data = [&]() {
+      if constexpr (requires { source.to_mdspan(); })
+        return source.to_mdspan().data_handle();
+      else
+        return source.data_handle();
+    }();
+    return broadcast_view_factory::create<value_type, TargetRank>(data, extents, strides, exhaustive);
+  }
+}
+
+template <class Source, std::integral... Dims> auto make_broadcast_view(const Source& source, Dims... dims) {
+  static_assert(sizeof...(Dims) > 0, "broadcast_to requires at least one target extent");
+  constexpr size_type target_rank = sizeof...(Dims);
+  const std::array<size_type, target_rank> shape{checked_broadcast_extent(dims)...};
+  return make_broadcast_view(source, shape);
+}
+
+template <class T> struct is_broadcast_source : std::false_type {};
+template <class Tp, class Ex, class Lp> struct is_broadcast_source<ndarray<Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, class Ex, class Lp> struct is_broadcast_source<gslice_view<Tp, Ex, Lp>> : std::true_type {};
+template <class Tp, size_type Rank> struct is_broadcast_source<broadcast_view<Tp, Rank>> : std::true_type {};
 } // namespace detail
 
 // [numcxx.array_initialization] initialization of ndarrays and slice views from nested initializer_list
