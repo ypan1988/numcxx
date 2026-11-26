@@ -1418,30 +1418,21 @@ public:
   template <class... Idxs> requires elem_access_arguments<Rank, Idxs...>
   [[nodiscard]]       reference operator()  (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
 
-  [[nodiscard]] reference operator[](size_type i) { return flat_unchecked(i); }
-  [[nodiscard]] const_reference operator[](size_type i) const { return flat_unchecked(i); }
-  [[nodiscard]] reference at(size_type i) {
-    detail::indexing::check_index(i, size(), "indirect_view::at");
-    return flat_unchecked(i);
-  }
-  [[nodiscard]] const_reference at(size_type i) const {
-    detail::indexing::check_index(i, size(), "indirect_view::at");
-    return flat_unchecked(i);
-  }
-  [[nodiscard]] reference flat(size_type i) {
-    detail::indexing::check_index(i, size(), "indirect_view::flat");
-    return flat_unchecked(i);
-  }
-  [[nodiscard]] const_reference flat(size_type i) const {
-    detail::indexing::check_index(i, size(), "indirect_view::flat");
-    return flat_unchecked(i);
-  }
-  [[nodiscard]] reference flat_unchecked(size_type i) {
-    return span_.data_handle()[span_.accessor().physical_offset(i)];
-  }
-  [[nodiscard]] const_reference flat_unchecked(size_type i) const {
-    return span_.data_handle()[span_.accessor().physical_offset(i)];
-  }
+  // flattened element access in default_layout order, independent of physical storage layout.
+  // flat_unchecked() is unchecked and does not support negative indices.
+  [[nodiscard]] const_reference flat_unchecked( size_type i) const { return span_.data_handle()[span_.accessor().physical_offset(i)]; }
+  [[nodiscard]]       reference flat_unchecked( size_type i)       { return span_.data_handle()[span_.accessor().physical_offset(i)]; }
+  // flat() checks bounds and supports negative indices.
+  [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "indirect_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+  [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "indirect_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+
+  // flattened element access in linear order.
+  // operator[] is unchecked and does not support negative indices.
+  [[nodiscard]] const_reference operator[]    ( size_type i) const {                                                                  return         desc_.get_linear_unchecked(i); }
+  [[nodiscard]]       reference operator[]    ( size_type i)       {                                                                  return         desc_.get_linear_unchecked(i); }
+  // at() checks bounds and supports negative indices.
+  [[nodiscard]] const_reference at            (index_type i) const { detail::indexing::check_index(i, size(), "indirect_view::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]]       reference at            (index_type i)       { detail::indexing::check_index(i, size(), "indirect_view::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
 
   auto operator+() const { return apply_unary_op<detail::nc_unary_plus>(); }
   auto operator-() const { return apply_unary_op<std::negate>(); }
