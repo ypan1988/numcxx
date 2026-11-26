@@ -1374,6 +1374,7 @@ private:
 // [numcxx.indirect_view]
 template <class ElementType, size_type Rank> class indirect_view {
 public:
+  // clang-format off
   using element_type = ElementType;
   using value_type = std::remove_cv_t<element_type>;
   using extents_type = dextents<Rank>;
@@ -1444,78 +1445,35 @@ public:
   auto operator~() const { return apply_unary_op<detail::nc_bit_not>(); }
   auto operator!() const { return apply_unary_op<std::logical_not>(); }
 
-  indirect_view& operator=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a = b; }, x);
-  }
-  indirect_view& operator+=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a += b; }, x);
-  }
-  indirect_view& operator-=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a -= b; }, x);
-  }
-  indirect_view& operator*=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a *= b; }, x);
-  }
-  indirect_view& operator/=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a /= b; }, x);
-  }
-  indirect_view& operator%=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a %= b; }, x);
-  }
-  indirect_view& operator&=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a &= b; }, x);
-  }
-  indirect_view& operator|=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a |= b; }, x);
-  }
-  indirect_view& operator^=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a ^= b; }, x);
-  }
-  indirect_view& operator<<=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a <<= b; }, x);
-  }
-  indirect_view& operator>>=(const value_type& x) {
-    return apply_scalar_op([](value_type& a, value_type b) { a >>= b; }, x);
-  }
-  template <value_expression Expr> indirect_view& operator+=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a += b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator-=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a -= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator*=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a *= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator/=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a /= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator%=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a %= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator&=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a &= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator|=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a |= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator^=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a ^= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator<<=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, e);
-  }
-  template <value_expression Expr> indirect_view& operator>>=(const Expr& e) {
-    return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, e);
-  }
+  indirect_view& operator= (const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a  = b; }, x); }
+  indirect_view& operator+=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a += b; }, x); }
+  indirect_view& operator-=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a -= b; }, x); }
+  indirect_view& operator*=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a *= b; }, x); }
+  indirect_view& operator/=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a /= b; }, x); }
+  indirect_view& operator%=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a %= b; }, x); }
+  indirect_view& operator&=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a &= b; }, x); }
+  indirect_view& operator|=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a |= b; }, x); }
+  indirect_view& operator^=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a ^= b; }, x); }
+  indirect_view& operator<<=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a <<= b; }, x); }
+  indirect_view& operator>>=(const value_type& x) { return apply_scalar_op([](value_type& a, value_type b) { a >>= b; }, x); }
 
-  template <value_expression Expr> indirect_view& operator=(const Expr& expr) {
-    return apply_expr_op([](value_type& a, value_type b) { a = b; }, expr);
-  }
+  template <value_expression Expr> indirect_view& operator+=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a += b; }, e); }
+  template <value_expression Expr> indirect_view& operator-=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a -= b; }, e); }
+  template <value_expression Expr> indirect_view& operator*=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a *= b; }, e); }
+  template <value_expression Expr> indirect_view& operator/=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a /= b; }, e); }
+  template <value_expression Expr> indirect_view& operator%=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a %= b; }, e); }
+  template <value_expression Expr> indirect_view& operator&=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a &= b; }, e); }
+  template <value_expression Expr> indirect_view& operator|=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a |= b; }, e); }
+  template <value_expression Expr> indirect_view& operator^=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a ^= b; }, e); }
+  template <value_expression Expr> indirect_view& operator<<=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a <<= b; }, e); }
+  template <value_expression Expr> indirect_view& operator>>=(const Expr& e) { return apply_expr_op([](value_type& a, value_type b) { a >>= b; }, e); }
+  template <value_expression Expr> indirect_view& operator=(const Expr& expr) { return apply_expr_op([](value_type& a, value_type b) { a = b; }, expr); }
 
   constexpr const_mdspan_type to_mdspan() const noexcept {
     return {span_.data_handle(), span_.extents(), const_accessor_type(span_.accessor())};
   }
   constexpr mdspan_type to_mdspan() noexcept { return span_; }
+  // clang-format on
 
 private:
   template <class... Idxs> auto normalize_indices(Idxs&&... idxs) const {
@@ -2767,20 +2725,20 @@ template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
-  return has_reversed_dim_ ? detail::indexing::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
-                                 to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-                           : detail::indexing::make_indirect_view_padded<Extents::rank()>(
-                                 to_mdspan(), std::forward<Args>(args)...);
+  return has_reversed_dim_
+             ? detail::indexing::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::indexing::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
 template <typename... Args>
   requires indirect_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
-  return has_reversed_dim_ ? detail::indexing::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
-                                 to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
-                           : detail::indexing::make_indirect_view_padded<Extents::rank()>(
-                                 to_mdspan(), std::forward<Args>(args)...);
+  return has_reversed_dim_
+             ? detail::indexing::make_indirect_view_padded_with_reverse_dims<Extents::rank()>(
+                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             : detail::indexing::make_indirect_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
 template <typename Tp, typename Extents, typename Lp>
@@ -2802,8 +2760,8 @@ template <typename... Args>
   requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) const {
   return has_reversed_dim_
-             ? detail::indexing::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
-                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             ? detail::indexing::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(to_mdspan(), reverse_dims_,
+                                                                                            std::forward<Args>(args)...)
              : detail::indexing::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
@@ -2812,8 +2770,8 @@ template <typename... Args>
   requires gslice_view_arguments<Extents::rank(), Args...>
 [[nodiscard]] auto gslice_view<Tp, Extents, Lp>::operator()(Args&&... args) {
   return has_reversed_dim_
-             ? detail::indexing::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(
-                   to_mdspan(), reverse_dims_, std::forward<Args>(args)...)
+             ? detail::indexing::make_gslice_view_padded_with_reverse_dims<Extents::rank()>(to_mdspan(), reverse_dims_,
+                                                                                            std::forward<Args>(args)...)
              : detail::indexing::make_gslice_view_padded<Extents::rank()>(to_mdspan(), std::forward<Args>(args)...);
 }
 
