@@ -595,15 +595,15 @@ public:
   }
 
   [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) const {
-    return src_.accessor().access(src_.data_handle(), calc_offset(i));
+    return src_.accessor().access(src_.data_handle(), calc_linear_offset(i));
   }
 
   [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) {
-    return src_.accessor().access(src_.data_handle(), calc_offset(i));
+    return src_.accessor().access(src_.data_handle(), calc_linear_offset(i));
   }
 
 private:
-  size_type calc_offset(size_type i) const noexcept {
+  size_type calc_linear_offset(size_type i) const noexcept {
     if (size() == 0)
       return 0;
     size_type offset = 0, remaining = i;
