@@ -594,15 +594,34 @@ public:
     return helper(std::make_index_sequence<rank>{});
   }
 
-  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) const {
-    return src_.accessor().access(src_.data_handle(), calc_linear_offset(i));
-  }
+  [[nodiscard]] constexpr size_type flat_offset(size_type i) const noexcept { return calc_flat_offset(i); }
 
-  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) {
-    return src_.accessor().access(src_.data_handle(), calc_linear_offset(i));
-  }
+  [[nodiscard]] constexpr decltype(auto) get_flat_unchecked  (size_type i) const { return src_.accessor().access(src_.data_handle(), calc_flat_offset(i)); }
+  [[nodiscard]] constexpr decltype(auto) get_flat_unchecked  (size_type i)       { return src_.accessor().access(src_.data_handle(), calc_flat_offset(i));}
+  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) const { return src_.accessor().access(src_.data_handle(), calc_linear_offset(i)); }
+  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i)       { return src_.accessor().access(src_.data_handle(), calc_linear_offset(i));}
 
 private:
+  size_type calc_flat_offset(size_type i) const noexcept {
+    size_type offset = 0, remaining = i;
+    auto process_dim = [&](size_type r) {
+      const size_type dim_len = extent(r);
+      size_type idx = remaining % dim_len;
+      if (reverse_dims_[r])
+        idx = dim_len - 1 - idx;
+      offset += idx * src_.stride(r);
+      remaining /= dim_len;
+    };
+    if constexpr (std::is_same_v<default_layout, layout_right>) {
+      for (size_type r = rank; r-- > 0;)
+        process_dim(r);
+    } else {
+      for (size_type r = 0; r < rank; ++r)
+        process_dim(r);
+    }
+    return offset;
+  }
+
   size_type calc_linear_offset(size_type i) const noexcept {
     if (size() == 0)
       return 0;
@@ -1248,39 +1267,19 @@ private:
     return true;
   }
 
-  size_type calc_flat_offset(size_type i) const noexcept {
-    size_type offset = 0, remaining = i;
-    auto process_dim = [&](rank_type r) {
-      const size_type dim_len = extent(r);
-      size_type idx = remaining % dim_len;
-      if (reverse_dims_[r])
-        idx = dim_len - 1 - idx;
-      offset += idx * span_.stride(r);
-      remaining /= dim_len;
-    };
-    if constexpr (std::is_same_v<default_layout, layout_right>) {
-      for (rank_type r = rank(); r-- > 0;)
-        process_dim(r);
-    } else {
-      for (rank_type r = 0; r < rank(); ++r)
-        process_dim(r);
-    }
-    return offset;
-  }
-
   template <typename BoolExpr> std::vector<size_type> resolve_mask_offsets(const BoolExpr& expr) const {
     std::vector<size_type> offsets;
     offsets.reserve(expr.size());
     for (size_type i = 0; i < expr.size(); ++i)
       if (static_cast<bool>(expr.flat_unchecked(i)))
-        offsets.push_back(calc_flat_offset(i));
+        offsets.push_back(desc_.flat_offset(i));
     return offsets;
   }
 
   template <typename Iterator> std::vector<size_type> resolve_indirect_offsets(Iterator first, Iterator last) const {
     std::vector<size_type> offsets(first, last);
     for (auto& offset : offsets)
-      offset = calc_flat_offset(offset);
+      offset = desc_.calc_flat_offset(offset);
     return offsets;
   }
 
@@ -3001,12 +3000,12 @@ typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat_unchecked(size
 
 template <typename Tp, typename Ex, typename Lp>
 typename gslice_view<Tp, Ex, Lp>::const_reference gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
-  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
+  return flat_contiguous_ ? data_handle()[i] : desc_.get_flat_unchecked(i);
 }
 
 template <typename Tp, typename Ex, typename Lp>
 typename gslice_view<Tp, Ex, Lp>::reference gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) {
-  return flat_contiguous_ ? data_handle()[i] : data_handle()[calc_flat_offset(i)];
+  return flat_contiguous_ ? data_handle()[i] : desc_.get_flat_unchecked(i);
 }
 
 template <typename Tp, typename Ex, typename Lp> auto gslice_view<Tp, Ex, Lp>::eval() const {
