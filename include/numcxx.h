@@ -1404,16 +1404,19 @@ public:
   indirect_view(data_handle_type data, extents_type extents, accessor_type accessor)
       : span_(data, extents, std::move(accessor)), desc_(span_) {}
 
-  template <class... Idxs>
-    requires elem_access_arguments<Rank, Idxs...>
-  [[nodiscard]] reference operator()(Idxs&&... idxs) {
-    return access(std::forward<Idxs>(idxs)...);
-  }
-  template <class... Idxs>
-    requires elem_access_arguments<Rank, Idxs...>
-  [[nodiscard]] const_reference operator()(Idxs&&... idxs) const {
-    return access(std::forward<Idxs>(idxs)...);
-  }
+  // N-dimensional element access.
+  // operator[] is unchecked and does not support negative indices.
+#if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
+  template <class... Idxs> requires elem_access_arguments<Rank, Idxs...>
+  [[nodiscard]] const_reference operator[]  (Idxs&&... idxs) const {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+  template <class... Idxs> requires elem_access_arguments<Rank, Idxs...>
+  [[nodiscard]]       reference operator[]  (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+#endif
+  // operator() checks bounds and supports negative indices.
+  template <class... Idxs> requires elem_access_arguments<Rank, Idxs...>
+  [[nodiscard]] const_reference operator()  (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
+  template <class... Idxs> requires elem_access_arguments<Rank, Idxs...>
+  [[nodiscard]]       reference operator()  (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
 
   [[nodiscard]] reference operator[](size_type i) { return flat_unchecked(i); }
   [[nodiscard]] const_reference operator[](size_type i) const { return flat_unchecked(i); }
@@ -1476,52 +1479,6 @@ public:
   // clang-format on
 
 private:
-  template <class... Idxs> auto normalize_indices(Idxs&&... idxs) const {
-    std::array<index_type, Rank> indices{static_cast<index_type>(std::forward<Idxs>(idxs))...};
-    for (rank_type r = 0; r < Rank; ++r) {
-      if (indices[r] < 0)
-        indices[r] += extent(r);
-      NUMCXX_ASSERT(indices[r] >= 0 && indices[r] < extent(r), "indirect_view index out of bounds");
-    }
-    return indices;
-  }
-
-  template <class... Idxs> const_reference access(Idxs&&... idxs) const {
-    const auto indices = normalize_indices(std::forward<Idxs>(idxs)...);
-    size_type flat_idx = 0;
-    size_type stride = 1;
-    if constexpr (std::is_same_v<default_layout, layout_right>) {
-      for (size_type r = Rank; r-- > 0;) {
-        flat_idx += indices[r] * stride;
-        stride *= span_.extent(r);
-      }
-    } else {
-      for (size_type r = 0; r < Rank; ++r) {
-        flat_idx += indices[r] * stride;
-        stride *= span_.extent(r);
-      }
-    }
-    return span_.data_handle()[span_.accessor().physical_offset(flat_idx)];
-  }
-
-  template <class... Idxs> reference access(Idxs&&... idxs) {
-    const auto indices = normalize_indices(std::forward<Idxs>(idxs)...);
-    size_type flat_idx = 0;
-    size_type stride = 1;
-    if constexpr (std::is_same_v<default_layout, layout_right>) {
-      for (size_type r = Rank; r-- > 0;) {
-        flat_idx += indices[r] * stride;
-        stride *= span_.extent(r);
-      }
-    } else {
-      for (size_type r = 0; r < Rank; ++r) {
-        flat_idx += indices[r] * stride;
-        stride *= span_.extent(r);
-      }
-    }
-    return span_.data_handle()[span_.accessor().physical_offset(flat_idx)];
-  }
-
   template <template <class> class Op> auto apply_unary_op() const {
     return detail::make_unary_op<Op<value_type>>(*this);
   }
