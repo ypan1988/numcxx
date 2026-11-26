@@ -493,7 +493,7 @@ public:
   [[nodiscard]] constexpr normalized_slice normalize(size_type dim_len) const noexcept;
 };
 
-// [numcxx.gslice_and_ix]
+// [numcxx.gslice_and_indirect]
 /// Generalized N-dimensional basic slicing wrapper.
 template <class... Args>
 class gslice {
@@ -506,9 +506,9 @@ private:
 
 /// Generalized N-dimensional fancy indexing wrapper (basic slicing + 1 uvec).
 template <class... Args>
-class ix {
+class indirect {
 public:
-  constexpr explicit ix(std::remove_cvref_t<Args>... args) : arguments_(std::move(args)...) {}
+  constexpr explicit indirect(std::remove_cvref_t<Args>... args) : arguments_(std::move(args)...) {}
   [[nodiscard]] constexpr const auto &arguments() const noexcept { return arguments_;}
 private:
   std::tuple<std::remove_cvref_t<Args>...> arguments_;
@@ -516,7 +516,7 @@ private:
 
 // Deduce and store selector types by value.
 template <class... Args> gslice(Args &&...) -> gslice<std::remove_cvref_t<Args>...>;
-template <class... Args> ix    (Args &&...) -> ix    <std::remove_cvref_t<Args>...>;
+template <class... Args> indirect(Args &&...) -> indirect<std::remove_cvref_t<Args>...>;
 
 // [numcxx.mdspan_desc]
 namespace detail {
@@ -787,15 +787,15 @@ public:
 
   // fancy indexing using slice specifiers and exactly one index array.
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator()(             Args    &&...  args) const;
+  [[nodiscard]] auto operator()(               Args    &&...  args) const;
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator()(             Args    &&...  args)      ;
+  [[nodiscard]] auto operator()(               Args    &&...  args)      ;
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const     ix<Args...>&        ia) const { return  detail::apply_indices(*this, ia.arguments()); }
+  [[nodiscard]] auto operator[](const indirect<Args...>&        ix) const { return  detail::apply_indices(*this, ix.arguments()); }
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const     ix<Args...>&        ia)       { return  detail::apply_indices(*this, ia.arguments()); }
-  [[nodiscard]] auto operator[](const   uvec         &         a) const { return                       (*this)[         ix(a)]; }
-  [[nodiscard]] auto operator[](const   uvec         &         a)       { return                       (*this)[         ix(a)]; }
+  [[nodiscard]] auto operator[](const indirect<Args...>&        ix)       { return  detail::apply_indices(*this, ix.arguments()); }
+  [[nodiscard]] auto operator[](const     uvec         &         x) const { return                       (*this)[   indirect(x)]; }
+  [[nodiscard]] auto operator[](const     uvec         &         x)       { return                       (*this)[   indirect(x)]; }
 
   // mask indexing using a boolean expression.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value
@@ -1084,7 +1084,7 @@ public:
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator()(        Args&&...           args)      ;
 
-  // subset operations using discrete (indirect) indexing via ix arguments or direct operator().
+  // subset operations using discrete (indirect) indexing via indirect arguments or direct operator().
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
   [[nodiscard]] auto operator()(        Args&&...           args) const;
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
@@ -1096,15 +1096,15 @@ public:
 
   // subset operations with gslice (i.e., N-dimensional indices and slice specifiers).
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
+  [[nodiscard]] auto operator[](const   gslice<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
+  [[nodiscard]] auto operator[](const   gslice<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
-  // subset operations with ix (multidimensional indirect view).
+  // subset operations with indirect (multidimensional indirect view).
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const ix<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
+  [[nodiscard]] auto operator[](const indirect<Args...> &selection) const { return detail::apply_indices(*this, selection.arguments()); }
   template <class... Args> requires indirect_view_arguments<Extents::rank(), Args...>
-  [[nodiscard]] auto operator[](const ix<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
+  [[nodiscard]] auto operator[](const indirect<Args...> &selection)       { return detail::apply_indices(*this, selection.arguments()); }
 
   // subset operations with boolean mask.
   template <value_expression BoolExpr> requires detail::is_boolean_expr<std::remove_cvref_t<BoolExpr>>::value

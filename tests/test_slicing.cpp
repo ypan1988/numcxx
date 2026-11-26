@@ -283,7 +283,7 @@ TEST_F(SlicingTest, ReverseViewOffsetsMapThroughView) {
   auto v = a(full_extent, slice({}, {}, -1));
 
   // 1. Select row 0 and row 1 along Axis 0 using initializer_list.
-  auto selected = v[ix(uvec{0, 1})];
+  auto selected = v[indirect(uvec{0, 1})];
 
   // Verify shape: (2, 5)
   ASSERT_EQ(selected.extent(0), 2);
