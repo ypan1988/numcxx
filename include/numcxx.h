@@ -1095,8 +1095,8 @@ public:
 
   // flattened element access in default_layout order, independent of physical storage layout.
   // flat_unchecked() is unchecked and does not support negative indices.
-  [[nodiscard]] const_reference flat_unchecked( size_type i) const;
-  [[nodiscard]]       reference flat_unchecked( size_type i)      ;
+  [[nodiscard]] const_reference flat_unchecked( size_type i) const { return flat_contiguous_ ? data_handle()[i] : desc_.get_flat_unchecked(i); }
+  [[nodiscard]]       reference flat_unchecked( size_type i)       { return flat_contiguous_ ? data_handle()[i] : desc_.get_flat_unchecked(i); }
   // flat() checks bounds and supports negative indices.
   [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "gslice_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
   [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "gslice_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
@@ -2996,16 +2996,6 @@ typename ndarray<Tp, Ex, Lp>::reference ndarray<Tp, Ex, Lp>::flat_unchecked(size
     const auto& mapping = elem_.mapping();
     return std::apply([&](auto... idxs) -> decltype(auto) { return data()[mapping(idxs...)]; }, idx);
   }
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename gslice_view<Tp, Ex, Lp>::const_reference gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) const {
-  return flat_contiguous_ ? data_handle()[i] : desc_.get_flat_unchecked(i);
-}
-
-template <typename Tp, typename Ex, typename Lp>
-typename gslice_view<Tp, Ex, Lp>::reference gslice_view<Tp, Ex, Lp>::flat_unchecked(size_type i) {
-  return flat_contiguous_ ? data_handle()[i] : desc_.get_flat_unchecked(i);
 }
 
 template <typename Tp, typename Ex, typename Lp> auto gslice_view<Tp, Ex, Lp>::eval() const {
