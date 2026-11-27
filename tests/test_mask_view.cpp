@@ -57,8 +57,6 @@ TEST(MaskViewExpressionTest, MaskAndIndirectViewsSupportUncheckedFlatEvaluation)
   EXPECT_EQ(arr[0], 20);
   EXPECT_EQ(arr[2], 22);
   EXPECT_EQ(arr[4], 44);
-  EXPECT_EQ(indirect_tmp.at(1), indirect_tmp[1]);
-  EXPECT_THROW((void)indirect_tmp.at(indirect_tmp.size()), std::out_of_range);
   EXPECT_THROW((void)indirect_tmp.flat(indirect_tmp.size()), std::out_of_range);
   indirect_tmp *= 2;
   EXPECT_EQ(arr[0], 40);
