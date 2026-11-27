@@ -19,8 +19,6 @@ TEST(MaskViewConstructionTest, FromNdarrayWithBoolExpr) {
   EXPECT_DOUBLE_EQ(masked[1], 7.0);
   EXPECT_DOUBLE_EQ(masked[2], 8.0);
   EXPECT_DOUBLE_EQ(masked[3], 9.0);
-  EXPECT_EQ(masked.at(1), masked[1]);
-  EXPECT_THROW((void)masked.at(masked.size()), std::out_of_range);
   EXPECT_THROW((void)masked.flat(masked.size()), std::out_of_range);
 }
 

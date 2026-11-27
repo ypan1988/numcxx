@@ -1401,8 +1401,8 @@ public:
   template <class... Idxs> requires elem_access_arguments<Rank, Idxs...>
   [[nodiscard]]       reference operator[]  (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
 #else
-  [[nodiscard]] const_reference operator[]     (size_type i) const requires (Rank == 1) {          return                                        flat_unchecked(i); }
-  [[nodiscard]]       reference operator[]     (size_type i)       requires (Rank == 1) {          return                                        flat_unchecked(i); }
+  [[nodiscard]] const_reference operator[]     (size_type i) const requires (rank() == 1) {        return                                        flat_unchecked(i); }
+  [[nodiscard]]       reference operator[]     (size_type i)       requires (rank() == 1) {        return                                        flat_unchecked(i); }
 #endif
   // operator() checks bounds and supports negative indices.
   template <class... Idxs> requires elem_access_arguments<Rank, Idxs...>
@@ -1576,12 +1576,11 @@ public:
   mask_view(mask_view &&) noexcept = default;
   ~mask_view() = default;
 
-  [[nodiscard]] const_reference     operator()(index_type i) const { desc_.check_indices(i); return desc_.get_element(i); }
-  [[nodiscard]]       reference     operator()(index_type i)       { desc_.check_indices(i); return desc_.get_element(i); }
-  [[nodiscard]] const_reference     operator[]( size_type i) const { return flat_unchecked(i); }
-  [[nodiscard]]       reference     operator[]( size_type i)       { return flat_unchecked(i); }
-  [[nodiscard]] const_reference             at(index_type i) const { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
-  [[nodiscard]]       reference             at(index_type i)       { detail::indexing::check_index(i, size(), "mask_view::at");   return        (*this)[detail::indexing::normalize_index(i, size())]; }
+  [[nodiscard]] const_reference     operator[]( size_type i) const {                         return flat_unchecked(i); }
+  [[nodiscard]]       reference     operator[]( size_type i)       {                         return flat_unchecked(i); }
+  [[nodiscard]] const_reference     operator()(index_type i) const { desc_.check_indices(i); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+  [[nodiscard]]       reference     operator()(index_type i)       { desc_.check_indices(i); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
+
   [[nodiscard]] const_reference flat_unchecked( size_type i) const { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
   [[nodiscard]]       reference flat_unchecked( size_type i)       { return desc_.source().accessor().offset(desc_.source().data_handle(), i)[0]; }
   [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "mask_view::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
