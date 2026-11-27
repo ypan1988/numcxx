@@ -194,8 +194,7 @@ TEST(ElementAccess, GsliceViewDirectElement) {
 
   EXPECT_EQ(v(0, 0), 11);
   EXPECT_EQ(v(1, 2), 23);
-  EXPECT_EQ(v.at(0), v[0]);
-  EXPECT_THROW((void)v.at(v.size()), std::out_of_range);
+  EXPECT_THROW((void)v.flat(v.size()), std::out_of_range);
 }
 
 TEST(ElementAccess, ConstGsliceViewElementAccess) {
@@ -274,10 +273,9 @@ TEST(ElementAccess, Rank1LinearAccess) {
 
   EXPECT_EQ(v[0], 10);
   EXPECT_EQ(v[2], 12);
-  EXPECT_EQ(v.at(2), v[2]);
-  v.at(1) = 42;
+  v.flat(1) = 42;
   EXPECT_EQ(a(1, 1), 42);
-  EXPECT_THROW((void)v.at(v.size()), std::out_of_range);
+  EXPECT_THROW((void)v.flat(v.size()), std::out_of_range);
 }
 
 /* ============================================================

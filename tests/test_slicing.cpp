@@ -60,8 +60,8 @@ TEST_F(SlicingTest, FullExtentPreservesShape) {
   EXPECT_EQ(v.extent(0), 4);
   EXPECT_EQ(v.extent(1), 5);
 
-  EXPECT_EQ(v[0], 0);
-  EXPECT_EQ(v[19], 19);
+  EXPECT_EQ(v.flat(0), 0);
+  EXPECT_EQ(v.flat(19), 19);
 }
 
 TEST_F(SlicingTest, FullExtentWithScalarIndexReducesRank) {
