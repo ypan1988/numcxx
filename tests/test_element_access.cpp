@@ -149,33 +149,16 @@ TEST(ElementAccess, ConstNdarrayElementAccess) {
   EXPECT_EQ(r, 4);
 }
 
-TEST(ElementAccess, NdarrayBracketAndAtUsePhysicalStorageOrder) {
-  numcxx::ndarray<int, numcxx::dextents<2>, numcxx::layout_left> a(2, 3);
-  for (int i = 0; i < 2; ++i)
-    for (int j = 0; j < 3; ++j)
-      a(i, j) = i * 10 + j;
-
-  EXPECT_EQ(a[1], 10);
-  EXPECT_EQ(a.at(1), a[1]);
-  a.at(1) = 42;
-  EXPECT_EQ(a(1, 0), 42);
-  EXPECT_THROW((void)a.at(a.size()), std::out_of_range);
-
-  const auto &const_a = a;
-  static_assert(std::is_same_v<decltype(const_a.at(0)), const int &>);
-  EXPECT_EQ(const_a.at(1), 42);
-}
-
 TEST(ElementAccess, CheckedLinearAccessUsesStandardizedOutOfRangeErrors) {
   numcxx::ivec a(3);
 
   try {
-    (void)a.at(a.size());
-    FAIL() << "Expected ndarray::at to throw";
+    (void)a.flat(a.size());
+    FAIL() << "Expected ndarray::flat to throw";
   } catch (const std::out_of_range &e) {
     EXPECT_STREQ(
         e.what(),
-        "ndarray::at: index 3 out of bounds for size 3");
+        "ndarray::flat: index 3 out of bounds for size 3");
   }
 
   try {

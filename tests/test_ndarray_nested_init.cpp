@@ -45,12 +45,12 @@ TEST(NdarrayNestedInitTest, Mat2D) {
   EXPECT_EQ(a.size(), 6);
 
   // Verify flattened storage order (row-major)
-  EXPECT_DOUBLE_EQ(a[0], 1.0);
-  EXPECT_DOUBLE_EQ(a[1], 2.0);
-  EXPECT_DOUBLE_EQ(a[2], 3.0);
-  EXPECT_DOUBLE_EQ(a[3], 4.0);
-  EXPECT_DOUBLE_EQ(a[4], 5.0);
-  EXPECT_DOUBLE_EQ(a[5], 6.0);
+  EXPECT_DOUBLE_EQ(a.flat(0), 1.0);
+  EXPECT_DOUBLE_EQ(a.flat(1), 2.0);
+  EXPECT_DOUBLE_EQ(a.flat(2), 3.0);
+  EXPECT_DOUBLE_EQ(a.flat(3), 4.0);
+  EXPECT_DOUBLE_EQ(a.flat(4), 5.0);
+  EXPECT_DOUBLE_EQ(a.flat(5), 6.0);
 }
 
 TEST(NdarrayNestedInitTest, Mat2DStatic) {
@@ -62,12 +62,12 @@ TEST(NdarrayNestedInitTest, Mat2DStatic) {
   EXPECT_EQ(a.extent(1), 3);
   EXPECT_EQ(a.size(), 6);
 
-  EXPECT_DOUBLE_EQ(a[0], 1.0);
-  EXPECT_DOUBLE_EQ(a[1], 2.0);
-  EXPECT_DOUBLE_EQ(a[2], 3.0);
-  EXPECT_DOUBLE_EQ(a[3], 4.0);
-  EXPECT_DOUBLE_EQ(a[4], 5.0);
-  EXPECT_DOUBLE_EQ(a[5], 6.0);
+  EXPECT_DOUBLE_EQ(a.flat(0), 1.0);
+  EXPECT_DOUBLE_EQ(a.flat(1), 2.0);
+  EXPECT_DOUBLE_EQ(a.flat(2), 3.0);
+  EXPECT_DOUBLE_EQ(a.flat(3), 4.0);
+  EXPECT_DOUBLE_EQ(a.flat(4), 5.0);
+  EXPECT_DOUBLE_EQ(a.flat(5), 6.0);
 }
 
 // 3. 3D array tests
@@ -82,14 +82,14 @@ TEST(NdarrayNestedInitTest, Cube3D) {
   EXPECT_EQ(a.size(), 8);
 
   // Verify flattened storage order
-  EXPECT_DOUBLE_EQ(a[0], 1.0);
-  EXPECT_DOUBLE_EQ(a[1], 2.0);
-  EXPECT_DOUBLE_EQ(a[2], 3.0);
-  EXPECT_DOUBLE_EQ(a[3], 4.0);
-  EXPECT_DOUBLE_EQ(a[4], 5.0);
-  EXPECT_DOUBLE_EQ(a[5], 6.0);
-  EXPECT_DOUBLE_EQ(a[6], 7.0);
-  EXPECT_DOUBLE_EQ(a[7], 8.0);
+  EXPECT_DOUBLE_EQ(a.flat(0), 1.0);
+  EXPECT_DOUBLE_EQ(a.flat(1), 2.0);
+  EXPECT_DOUBLE_EQ(a.flat(2), 3.0);
+  EXPECT_DOUBLE_EQ(a.flat(3), 4.0);
+  EXPECT_DOUBLE_EQ(a.flat(4), 5.0);
+  EXPECT_DOUBLE_EQ(a.flat(5), 6.0);
+  EXPECT_DOUBLE_EQ(a.flat(6), 7.0);
+  EXPECT_DOUBLE_EQ(a.flat(7), 8.0);
 }
 
 TEST(NdarrayNestedInitTest, Cube3DStatic) {
@@ -102,37 +102,37 @@ TEST(NdarrayNestedInitTest, Cube3DStatic) {
   EXPECT_EQ(a.extent(2), 2);
   EXPECT_EQ(a.size(), 8);
 
-  EXPECT_DOUBLE_EQ(a[0], 1.0);
-  EXPECT_DOUBLE_EQ(a[1], 2.0);
-  EXPECT_DOUBLE_EQ(a[2], 3.0);
-  EXPECT_DOUBLE_EQ(a[3], 4.0);
-  EXPECT_DOUBLE_EQ(a[4], 5.0);
-  EXPECT_DOUBLE_EQ(a[5], 6.0);
-  EXPECT_DOUBLE_EQ(a[6], 7.0);
-  EXPECT_DOUBLE_EQ(a[7], 8.0);
+  EXPECT_DOUBLE_EQ(a.flat(0), 1.0);
+  EXPECT_DOUBLE_EQ(a.flat(1), 2.0);
+  EXPECT_DOUBLE_EQ(a.flat(2), 3.0);
+  EXPECT_DOUBLE_EQ(a.flat(3), 4.0);
+  EXPECT_DOUBLE_EQ(a.flat(4), 5.0);
+  EXPECT_DOUBLE_EQ(a.flat(5), 6.0);
+  EXPECT_DOUBLE_EQ(a.flat(6), 7.0);
+  EXPECT_DOUBLE_EQ(a.flat(7), 8.0);
 }
 
 // 4. Different numeric types
 TEST(NdarrayNestedInitTest, DifferentTypes) {
   // int
   numcxx::imat im = {{1, 2, 3}, {4, 5, 6}};
-  EXPECT_EQ(im[0], 1);
-  EXPECT_EQ(im[4], 5);
+  EXPECT_EQ(im.flat(0), 1);
+  EXPECT_EQ(im.flat(4), 5);
 
   // unsigned int
   numcxx::umat um = {{1u, 2u, 3u}, {4u, 5u, 6u}};
-  EXPECT_EQ(um[0], 1u);
-  EXPECT_EQ(um[4], 5u);
+  EXPECT_EQ(um.flat(0), 1u);
+  EXPECT_EQ(um.flat(4), 5u);
 
   // float
   numcxx::fmat fm = {{1.0f, 2.0f, 3.0f}, {4.0f, 5.0f, 6.0f}};
-  EXPECT_FLOAT_EQ(fm[0], 1.0f);
-  EXPECT_FLOAT_EQ(fm[4], 5.0f);
+  EXPECT_FLOAT_EQ(fm.flat(0), 1.0f);
+  EXPECT_FLOAT_EQ(fm.flat(4), 5.0f);
 
   // double
   numcxx::dmat dm = {{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
-  EXPECT_DOUBLE_EQ(dm[0], 1.0);
-  EXPECT_DOUBLE_EQ(dm[4], 5.0);
+  EXPECT_DOUBLE_EQ(dm.flat(0), 1.0);
+  EXPECT_DOUBLE_EQ(dm.flat(4), 5.0);
 }
 
 // // 5. String type (verify template support)

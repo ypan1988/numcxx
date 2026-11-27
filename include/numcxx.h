@@ -775,6 +775,9 @@ public:
   [[nodiscard]] const_reference operator[]  (Idxs&&... idxs) const {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
   [[nodiscard]]       reference operator[]  (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+#else
+  [[nodiscard]] const_reference operator[]     (size_type i) const requires (rank() == 1) {        return                                                data()[i]; }
+  [[nodiscard]]       reference operator[]     (size_type i)       requires (rank() == 1) {        return                                                data()[i]; }
 #endif
   // operator() checks bounds and supports negative indices.
   template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
@@ -789,14 +792,6 @@ public:
   // flat() checks bounds and supports negative indices.
   [[nodiscard]] const_reference flat          (index_type i) const { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
   [[nodiscard]]       reference flat          (index_type i)       { detail::indexing::check_index(i, size(), "ndarray::flat"); return flat_unchecked(detail::indexing::normalize_index(i, size())); }
-
-  // flattened element access in physical storage order.
-  // operator[] is unchecked and does not support negative indices.
-  [[nodiscard]] const_reference operator[]    ( size_type i) const {                                                            return         data()[i]; }
-  [[nodiscard]]       reference operator[]    ( size_type i)       {                                                            return         data()[i]; }
-  // at() checks bounds and supports negative indices.
-  [[nodiscard]] const_reference at            (index_type i) const { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
-  [[nodiscard]]       reference at            (index_type i)       { detail::indexing::check_index(i, size(), "ndarray::at"  ); return        (*this)[detail::indexing::normalize_index(i, size())]; }
 
   // basic slicing using slice specifiers (i.e., slice, full_extent, std::pair, or scalar index).
   template <class... Args> requires gslice_view_arguments<Extents::rank(), Args...>
