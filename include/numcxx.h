@@ -770,19 +770,20 @@ public:
 
   // N-dimensional element access.
   // operator[] is unchecked and does not support negative indices.
+  // without multidimensional subscripting (C++23), it is available only for rank == 1.
 #if defined(__cpp_multidimensional_subscript) && __cpp_multidimensional_subscript >= 202211L
-  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]] const_reference operator[]  (Idxs&&... idxs) const {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
-  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
-  [[nodiscard]]       reference operator[]  (Idxs&&... idxs)       {                               return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+  template <class... Idxs> requires elem_access_arguments<rank(), Idxs...>
+  [[nodiscard]] const_reference operator[]  (Idxs&&... idxs) const                               { return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
+  template <class... Idxs> requires elem_access_arguments<rank(), Idxs...>
+  [[nodiscard]]       reference operator[]  (Idxs&&... idxs)                                     { return desc_.get_element_unchecked(std::forward<Idxs>(idxs)...); }
 #else
-  [[nodiscard]] const_reference operator[]     (size_type i) const requires (rank() == 1) {        return                                                data()[i]; }
-  [[nodiscard]]       reference operator[]     (size_type i)       requires (rank() == 1) {        return                                                data()[i]; }
+  [[nodiscard]] const_reference operator[]     (size_type i) const requires (rank() == 1)        { return                                                data()[i]; }
+  [[nodiscard]]       reference operator[]     (size_type i)       requires (rank() == 1)        { return                                                data()[i]; }
 #endif
   // operator() checks bounds and supports negative indices.
-  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  template <class... Idxs> requires elem_access_arguments<rank(), Idxs...>
   [[nodiscard]] const_reference operator()  (Idxs&&... idxs) const { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
-  template <class... Idxs> requires elem_access_arguments<Extents::rank(), Idxs...>
+  template <class... Idxs> requires elem_access_arguments<rank(), Idxs...>
   [[nodiscard]]       reference operator()  (Idxs&&... idxs)       { desc_.check_indices(idxs...); return desc_.get_element          (std::forward<Idxs>(idxs)...); }
 
   // flattened element access in default_layout order, independent of physical storage layout.
@@ -925,6 +926,10 @@ private:
   template <class>               friend class   nc_val_expr;
   // clang-format on
 
+  [[nodiscard]] static constexpr bool flat_contiguous() noexcept {
+    return std::is_same_v<layout_type, default_layout>;
+  }
+
   ::numcxx::index_type normalize_reduction_axis(::numcxx::index_type axis, const char* function_name) const {
     const ::numcxx::index_type rank_value = static_cast<::numcxx::index_type>(extents_type::rank());
     if (axis < 0)
@@ -1014,6 +1019,8 @@ private:
 private:
   mdarray_type elem_;
   detail::indexing::mdspan_desc<mdspan_type> desc_{to_mdspan()};
+  bool is_flat_contiguous_ = flat_contiguous();
+
   // std::vector<size_type> logical_offset_;
 };
 
