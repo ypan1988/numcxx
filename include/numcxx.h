@@ -597,9 +597,7 @@ public:
   [[nodiscard]] constexpr size_type flat_offset(size_type i) const noexcept { return calc_flat_offset(i); }
 
   [[nodiscard]] constexpr decltype(auto) get_flat_unchecked  (size_type i) const { return src_.accessor().access(src_.data_handle(), calc_flat_offset(i)); }
-  [[nodiscard]] constexpr decltype(auto) get_flat_unchecked  (size_type i)       { return src_.accessor().access(src_.data_handle(), calc_flat_offset(i));}
-  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i) const { return src_.accessor().access(src_.data_handle(), calc_linear_offset(i)); }
-  [[nodiscard]] constexpr decltype(auto) get_linear_unchecked(size_type i)       { return src_.accessor().access(src_.data_handle(), calc_linear_offset(i));}
+  [[nodiscard]] constexpr decltype(auto) get_flat_unchecked  (size_type i)       { return src_.accessor().access(src_.data_handle(), calc_flat_offset(i)); }
 
 private:
   size_type calc_flat_offset(size_type i) const noexcept {
@@ -613,29 +611,6 @@ private:
       remaining /= dim_len;
     };
     if constexpr (std::is_same_v<default_layout, layout_right>) {
-      for (size_type r = rank; r-- > 0;)
-        process_dim(r);
-    } else {
-      for (size_type r = 0; r < rank; ++r)
-        process_dim(r);
-    }
-    return offset;
-  }
-
-  size_type calc_linear_offset(size_type i) const noexcept {
-    if (size() == 0)
-      return 0;
-    size_type offset = 0, remaining = i;
-    auto process_dim = [&](size_type r) {
-      size_type dim_len = extent(r);
-      size_type idx = remaining % dim_len;
-      if (reverse_dims_[r]) {
-        idx = dim_len - 1 - idx;
-      }
-      offset += idx * src_.stride(r);
-      remaining /= dim_len;
-    };
-    if constexpr (std::is_same_v<layout_type, default_layout>) {
       for (size_type r = rank; r-- > 0;)
         process_dim(r);
     } else {
